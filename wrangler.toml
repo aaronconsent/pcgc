@@ -1,0 +1,8 @@
+name = "pcgc"
+compatibility_date = "2026-04-01"
+
+# Pure static site — no Worker script, just serve files from ./site.
+# Cloudflare's static assets handler does directory-index resolution
+# automatically, so /about-us/ -> site/about-us/index.html works.
+[assets]
+directory = "./site"

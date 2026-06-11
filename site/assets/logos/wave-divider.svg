@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 1440 80"
+     preserveAspectRatio="none"
+     width="100%"
+     height="80"
+     role="img"
+     aria-label="">
+  <!-- Coral wave (top ribbon) — matches the upper wave under the cart in the PCGC logo -->
+  <path
+    d="M0,28
+       C 240,0 480,0 720,28
+       C 960,56 1200,56 1440,28
+       L 1440,40
+       C 1200,68 960,68 720,40
+       C 480,12 240,12 0,40
+       Z"
+    fill="#e85a4f"/>
+  <!-- Teal wave (bottom ribbon) — shifted down so a sliver of background shows between the two -->
+  <path
+    d="M0,50
+       C 240,22 480,22 720,50
+       C 960,78 1200,78 1440,50
+       L 1440,64
+       C 1200,92 960,92 720,64
+       C 480,36 240,36 0,64
+       Z"
+    fill="#2e7a8a"/>
+</svg>

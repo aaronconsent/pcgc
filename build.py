@@ -48,13 +48,14 @@ def head(title, desc, path="/"):
           <title>{title} | {BIZ['name']}</title>
           <meta name="description" content="{desc}">
           <link rel="canonical" href="{canonical}">
-          <link rel="icon" type="image/jpeg" href="/assets/logo.jpeg">
+          <link rel="icon" type="image/svg+xml" href="/assets/logos/logo-color.svg">
+          <link rel="icon" type="image/png" sizes="256x256" href="/assets/logos/favicon.png">
           <link rel="preconnect" href="https://fonts.cdnfonts.com">
           <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/grobold">
           <link rel="stylesheet" href="/assets/site.css">
           <meta property="og:title" content="{title} | {BIZ['name']}">
           <meta property="og:description" content="{desc}">
-          <meta property="og:image" content="/assets/logo.jpeg">
+          <meta property="og:image" content="/assets/logos/logo-color.png">
           <meta property="og:type" content="website">
         </head>
         <body>
@@ -71,7 +72,7 @@ def header(current_path):
         <header class="site-header">
           <div class="container">
             <a class="brand" href="/">
-              <span class="brand-illo" aria-hidden="true" title="Illustration placeholder">Illustration</span>
+              <img class="brand-mark" src="/assets/logos/logo-color.svg" alt="" width="72" height="56" aria-hidden="true">
               <span class="brand-text">{BIZ['name']}<small>Livingston, Texas</small></span>
             </a>
             <nav class="primary">
@@ -86,7 +87,7 @@ def header(current_path):
 def contact_strip():
     return dedent(f"""\
         <section class="contact-strip">
-          <div class="container">
+          <div class="container contact-strip-inner">
             <div>
               <h3>Call us</h3>
               <a class="big" href="tel:{BIZ['phone_primary'].replace('-','')}">{BIZ['phone_primary']}</a><br>
@@ -117,7 +118,8 @@ def footer():
           <div class="container">
             <div class="foot-grid">
               <div>
-                <h4>{BIZ['name']}</h4>
+                <img class="foot-mark" src="/assets/logos/logo-white.svg" alt="{BIZ['name']}" width="120" height="92">
+                <h4 class="brand-text-foot">{BIZ['name']}</h4>
                 <p>Family-owned in Livingston, Texas. We sell new Breezy EV carts, service and customize every make, and deliver across {BIZ['service_area']}.</p>
                 <a class="bbb-badge" href="{BIZ['bbb_url']}" target="_blank" rel="noopener">★ BBB Accredited</a>
               </div>

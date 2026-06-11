@@ -69,20 +69,11 @@ p { margin: 0 0 1em; }
   display: flex; align-items: center; gap: 1.5rem;
   padding-top: .75rem; padding-bottom: .75rem;
 }
-.brand { display: flex; align-items: center; gap: .85rem; text-decoration: none; }
+.brand { display: flex; align-items: center; gap: .65rem; text-decoration: none; }
 .brand:hover { text-decoration: none; }
-.brand-illo {
-  display: inline-flex;
-  align-items: center; justify-content: center;
-  width: 64px; height: 56px;
-  border: 2px dashed var(--coral);
-  border-radius: 8px;
-  color: var(--coral);
-  font-size: .55rem;
-  font-weight: 600;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  background: rgba(232, 90, 79, .06);
+.brand-mark {
+  width: 72px; height: 56px;
+  object-fit: contain;
   flex-shrink: 0;
 }
 .brand-text {
@@ -105,7 +96,7 @@ p { margin: 0 0 1em; }
 }
 @media (max-width: 760px) {
   .brand-text { font-size: 1.1rem; }
-  .brand-illo { width: 52px; height: 48px; font-size: .5rem; }
+  .brand-mark { width: 56px; height: 44px; }
 }
 
 nav.primary { margin-left: auto; display: flex; gap: 1.25rem; align-items: center; }
@@ -139,6 +130,15 @@ nav.primary a.cta:hover { background: var(--coral-dk); text-decoration: none; }
   content: ""; position: absolute; inset: 0;
   background: radial-gradient(circle at 80% 30%, rgba(232, 90, 79, .18), transparent 50%);
   pointer-events: none;
+}
+.hero::before {
+  content: ""; position: absolute;
+  right: -40px; bottom: -40px;
+  width: 320px; height: 240px;
+  background: url("/assets/logos/logo-white.svg") no-repeat center / contain;
+  opacity: .07;
+  pointer-events: none;
+  z-index: 0;
 }
 .hero .container { position: relative; z-index: 1; }
 .hero h1 { color: #fff; max-width: 22ch; }
@@ -190,6 +190,23 @@ section.alt { background: var(--bg-alt); }
   color: var(--coral);
   margin-bottom: .8rem;
 }
+
+/* Brand divider — mono cart silhouette flanked by hairlines */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 2.5rem auto;
+  max-width: 280px;
+}
+.divider::before, .divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.divider img { width: 64px; height: 48px; object-fit: contain; opacity: .55; }
+section.alt .divider::before, section.alt .divider::after { background: var(--line); }
 .lede-text { font-size: 1.12rem; color: var(--ink-soft); }
 
 /* Card grid */
@@ -313,16 +330,35 @@ ul.checks li::before {
 /* Contact strip */
 .contact-strip {
   background: var(--teal-dk); color: #fff;
+  position: relative; overflow: hidden;
+}
+.contact-strip::before {
+  content: ""; position: absolute;
+  left: -30px; top: 50%; transform: translateY(-50%);
+  width: 200px; height: 150px;
+  background: url("/assets/logos/logo-white.svg") no-repeat center / contain;
+  opacity: .08;
+  pointer-events: none;
 }
 .contact-strip .container {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1.5rem; padding-top: 2.5rem; padding-bottom: 2.5rem;
+  position: relative; z-index: 1;
 }
 .contact-strip h3 { color: #fff; font-size: 1.05rem; margin-bottom: .4rem; }
 .contact-strip a { color: #fff; }
 .contact-strip .big { font-size: 1.45rem; font-weight: 700; font-family: Georgia, serif; }
 
 /* Footer */
+.foot-mark { width: 120px; height: auto; display: block; margin-bottom: .75rem; opacity: .95; }
+.brand-text-foot {
+  font-family: "GROBOLD", "Grobold", Georgia, serif !important;
+  color: #fff !important;
+  font-size: 1.35rem !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em;
+  margin-bottom: .65rem !important;
+}
 .site-footer { background: #14323a; color: rgba(255,255,255,.7); padding: 3rem 0 1.5rem; font-size: .92rem; }
 .site-footer h4 { color: #fff; font-family: inherit; font-size: 1rem; margin-bottom: .75rem; }
 .site-footer a { color: rgba(255,255,255,.85); }

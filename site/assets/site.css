@@ -284,18 +284,26 @@ ul.checks li::before {
 .hero-split img { border-radius: var(--radius); box-shadow: var(--shadow-lg); transform: rotate(-1.5deg); }
 @media (max-width: 800px) { .hero-split { grid-template-columns: 1fr; } .hero-split img { transform: none; } }
 
-/* Wave divider — single teal wave lifted from the PCGC brand mark.
-   Renders as a centered flourish between sections at its natural
-   aspect ratio so the tapered ends and the gentle two-hump curve don't
-   distort. Container is full-width so the divider visually anchors
-   between sections; the wave itself stays brand-mark sized. */
+/* Wave divider — true vector wave, transparent background, spans
+   edge to edge as a section border. preserveAspectRatio="none" on
+   the SVG (combined with background-size 100% 100%) lets it flex
+   to any container width without pixelation. */
 .wave-divider {
-  width: 100%;
-  height: 96px;
-  background: url("/assets/logos/wave-divider.svg") no-repeat center / auto 100%;
   display: block;
+  width: 100%;
+  height: 50px;
+  margin: 0;
+  padding: 0;
+  background: transparent url("/assets/logos/wave-divider.svg") no-repeat center / 100% 100%;
 }
-@media (max-width: 720px) { .wave-divider { height: 64px; } }
+@media (max-width: 720px) { .wave-divider { height: 32px; } }
+/* When a wave sits directly after a hero, pull it up so it visually
+   acts as the hero's bottom edge instead of floating with whitespace
+   above. */
+.hero + .wave-divider { margin-top: -2rem; }
+/* And tighten the gap below it so it reads as a border, not a
+   stand-alone band. */
+.wave-divider + section { padding-top: 2rem; }
 
 /* Photo block */
 .photo-block { position: relative; }

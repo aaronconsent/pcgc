@@ -49,6 +49,8 @@ def head(title, desc, path="/"):
           <meta name="description" content="{desc}">
           <link rel="canonical" href="{canonical}">
           <link rel="icon" type="image/jpeg" href="/assets/logo.jpeg">
+          <link rel="preconnect" href="https://fonts.cdnfonts.com">
+          <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/grobold">
           <link rel="stylesheet" href="/assets/site.css">
           <meta property="og:title" content="{title} | {BIZ['name']}">
           <meta property="og:description" content="{desc}">
@@ -69,7 +71,7 @@ def header(current_path):
         <header class="site-header">
           <div class="container">
             <a class="brand" href="/">
-              <img src="/assets/logo.jpeg" alt="{BIZ['name']}" width="80" height="56">
+              <span class="brand-illo" aria-hidden="true" title="Illustration placeholder">Illustration</span>
               <span class="brand-text">{BIZ['name']}<small>Livingston, Texas</small></span>
             </a>
             <nav class="primary">

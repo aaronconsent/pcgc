@@ -284,17 +284,18 @@ ul.checks li::before {
 .hero-split img { border-radius: var(--radius); box-shadow: var(--shadow-lg); transform: rotate(-1.5deg); }
 @media (max-width: 800px) { .hero-split { grid-template-columns: 1fr; } .hero-split img { transform: none; } }
 
-/* Wave divider — recreates the dual-wave under the cart in the PCGC logo.
-   Stretches edge-to-edge; preserveAspectRatio="none" inside the SVG lets it
-   flatten to fit whatever height we give it. */
+/* Wave divider — single teal wave lifted from the PCGC brand mark.
+   Renders as a centered flourish between sections at its natural
+   aspect ratio so the tapered ends and the gentle two-hump curve don't
+   distort. Container is full-width so the divider visually anchors
+   between sections; the wave itself stays brand-mark sized. */
 .wave-divider {
   width: 100%;
-  height: 72px;
-  background:
-    url("/assets/logos/wave-divider.svg") no-repeat center / 100% 100%;
+  height: 96px;
+  background: url("/assets/logos/wave-divider.svg") no-repeat center / auto 100%;
   display: block;
 }
-@media (max-width: 720px) { .wave-divider { height: 48px; } }
+@media (max-width: 720px) { .wave-divider { height: 64px; } }
 
 /* Photo block */
 .photo-block { position: relative; }

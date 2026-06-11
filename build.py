@@ -72,7 +72,7 @@ def header(current_path):
         <header class="site-header">
           <div class="container">
             <a class="brand" href="/">
-              <img class="brand-mark" src="/assets/logos/logo-color.svg" alt="" width="72" height="56" aria-hidden="true">
+              <img class="brand-mark" src="/assets/logos/logo-color.svg" alt="" width="144" height="112" aria-hidden="true">
               <span class="brand-text">{BIZ['name']}<small>Livingston, Texas</small></span>
             </a>
             <nav class="primary">

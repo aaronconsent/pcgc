@@ -72,9 +72,10 @@ p { margin: 0 0 1em; }
 .brand { display: flex; align-items: center; gap: .65rem; text-decoration: none; }
 .brand:hover { text-decoration: none; }
 .brand-mark {
-  width: 72px; height: 56px;
+  width: 144px; height: 112px;
   object-fit: contain;
   flex-shrink: 0;
+  margin: -.5rem 0; /* keep the header itself the same height */
 }
 .brand-text {
   font-family: "GROBOLD", "Grobold", Georgia, "Times New Roman", serif;
@@ -96,7 +97,7 @@ p { margin: 0 0 1em; }
 }
 @media (max-width: 760px) {
   .brand-text { font-size: 1.1rem; }
-  .brand-mark { width: 56px; height: 44px; }
+  .brand-mark { width: 96px; height: 76px; margin: -.4rem 0; }
 }
 
 nav.primary { margin-left: auto; display: flex; gap: 1.25rem; align-items: center; }
@@ -214,19 +215,26 @@ section.alt .divider::before, section.alt .divider::after { background: var(--li
 .card {
   background: var(--bg-alt);
   border: 1px solid var(--line);
+  border-top: 3px solid var(--coral);
   border-radius: var(--radius);
   padding: 1.5rem;
   box-shadow: var(--shadow);
+  transition: transform .15s ease, box-shadow .15s ease;
 }
+.card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.card.alt { border-top-color: var(--teal-dk); }
 .card .icon {
-  width: 44px; height: 44px;
-  background: var(--coral); color: #fff;
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.4rem; font-weight: 700;
-  margin-bottom: 1rem;
+  display: block;
+  background: none;
+  color: var(--coral);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: .65rem;
+  width: auto; height: auto;
 }
-.card.alt .icon { background: var(--teal-dk); }
+.card.alt .icon { color: var(--teal-dk); }
 .card h3 { margin-bottom: .35rem; }
 .card p { color: var(--ink-soft); margin: 0; }
 

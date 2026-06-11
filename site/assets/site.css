@@ -284,13 +284,19 @@ ul.checks li::before {
 .hero-split img { border-radius: var(--radius); box-shadow: var(--shadow-lg); transform: rotate(-1.5deg); }
 @media (max-width: 800px) { .hero-split { grid-template-columns: 1fr; } .hero-split img { transform: none; } }
 
-/* Wave divider — a true border between sections, not its own section.
-   The element occupies ZERO layout height; the wave is drawn by a
-   pseudo-element that's absolutely positioned to straddle the seam
-   between the two adjacent sections. Half the wave bleeds up over
-   the previous section, half drops down into the next one, so it
-   reads as the boundary line itself, not a band of content. */
+/* Wave divider — a TRUE seamless border between two sections.
+   The element itself has zero layout height; a ::before pseudo
+   sits at the bottom of the previous section, extending up into
+   it, filled with the NEXT section's background color. The result
+   reads as the previous section ending with a wavy bottom edge
+   that interlocks perfectly with the next section's flat top —
+   exactly the curvy-section-border pattern used by modern sites.
+
+   Set --wave-fill to the next section's background color on each
+   instance; defaults to #000 (matches the black photo band that
+   follows the home hero). */
 .wave-divider {
+  --wave-fill: #000;
   display: block;
   position: relative;
   width: 100%;
@@ -299,22 +305,34 @@ ul.checks li::before {
   padding: 0;
   z-index: 5;
   overflow: visible;
+  pointer-events: none;
 }
 .wave-divider::before {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
-  top: -25px;
-  height: 50px;
-  background: transparent
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 28' preserveAspectRatio='none'><path fill='%232e7a8a' d='M0,18 C90,18 270,2 360,2 C450,2 630,18 720,18 C810,18 990,2 1080,2 C1170,2 1350,18 1440,18 C1350,18 1170,12 1080,12 C990,12 810,26 720,26 C630,26 450,12 360,12 C270,12 90,18 0,18 Z'/></svg>")
-    no-repeat center / 100% 100%;
-  pointer-events: none;
+  bottom: 0; /* bottom of the wave-divider = the section boundary */
+  height: 90px;
+  background-color: var(--wave-fill);
+  /* The mask SVG: filled region from the wavy top edge down to the
+     bottom of the box. preserveAspectRatio='none' so it flexes to
+     any width. Two-hump curve, matching the original PCGC wave. */
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 90' preserveAspectRatio='none'><path fill='black' d='M0,30 C90,30 270,8 360,8 C450,8 630,50 720,50 C810,50 990,8 1080,8 C1170,8 1350,30 1440,30 L1440,90 L0,90 Z'/></svg>");
+          mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 90' preserveAspectRatio='none'><path fill='black' d='M0,30 C90,30 270,8 360,8 C450,8 630,50 720,50 C810,50 990,8 1080,8 C1170,8 1350,30 1440,30 L1440,90 L0,90 Z'/></svg>");
+  -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
 }
 @media (max-width: 720px) {
-  .wave-divider::before { top: -16px; height: 32px; }
+  .wave-divider::before { height: 56px; }
 }
+
+/* When a hero is followed by a wave-divider, give it extra bottom
+   padding so its content doesn't get covered by the wave overlay. */
+.hero:has(+ .wave-divider) { padding-bottom: 8rem; }
+@media (max-width: 720px) { .hero:has(+ .wave-divider) { padding-bottom: 5rem; } }
 
 /* Photo block */
 .photo-block { position: relative; }

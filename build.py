@@ -173,8 +173,12 @@ def page_home():
                 <span><b>2-year</b> bumper-to-bumper warranty</span>
               </div>
             </div>
-            <img src="/assets/breezy-ev-teal.jpg" alt="Teal 6-seater Breezy EV golf cart with lifted off-road tires" width="800" height="752" fetchpriority="high">
+            <img src="/assets/photos/breezy-ev-lake-grass.jpg" alt="Teal 6-seater Breezy EV golf cart with lifted off-road tires beside East Texas lake" width="800" height="600" fetchpriority="high">
           </div>
+        </section>
+
+        <section class="band" style="padding:0; background:#000;">
+          <img src="/assets/photos/hero-sign-corvette.jpg" alt="Polk County Golf Carts shop sign with a blue Breezy EV cart parked next to a blue Corvette with BREEZY license plate" style="width:100%; display:block; max-height:520px; object-fit:cover;" loading="lazy">
         </section>
 
         <section class="alt">
@@ -289,7 +293,7 @@ def page_carts():
                 <a class="btn btn-outline" href="/contact/">Get a quote</a>
               </div>
             </div>
-            <img src="/assets/breezy-ev-teal.jpg" alt="Teal 6-seater Breezy EV golf cart with off-road tires" width="800" height="752" fetchpriority="high">
+            <img src="/assets/photos/breezy-ev-lake-grass.jpg" alt="Teal 6-seater Breezy EV golf cart with off-road tires" width="800" height="752" fetchpriority="high">
           </div>
         </section>
 
@@ -361,13 +365,12 @@ def page_carts():
         <section>
           <div class="container split">
             <div class="photo-block">
-              <img src="/assets/breezy-ev-rear.jpg" alt="Rear view of a red Breezy EV cart with quilted white jump seats" width="900" height="1072" loading="lazy">
-              <div class="caption">Rear-facing jump seat with quilted upholstery — standard on 6-seater configurations.</div>
+              <img src="/assets/photos/breezy-ev-colors-grid.jpg" alt="Four Breezy EV golf carts in green, red, light blue, and dark blue showing color and seating options" width="800" height="640" loading="lazy">
             </div>
             <div>
               <span class="eyebrow">Built for the whole family</span>
               <h2>Room for six. Comfort for all of them.</h2>
-              <p class="lede-text">The six-seater configuration adds a rear-facing bench with the same quilted upholstery as the front. Flip it down and you've got a flat utility deck for hauling.</p>
+              <p class="lede-text">The six-seater configuration adds a rear-facing bench with the same quilted upholstery as the front. Pick a 4-seater for everyday cruising, a 6-seater for the whole family.</p>
               <ul class="checks">
                 <li>Independent rear suspension for a smoother ride</li>
                 <li>Quilted vinyl seats — easy to clean, hot-weather friendly</li>
@@ -379,6 +382,24 @@ def page_carts():
         </section>
 
         <section class="alt">
+          <div class="container">
+            <div class="section-head center" style="margin-left:auto; margin-right:auto; text-align:center">
+              <span class="eyebrow">Gallery</span>
+              <h2>Real carts. Real customers.</h2>
+              <p class="lede-text">A few that have rolled out of our Livingston shop.</p>
+            </div>
+            <div class="photo-grid">
+              <img src="/assets/photos/sunset-carts-sign.jpg" alt="Two lifted Breezy EV carts photographed at sunset with the PCGC sign between them" loading="lazy">
+              <img src="/assets/photos/texas-cart-alamo.jpg" alt="Yamaha golf cart with a Texas-flag wrap parked in front of the Alamo" loading="lazy">
+              <img src="/assets/photos/breezy-ev-lakeside.jpg" alt="Teal Breezy EV golf cart with quilted leather seats by a lake" loading="lazy">
+              <img src="/assets/photos/cart-red-lifted.jpg" alt="Red lifted EZGO golf cart with off-road tires" loading="lazy">
+              <img src="/assets/photos/cart-blue-tempo.jpg" alt="Blue Club Car Tempo with chrome wheels" loading="lazy">
+              <img src="/assets/photos/cart-white-chrome.jpg" alt="White Club Car Tempo with chrome wheels and grey upholstery" loading="lazy">
+            </div>
+          </div>
+        </section>
+
+        <section>
           <div class="container center">
             <h2>Ready to see one in person?</h2>
             <p class="lede-text">We're in Livingston, just off FM 3277. Stop by, take one for a spin, ask anything.</p>
@@ -483,7 +504,7 @@ def page_services():
                 <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">Book a free consultation</a>
               </div>
               <div class="photo-block">
-                <img src="/assets/custom-builds.jpg" alt="Collage of customized golf carts built by Polk County Golf Carts" width="800" height="640" loading="lazy">
+                <img src="/assets/photos/texas-cart-alamo.jpg" alt="Yamaha golf cart with a Texas-flag wrap parked in front of the Alamo" width="800" height="1200" loading="lazy">
               </div>
             </div>
             <div class="cards" style="margin-top:3rem">
@@ -522,10 +543,36 @@ def page_services():
         </section>
 
         <section class="alt">
-          <div class="container center">
-            <h2>Free consultation, free pickup &amp; delivery.</h2>
-            <p class="lede-text">Within {BIZ['delivery_radius']} miles of Livingston, we'll come grab your cart at no charge. Outside the area, we'll quote it honest.</p>
-            <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+          <div class="container split">
+            <div>
+              <span class="eyebrow">Pickup &amp; delivery</span>
+              <h2>We come to you.</h2>
+              <p class="lede-text">Free pickup &amp; delivery within {BIZ['delivery_radius']} miles of Livingston. Our branded rig and trailer is on the road every week serving {BIZ['service_area']}.</p>
+              <ul class="checks">
+                <li>Free roundtrip within {BIZ['delivery_radius']} miles of our shop</li>
+                <li>Honest flat-rate quote outside the area</li>
+                <li>Event &amp; resort fleet delivery</li>
+              </ul>
+              <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+            </div>
+            <div class="photo-block">
+              <img src="/assets/photos/truck-towing-carts.jpg" alt="PCGC branded GMC truck towing a trailer with two golf carts" width="1200" height="600" loading="lazy">
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="container split reverse">
+            <div class="photo-block">
+              <img src="/assets/photos/rental-fleet-resort.jpg" alt="Fleet of Yamaha golf carts at Two Creeks Crossing Resort" width="1200" height="675" loading="lazy">
+            </div>
+            <div>
+              <span class="eyebrow">Resort &amp; event service</span>
+              <h2>Fleet maintenance for the people who need it most.</h2>
+              <p class="lede-text">Resorts, RV parks, events — wherever golf carts run all day, every day. We service whole fleets on regular schedules, plus emergency calls.</p>
+              <p>If you run a property in East Texas with carts, let's talk about a maintenance contract that keeps your fleet on the path instead of in the shop.</p>
+              <a class="btn btn-ghost" href="/contact/">Get a fleet quote</a>
+            </div>
           </div>
         </section>
         """)
@@ -559,6 +606,24 @@ def page_about():
               <p>What started as a hobby quickly turned into a thriving business. But our goal hasn't changed: <b>make sure you, our customer, are satisfied</b>. We do that by providing honest and quick service at a reasonable price, with options for every budget.</p>
               <p>You have a lot of choices when it comes to customizing or servicing your golf cart. We're grateful you'd consider us for yours.</p>
               <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Talk to John today</a>
+            </div>
+            <div class="photo-block">
+              <img src="/assets/photos/owner-john.jpg" alt="John, owner of Polk County Golf Carts, in front of the shop" width="1024" height="768" loading="lazy">
+              <div class="caption">John — owner, mechanic, and the guy who actually answers the phone.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="band" style="padding:0; background:#000;">
+          <img src="/assets/photos/shop-exterior.jpg" alt="The Polk County Golf Carts shop building with a teal cart parked out front" style="width:100%; display:block; max-height:480px; object-fit:cover;" loading="lazy">
+        </section>
+
+        <section class="alt">
+          <div class="container split">
+            <div>
+              <span class="eyebrow">Why us</span>
+              <h2>Family-shop attitude. Dealer-grade work.</h2>
+              <p class="lede-text">We're not a chain. We're not a franchise. We're the people next door who happen to be very good at golf carts — and who'll still answer when you call back two years later.</p>
             </div>
             <div>
               <div class="price-box" style="text-align:left">
@@ -638,9 +703,16 @@ def page_contact():
         + header("/contact/")
         + dedent(f"""\
         <section class="hero" style="padding-bottom:3rem">
-          <div class="container">
-            <h1>Let's talk carts.</h1>
-            <p class="lede">Call, text, or email. We answer fast — and if you're within {BIZ['delivery_radius']} miles of Livingston, we'll come to you.</p>
+          <div class="container hero-split">
+            <div>
+              <h1>Let's talk carts.</h1>
+              <p class="lede">Call, text, or email. We answer fast — and if you're within {BIZ['delivery_radius']} miles of Livingston, we'll come to you.</p>
+              <div class="hero-ctas">
+                <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 {BIZ['phone_primary']}</a>
+                <a class="btn btn-outline" href="mailto:{BIZ['email']}">Email us</a>
+              </div>
+            </div>
+            <img src="/assets/photos/shop-exterior.jpg" alt="The Polk County Golf Carts shop in Livingston, TX" width="1024" height="500" fetchpriority="high">
           </div>
         </section>
 

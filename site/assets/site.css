@@ -284,26 +284,24 @@ ul.checks li::before {
 .hero-split img { border-radius: var(--radius); box-shadow: var(--shadow-lg); transform: rotate(-1.5deg); }
 @media (max-width: 800px) { .hero-split { grid-template-columns: 1fr; } .hero-split img { transform: none; } }
 
-/* Wave divider — true vector wave, transparent background, spans
-   edge to edge as a section border. preserveAspectRatio="none" on
-   the SVG (combined with background-size 100% 100%) lets it flex
-   to any container width without pixelation. */
+/* Wave divider — inlined entirely in CSS as a data-URI SVG, so there
+   is no external file to load and nothing to clip or letterbox. The
+   path is a single closed shape: tapered to a point at both edges,
+   thickest at the two humps, narrower through the central valley —
+   the same silhouette as the original PCGC wave. preserveAspectRatio
+   is none so it spans edge-to-edge at any viewport width. */
 .wave-divider {
   display: block;
   width: 100%;
-  height: 50px;
+  height: 70px;
   margin: 0;
   padding: 0;
-  background: transparent url("/assets/logos/wave-divider.svg") no-repeat center / 100% 100%;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 28' preserveAspectRatio='none'><path fill='%232e7a8a' d='M0,18 C90,18 270,2 360,2 C450,2 630,18 720,18 C810,18 990,2 1080,2 C1170,2 1350,18 1440,18 C1350,18 1170,12 1080,12 C990,12 810,26 720,26 C630,26 450,12 360,12 C270,12 90,18 0,18 Z'/></svg>");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
 }
-@media (max-width: 720px) { .wave-divider { height: 32px; } }
-/* When a wave sits directly after a hero, pull it up so it visually
-   acts as the hero's bottom edge instead of floating with whitespace
-   above. */
-.hero + .wave-divider { margin-top: -2rem; }
-/* And tighten the gap below it so it reads as a border, not a
-   stand-alone band. */
-.wave-divider + section { padding-top: 2rem; }
+@media (max-width: 720px) { .wave-divider { height: 44px; } }
 
 /* Photo block */
 .photo-block { position: relative; }

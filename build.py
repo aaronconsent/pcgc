@@ -160,18 +160,20 @@ def page_home():
         + header("/")
         + dedent(f"""\
         <section class="hero">
-          <div class="container">
-            <h1>The cart you want, built and serviced by a neighbor you trust.</h1>
-            <p class="lede">Family-owned since {BIZ['founded']}, we sell brand-new Breezy EV carts, service every make, and customize anything from a fresh paint job to a full lift kit. Free pickup &amp; delivery within {BIZ['delivery_radius']} miles of Livingston.</p>
-            <div class="hero-ctas">
-              <a class="btn btn-coral" href="/carts/">See the new Breezy EV →</a>
-              <a class="btn btn-outline" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 {BIZ['phone_primary']}</a>
+          <div class="container hero-split">
+            <div>
+              <h1>The cart you want, built and serviced by a neighbor you trust.</h1>
+              <p class="lede">Family-owned since {BIZ['founded']}, we sell brand-new Breezy EV carts, service every make, and customize anything from a fresh paint job to a full lift kit. Free pickup &amp; delivery within {BIZ['delivery_radius']} miles of Livingston.</p>
+              <div class="hero-ctas">
+                <a class="btn btn-coral" href="/carts/">See the new Breezy EV →</a>
+                <a class="btn btn-outline" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 {BIZ['phone_primary']}</a>
+              </div>
+              <div class="hero-meta">
+                <span><b>★★★★★</b> 5.0 reviews · BBB Accredited</span>
+                <span><b>2-year</b> bumper-to-bumper warranty</span>
+              </div>
             </div>
-            <div class="hero-meta">
-              <span><b>★★★★★</b> 5.0 reviews · BBB Accredited</span>
-              <span><b>2-year</b> bumper-to-bumper warranty</span>
-              <span><b>Financing</b> through Lendmark, Mariner &amp; Synchrony</span>
-            </div>
+            <img src="/assets/breezy-ev-teal.jpg" alt="Teal 6-seater Breezy EV golf cart with lifted off-road tires" width="800" height="752" fetchpriority="high">
           </div>
         </section>
 
@@ -278,13 +280,16 @@ def page_carts():
         + header("/carts/")
         + dedent(f"""\
         <section class="hero" style="padding-bottom:3rem">
-          <div class="container">
-            <h1>The 2026 Breezy EV.</h1>
-            <p class="lede">Style. Comfort. Speed. Fun. The cart we'd put our family in — so we'd put yours in it too.</p>
-            <div class="hero-ctas">
-              <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">Call {BIZ['phone_primary']}</a>
-              <a class="btn btn-outline" href="/contact/">Get a quote</a>
+          <div class="container hero-split">
+            <div>
+              <h1>The 2026 Breezy EV.</h1>
+              <p class="lede">Style. Comfort. Speed. Fun. The cart we'd put our family in — so we'd put yours in it too.</p>
+              <div class="hero-ctas">
+                <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">Call {BIZ['phone_primary']}</a>
+                <a class="btn btn-outline" href="/contact/">Get a quote</a>
+              </div>
             </div>
+            <img src="/assets/breezy-ev-teal.jpg" alt="Teal 6-seater Breezy EV golf cart with off-road tires" width="800" height="752" fetchpriority="high">
           </div>
         </section>
 
@@ -349,6 +354,26 @@ def page_carts():
                 <p class="muted">We work with <b>Lendmark Financial</b>, <b>Mariner</b>, and <b>Synchrony Bank</b>. Apply in minutes, answer same-day.</p>
                 <a class="btn btn-teal" href="tel:{BIZ['phone_primary'].replace('-','')}">Apply by phone</a>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="container split">
+            <div class="photo-block">
+              <img src="/assets/breezy-ev-rear.jpg" alt="Rear view of a red Breezy EV cart with quilted white jump seats" width="900" height="1072" loading="lazy">
+              <div class="caption">Rear-facing jump seat with quilted upholstery — standard on 6-seater configurations.</div>
+            </div>
+            <div>
+              <span class="eyebrow">Built for the whole family</span>
+              <h2>Room for six. Comfort for all of them.</h2>
+              <p class="lede-text">The six-seater configuration adds a rear-facing bench with the same quilted upholstery as the front. Flip it down and you've got a flat utility deck for hauling.</p>
+              <ul class="checks">
+                <li>Independent rear suspension for a smoother ride</li>
+                <li>Quilted vinyl seats — easy to clean, hot-weather friendly</li>
+                <li>Brake lights, turn signals, license-plate mount</li>
+                <li>Trailer hitch receiver standard</li>
+              </ul>
             </div>
           </div>
         </section>
@@ -449,12 +474,19 @@ def page_services():
 
         <section>
           <div class="container">
-            <div class="section-head">
-              <span class="eyebrow">Custom builds</span>
-              <h2>Make it yours.</h2>
-              <p class="lede-text">Whether you want a jump seat added or a full ground-up build with custom paint and a Navitas controller, we'll work to your budget and your taste.</p>
+            <div class="split">
+              <div>
+                <span class="eyebrow">Custom builds</span>
+                <h2>You are not ordinary. So why should your cart be?</h2>
+                <p class="lede-text">Whether you want a jump seat added or a full ground-up build with custom paint and a Navitas controller, we'll work to your budget and your taste.</p>
+                <p>Lifts. Sound systems. Wheels. Paint. Controllers. Seats. We've done it. Look through real builds we've delivered to East Texas customers — yours could be next.</p>
+                <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">Book a free consultation</a>
+              </div>
+              <div class="photo-block">
+                <img src="/assets/custom-builds.jpg" alt="Collage of customized golf carts built by Polk County Golf Carts" width="800" height="640" loading="lazy">
+              </div>
             </div>
-            <div class="cards">
+            <div class="cards" style="margin-top:3rem">
               <div class="card">
                 <div class="icon">🎨</div>
                 <h3>Custom paint</h3>

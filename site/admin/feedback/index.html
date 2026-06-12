@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Feedback Review · PCGC</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/logos/logo-color.svg">
+  <link rel="stylesheet" href="/assets/site.css">
+  <style>
+    .fb-page { max-width: 960px; margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+    .fb-page h1 { color: var(--teal-dk); margin-bottom: .35rem; }
+    .fb-page .sub { color: var(--ink-soft); margin-bottom: 2rem; }
+    .fb-status { text-align: center; padding: 3rem; color: var(--ink-soft); }
+    .fb-entry {
+      background: #fff; border: 1px solid var(--line);
+      border-left: 4px solid var(--coral);
+      border-radius: 10px; padding: 1.25rem 1.4rem;
+      margin-bottom: 1rem;
+      box-shadow: var(--shadow);
+    }
+    .fb-entry header {
+      display: flex; gap: 1rem; align-items: baseline;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      font-size: .85rem; color: var(--ink-soft);
+      margin-bottom: .65rem;
+    }
+    .fb-entry .ts { font-weight: 600; color: var(--teal-dk); }
+    .fb-entry .url a { color: var(--teal-dk); word-break: break-all; font-size: .85rem; }
+    .fb-entry .text {
+      white-space: pre-wrap; font-size: 1rem; color: var(--ink);
+      margin: .5rem 0 .8rem; line-height: 1.55;
+    }
+    .fb-entry footer { font-size: .78rem; color: var(--ink-soft); margin-top: .65rem; }
+    .fb-imgs { display: flex; gap: .5rem; margin-top: .85rem; flex-wrap: wrap; }
+    .fb-imgs a img {
+      width: 140px; height: 140px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      transition: transform .15s ease;
+    }
+    .fb-imgs a:hover img { transform: scale(1.04); }
+    .fb-empty { text-align: center; padding: 3rem 1rem; color: var(--ink-soft); }
+    .fb-empty h2 { color: var(--teal-dk); }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="/">
+        <img class="brand-mark" src="/assets/logos/logo-color.svg" alt="" width="144" height="112" aria-hidden="true">
+        <span class="brand-text">Polk County Golf Carts<small>Admin · Feedback</small></span>
+      </a>
+    </div>
+  </header>
+  <main class="fb-page">
+    <h1>Feedback</h1>
+    <p class="sub">Submissions from the on-site feedback widget, newest first.</p>
+    <div id="fb-out" class="fb-status">Loading…</div>
+  </main>
+  <script>
+  (async () => {
+    const out = document.getElementById('fb-out');
+    let data;
+    try {
+      const res = await fetch('/api/feedback', { credentials: 'include' });
+      if (res.status === 401) {
+        out.textContent = "Authentication failed. Reload to try again.";
+        return;
+      }
+      if (!res.ok) {
+        const txt = await res.text();
+        out.textContent = 'Error ' + res.status + ': ' + txt;
+        return;
+      }
+      data = await res.json();
+    } catch (err) {
+      out.textContent = 'Network error: ' + err.message;
+      return;
+    }
+    const entries = (data && data.entries) || [];
+    if (!entries.length) {
+      out.outerHTML = '<div class="fb-empty"><h2>No feedback yet</h2><p>Submissions through the floating widget will appear here.</p></div>';
+      return;
+    }
+    out.className = '';
+    out.textContent = '';
+    for (const e of entries) {
+      const wrap = document.createElement('article');
+      wrap.className = 'fb-entry';
+      const head = document.createElement('header');
+      const ts = document.createElement('span');
+      ts.className = 'ts';
+      ts.textContent = new Date(e.ts).toLocaleString();
+      head.appendChild(ts);
+      const urlEl = document.createElement('span');
+      urlEl.className = 'url';
+      if (e.url) {
+        urlEl.innerHTML = 'on <a target="_blank" rel="noopener"></a>';
+        const a = urlEl.querySelector('a');
+        a.href = e.url;
+        try { a.textContent = new URL(e.url).pathname + new URL(e.url).search; }
+        catch { a.textContent = e.url; }
+      }
+      head.appendChild(urlEl);
+      wrap.appendChild(head);
+
+      const text = document.createElement('div');
+      text.className = 'text';
+      text.textContent = e.text;
+      wrap.appendChild(text);
+
+      if (e.images && e.images.length) {
+        const imgs = document.createElement('div');
+        imgs.className = 'fb-imgs';
+        for (const im of e.images) {
+          const a = document.createElement('a');
+          a.href = '/api/feedback/image/' + encodeURIComponent(im.key);
+          a.target = '_blank';
+          a.rel = 'noopener';
+          const img = document.createElement('img');
+          img.src = a.href;
+          img.alt = im.name || '';
+          img.loading = 'lazy';
+          a.appendChild(img);
+          imgs.appendChild(a);
+        }
+        wrap.appendChild(imgs);
+      }
+
+      const foot = document.createElement('footer');
+      const ua = e.ua ? (' · ' + (e.ua.length > 80 ? e.ua.slice(0, 80) + '…' : e.ua)) : '';
+      const country = e.country ? (' · ' + e.country) : '';
+      foot.textContent = 'id ' + e.id + country + ua;
+      wrap.appendChild(foot);
+
+      document.querySelector('.fb-page').appendChild(wrap);
+    }
+  })();
+  </script>
+</body>
+</html>

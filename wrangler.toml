@@ -1,8 +1,23 @@
 name = "pcgc"
+main = "src/worker.js"
 compatibility_date = "2026-04-01"
 
-# Pure static site — no Worker script, just serve files from ./site.
-# Cloudflare's static assets handler does directory-index resolution
-# automatically, so /about-us/ -> site/about-us/index.html works.
+# Static-asset bucket: the worker calls env.ASSETS.fetch(request) for
+# anything not handled by /api/feedback.* routes. Directory-index
+# resolution (e.g. /about/ -> site/about/index.html) happens automatically.
 [assets]
 directory = "./site"
+binding = "ASSETS"
+
+# Stores one record per feedback submission (text, page url, image refs).
+# Create with:  npx wrangler kv:namespace create FEEDBACK_KV
+# Paste the returned id below, then `npx wrangler deploy`.
+[[kv_namespaces]]
+binding = "FEEDBACK_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Stores the attached image bytes.
+# Create with:  npx wrangler r2 bucket create pcgc-feedback
+[[r2_buckets]]
+binding = "FEEDBACK_R2"
+bucket_name = "pcgc-feedback"

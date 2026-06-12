@@ -10,11 +10,9 @@ directory = "./site"
 binding = "ASSETS"
 
 # Stores one record per feedback submission (text, page url, image refs).
-# Create with:  npx wrangler kv:namespace create FEEDBACK_KV
-# Paste the returned id below, then `npx wrangler deploy`.
 [[kv_namespaces]]
 binding = "FEEDBACK_KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "be6aa9b721f34655b1596c8d8660097f"
 
 # Stores the attached image bytes.
 # Create with:  npx wrangler r2 bucket create pcgc-feedback

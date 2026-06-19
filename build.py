@@ -199,6 +199,100 @@ def footer():
 
 import json as _json
 
+TOWN_PAGES = {
+    "livingston-tx": {
+        "name": "Livingston, TX",
+        "short_name": "Livingston",
+        "county": "Polk County",
+        "distance_mi": 0,
+        "delivery": "free",
+        "hook": "We're right here. Our shop is on FM 3277 — the showroom you can be at in five minutes.",
+        "use_cases": [
+            ("Neighborhood cruising", "Cul-de-sac runs, kids to school, the trip to the mailbox that becomes the long way around."),
+            ("Lake Livingston access", "Dock-to-driveway runs in summer, ramp shuttles in tournament season."),
+            ("Polk County events", "Tailgates, parades, the fairgrounds, anywhere a golf cart can fit through a gate."),
+        ],
+        "nearby": "Lake Livingston State Park · Polk County Courthouse · US-59 corridor · Naskila Casino",
+        "lifestyle_angle": "hometown advantage",
+    },
+    "onalaska-tx": {
+        "name": "Onalaska, TX",
+        "short_name": "Onalaska",
+        "county": "Polk County",
+        "distance_mi": 16,
+        "delivery": "free",
+        "hook": "Lake Livingston cart life starts in Onalaska. We deliver free across the lake's west and south shores.",
+        "use_cases": [
+            ("Lake-house lifestyle", "Dock-to-cabin runs, neighborhood cruising on the lakefront streets, ramp-to-house haul on tournament weekends."),
+            ("Weekend property maintenance", "A 6-seater carries the cooler, the kids, the dog, and the fishing rods in one trip."),
+            ("Yaupon Cove & Beacon Bay", "The kind of subdivisions where a golf cart is the right second vehicle, not a luxury."),
+        ],
+        "nearby": "Lake Livingston west shore · Lake Livingston Resort · Yaupon Cove · Beacon Bay",
+        "lifestyle_angle": "lake life",
+    },
+    "coldspring-tx": {
+        "name": "Coldspring, TX",
+        "short_name": "Coldspring",
+        "county": "San Jacinto County",
+        "distance_mi": 22,
+        "delivery": "free",
+        "hook": "Coldspring ranches and acreage. The kind of property where a lifted cart is the truck before the truck.",
+        "use_cases": [
+            ("Ranch & deer-lease use", "Feed runs, fence checks, hunting season hauling — the Breeze 4L and Terrain 6 are built for this."),
+            ("Sam Houston National Forest access", "Trailheads, primitive camping, the back roads that pavement forgot."),
+            ("South shore Lake Livingston", "The quieter side of the lake, where deliveries are still inside our free 25-mile range."),
+        ],
+        "nearby": "Sam Houston National Forest · Trinity River · Lake Livingston south shore",
+        "lifestyle_angle": "ranch country",
+    },
+    "huntsville-tx": {
+        "name": "Huntsville, TX",
+        "short_name": "Huntsville",
+        "county": "Walker County",
+        "distance_mi": 30,
+        "delivery": "extended",
+        "hook": "Sam Houston State, tailgating, and the rolling hills outside town. Just inside our extended service area.",
+        "use_cases": [
+            ("SHSU tailgating", "Bowers Stadium and the rest — a 6-seater Breezy EV beats a folding chair, every time."),
+            ("Huntsville State Park", "Roads, trails, a place to park the camper. Carts that handle gravel matter here."),
+            ("Acreage outside town", "The five-acre lots off the loop — the place where 5\" street stance stops being enough."),
+        ],
+        "nearby": "Sam Houston State University · Huntsville State Park · Sam Houston statue · I-45 corridor",
+        "lifestyle_angle": "college town + state park",
+    },
+    "lufkin-tx": {
+        "name": "Lufkin, TX",
+        "short_name": "Lufkin",
+        "county": "Angelina County",
+        "distance_mi": 50,
+        "delivery": "extended",
+        "hook": "Deep East Texas. We deliver to Lufkin — flat $75 extended fee, no surprise charges.",
+        "use_cases": [
+            ("Retiree neighborhoods", "Pinetop, Crown Colony, Walnut Hill — communities where carts replace second cars."),
+            ("Acreage & timber-country properties", "Lufkin's outskirts run to thousands of acres. A Terrain 6 covers it."),
+            ("Angelina College tailgating", "Same script as Huntsville: a six-seater wins."),
+        ],
+        "nearby": "Angelina College · Ellen Trout Zoo · US-59 corridor · Sam Rayburn Reservoir",
+        "lifestyle_angle": "the big East Texas town",
+    },
+    "woodville-tx": {
+        "name": "Woodville, TX",
+        "short_name": "Woodville",
+        "county": "Tyler County",
+        "distance_mi": 45,
+        "delivery": "extended",
+        "hook": "Dogwood Trails country. The lake-and-pines life that an electric cart was built for.",
+        "use_cases": [
+            ("Lake Tejas & B.A. Steinhagen Lake", "Two of the prettiest lakes in East Texas. A lifted Breezy EV handles the gravel roads in."),
+            ("Dogwood Trails Festival", "The kind of small-town event where everyone notices a custom-painted cart."),
+            ("Big Thicket access", "Trail-adjacent properties where a 7-inch ground-clearance cart is the right tool."),
+        ],
+        "nearby": "B.A. Steinhagen Lake · Lake Tejas · Big Thicket National Preserve · Dogwood Trails",
+        "lifestyle_angle": "small-town lake & pines",
+    },
+}
+
+
 BREEZY_EV_MODELS = {
     "breeze-4": {
         "name": "Breeze 4",
@@ -1625,6 +1719,257 @@ def page_breezy_model(slug):
     )
 
 
+# ---------------- Hidden /golf-carts/<town>/ pages ---------------- #
+#
+# Geo landing pages, one per town in the service area. Hidden the same
+# way as /breezy-ev/: noindex + robots Disallow + no sitemap + no nav.
+# Each page is ~800-1200 words of town-specific copy that wraps the
+# same lineup grid / contact CTA, so it reads as a real local page
+# rather than a doorway.
+
+def page_town(slug):
+    t = TOWN_PAGES[slug]
+    free = t["delivery"] == "free"
+    delivery_line = (
+        f"Free pickup &amp; delivery to {t['short_name']} — you're inside our {BIZ['delivery_radius']}-mile free zone."
+        if free else
+        f"{t['short_name']} sits in our extended service area. We deliver for a flat <b>$75</b> within {BIZ['extended_radius']} miles of Livingston."
+    )
+    use_case_html = "\n".join(
+        f'<div class="card"><h3>{title}</h3><p>{copy}</p></div>'
+        for title, copy in t["use_cases"]
+    )
+    lineup_cards = "\n".join(
+        f'<a class="card breezy-card" href="/breezy-ev/{m_slug}/">'
+        f'<img src="/assets/photos/breezy-ev/{m_slug}.jpg" alt="Breezy EV {m["name"]}" width="800" height="600" loading="lazy">'
+        f'<div class="card-body"><span class="eyebrow">{"Lifted" if m["lifted"] else "Street"}</span>'
+        f'<h3>{m["name"]}</h3><p class="muted">{m["tagline"]}</p></div>'
+        f'</a>'
+        for m_slug, m in BREEZY_EV_MODELS.items()
+    )
+    sd = breadcrumb_schema([
+        ("Home", "/"),
+        ("Golf carts by town", "/golf-carts/"),
+        (t["name"], f"/golf-carts/{slug}/"),
+    ])
+    return (
+        head(
+            f"Golf Carts in {t['name']} — Sales, Service & Delivery",
+            f"Polk County Golf Carts delivers brand-new Breezy EV carts, refurbished and used carts to {t['name']}. {t['hook']} Call {BIZ['phone_primary']} for a quote.",
+            f"/golf-carts/{slug}/",
+            og_slug="carts",
+            noindex=True,
+            structured_data=_json.dumps(sd),
+        )
+        + header(f"/golf-carts/{slug}/")
+        + dedent(f"""\
+        <section class="hero" style="padding-bottom:3rem">
+          <div class="container hero-split">
+            <div>
+              <span class="eyebrow">{t['county']} · {t['distance_mi']} mi from our shop</span>
+              <h1>Golf carts in {t['name']}.</h1>
+              <p class="lede">{t['hook']}</p>
+              <p class="hero-meta">{delivery_line}</p>
+              <div class="hero-ctas">
+                <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+                <a class="btn btn-outline" href="/breezy-ev/">See the lineup →</a>
+              </div>
+            </div>
+            <img src="/assets/photos/breezy-ev/breeze-6l.jpg" alt="Breezy EV cart for {t['short_name']} delivery" width="800" height="600" fetchpriority="high">
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container">
+            <div class="section-head">
+              <span class="eyebrow">Why {t['short_name']} customers buy from PCGC</span>
+              <h2>{t['short_name']}'s nearest Breezy EV dealer is in Livingston.</h2>
+              <p class="lede-text">PCGC is an <b>authorized Breezy EV dealer</b> with a brick-and-mortar showroom on FM 3277 — {t['distance_mi']} miles from {t['short_name']}. {"You're inside our free 25-mile pickup-and-delivery zone." if free else f"You're inside our extended 75-mile service area — flat $75 delivery, no surprises."} Family-owned since {BIZ['founded']}, BBB Accredited, 5-star Google reviews, and the only Breezy EV dealer in East Texas with a service center to keep the cart running after the sale.</p>
+            </div>
+            <div class="cards">
+              {use_case_html}
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="container">
+            <div class="section-head">
+              <span class="eyebrow">The lineup</span>
+              <h2>Four Breezy EVs. One delivers to {t['short_name']} next week.</h2>
+              <p class="lede-text">Every model ships with the same Lithium powertrain, the same 2-year + 8-year warranty, and the same CarPlay-equipped infotainment. What changes is the stance, the seats, and the terrain it's built for. <a href="/breezy-ev/compare/">Compare them side-by-side →</a></p>
+            </div>
+            <div class="cards breezy-grid">
+              {lineup_cards}
+            </div>
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container split">
+            <div>
+              <span class="eyebrow">{t['lifestyle_angle']}</span>
+              <h2>Built for the way {t['short_name']} actually rides.</h2>
+              <p>{t['short_name']} sits near {t['nearby']}. PCGC builds and services carts for {t['short_name']}-area customers every week — from {t['use_cases'][0][0].lower()} to {t['use_cases'][1][0].lower()}, with the lift, tires, and powertrain to match.</p>
+              <ul class="checks">
+                <li><b>BBB Accredited · 5-star Google reviews</b></li>
+                <li>{"Free pickup &amp; delivery to " + t['short_name'] if free else "$75 flat extended delivery to " + t['short_name']}</li>
+                <li>Financing through Lendmark Financial &amp; Dealer Direct</li>
+                <li>Custom paint, lift kits, sound systems &amp; more in-house</li>
+                <li>2-year warranty + 8-year Lithium battery warranty</li>
+              </ul>
+              <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Talk to Us today</a>
+            </div>
+            <div class="photo-block">
+              <img src="/assets/photos/shop-exterior.jpg" alt="Polk County Golf Carts shop in Livingston, Texas" width="1024" height="500" loading="lazy">
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="container center">
+            <h2>Ready to ride in {t['short_name']}?</h2>
+            <p class="lede-text">Call us. We'll quote it, deliver it, and stand behind it for the life of the cart.</p>
+            <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+            &nbsp;
+            <a class="btn btn-ghost" href="/breezy-ev/">See the four-model lineup →</a>
+          </div>
+        </section>
+        """)
+        + contact_strip()
+        + footer()
+    )
+
+
+def page_town_index():
+    """Hub page at /golf-carts/ that links out to each town page."""
+    items = "\n".join(
+        f'<a class="card" href="/golf-carts/{slug}/"><div class="card-body"><span class="eyebrow">{t["county"]} · {t["distance_mi"]} mi</span><h3>{t["name"]}</h3><p class="muted">{t["hook"][:120]}</p></div></a>'
+        for slug, t in TOWN_PAGES.items()
+    )
+    sd = breadcrumb_schema([("Home", "/"), ("Golf carts by town", "/golf-carts/")])
+    return (
+        head(
+            "Golf Cart Delivery Across East Texas",
+            "Polk County Golf Carts delivers and services golf carts across Livingston, Onalaska, Coldspring, Huntsville, Lufkin, and Woodville. Free pickup & delivery within 25 miles, extended up to 75.",
+            "/golf-carts/",
+            og_slug="carts",
+            noindex=True,
+            structured_data=_json.dumps(sd),
+        )
+        + header("/golf-carts/")
+        + dedent(f"""\
+        <section class="hero" style="padding-bottom:3rem">
+          <div class="container">
+            <h1>Golf carts, delivered to your town.</h1>
+            <p class="lede">We're based in Livingston, but we cover East Texas. Free pickup &amp; delivery within {BIZ['delivery_radius']} miles, extended service up to {BIZ['extended_radius']} miles for an additional charge.</p>
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container">
+            <div class="section-head">
+              <span class="eyebrow">Service area</span>
+              <h2>Pick your town.</h2>
+              <p class="lede-text">Each page covers what we deliver, who buys from us there, and how to schedule a test drive without crossing your fingers about whether we'll come out that far.</p>
+            </div>
+            <div class="cards">
+              {items}
+            </div>
+          </div>
+        </section>
+        """)
+        + contact_strip()
+        + footer()
+    )
+
+
+# ---------------- /leave-a-review/ + llms.txt + Reviews page ---------------- #
+
+def page_reviews():
+    """Public landing page at /leave-a-review/ — used as a tap target
+    from QR codes, business cards, post-service emails. Three platform
+    buttons + a soft escape hatch for "tell us first if something's
+    wrong" feedback. NOT hidden — this one's meant to be linked from
+    follow-up messages."""
+    google_review_url = (
+        # Until the GBP CID/place_id is captured, search.google.com is
+        # the most reliable fallback — the panel offers "Write a review".
+        "https://search.google.com/local/writereview?placeid="
+        # Aaron: replace with the actual placeid from your Google
+        # Business Profile when ready. Until then this falls back to
+        # the search URL below via JS-less click.
+    )
+    return (
+        head(
+            "Leave a Review · Polk County Golf Carts",
+            "Help future customers find Polk County Golf Carts — leave a quick review on Google, BBB, or Facebook.",
+            "/leave-a-review/",
+            og_slug="contact",
+            noindex=False,
+        )
+        + header("/leave-a-review/")
+        + dedent(f"""\
+        <section class="hero" style="padding-bottom:3rem">
+          <div class="container">
+            <h1>Tell folks about your cart.</h1>
+            <p class="lede">A 30-second review on Google or BBB does more for our shop than any ad we could run. Pick the platform that's easiest for you — thank you in advance.</p>
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container">
+            <div class="section-head center" style="margin-left:auto; margin-right:auto; text-align:center">
+              <span class="eyebrow">One tap</span>
+              <h2>Where would you like to leave it?</h2>
+            </div>
+            <div class="cards" style="max-width:880px; margin: 0 auto;">
+              <a class="card" href="https://www.google.com/search?q=Polk+County+Golf+Carts+Livingston+TX+reviews" target="_blank" rel="noopener">
+                <div class="card-body" style="text-align:center; padding:1.5rem;">
+                  <div style="font-size:2.5rem; line-height:1; margin-bottom:.5rem;">⭐</div>
+                  <h3>Google</h3>
+                  <p class="muted">The big one. Most customers find us here. Search opens with our profile — tap "Write a review."</p>
+                </div>
+              </a>
+              <a class="card alt" href="{BIZ['bbb_url']}#reviews" target="_blank" rel="noopener">
+                <div class="card-body" style="text-align:center; padding:1.5rem;">
+                  <div style="font-size:2.5rem; line-height:1; margin-bottom:.5rem;">★</div>
+                  <h3>BBB</h3>
+                  <p class="muted">Our Better Business Bureau profile — accredited since we opened.</p>
+                </div>
+              </a>
+              <a class="card" href="https://www.facebook.com/polkcountygolfcarts/reviews" target="_blank" rel="noopener">
+                <div class="card-body" style="text-align:center; padding:1.5rem;">
+                  <div style="font-size:2.5rem; line-height:1; margin-bottom:.5rem;">👍</div>
+                  <h3>Facebook</h3>
+                  <p class="muted">Our Facebook page — the same place we post new builds and customer photos.</p>
+                </div>
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="container split">
+            <div>
+              <span class="eyebrow">Something off?</span>
+              <h2>Tell us first.</h2>
+              <p class="lede-text">If anything didn't go right, we'd rather hear from you directly than read about it online. Call John — we'll make it right.</p>
+              <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 {BIZ['phone_primary']}</a>
+              &nbsp;
+              <a class="btn btn-ghost" href="mailto:{BIZ['email']}">{BIZ['email']}</a>
+            </div>
+            <div class="photo-block">
+              <img src="/assets/photos/owner-john.jpg" alt="John, owner of Polk County Golf Carts" width="1024" height="768" loading="lazy">
+            </div>
+          </div>
+        </section>
+        """)
+        + contact_strip()
+        + footer()
+    )
+
+
 # ---------------- Build ---------------- #
 
 PAGES = {
@@ -1638,9 +1983,16 @@ PAGES = {
     # sitemap + no nav link). Direct URL only until client signs off.
     "breezy-ev/index.html":          page_breezy_lineup,
     "breezy-ev/compare/index.html":  page_breezy_compare,
+    # Hidden tier-3 town pages — same hidden-while-reviewing pattern.
+    "golf-carts/index.html":         page_town_index,
+    # Public review landing page — meant to be linked from post-sale
+    # follow-ups and QR codes, NOT hidden.
+    "leave-a-review/index.html":     page_reviews,
 }
 for _slug in BREEZY_EV_MODELS:
     PAGES[f"breezy-ev/{_slug}/index.html"] = (lambda s=_slug: page_breezy_model(s))
+for _slug in TOWN_PAGES:
+    PAGES[f"golf-carts/{_slug}/index.html"] = (lambda s=_slug: page_town(s))
 
 
 def main():
@@ -1659,9 +2011,10 @@ def main():
             "Disallow: /api/\n"
             "Disallow: /rentals/\n"
             "Disallow: /breezy-ev/\n"
+            "Disallow: /golf-carts/\n"
             "Sitemap: https://polkcountygolfcarts.com/sitemap.xml\n"
         )
-    urls = ["/", "/carts/", "/services/", "/about/", "/contact/", "/privacy/"]
+    urls = ["/", "/carts/", "/services/", "/about/", "/contact/", "/privacy/", "/leave-a-review/"]
     sm = ['<?xml version="1.0" encoding="UTF-8"?>',
           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     for u in urls:
@@ -1669,7 +2022,56 @@ def main():
     sm.append("</urlset>")
     with open(os.path.join(ROOT, "sitemap.xml"), "w") as f:
         f.write("\n".join(sm))
-    print(f"\nDone. Built {len(PAGES)} pages + robots + sitemap.")
+
+    # llms.txt — concise summary for AI engines (ChatGPT, Perplexity,
+    # Claude, Gemini) modeled on llmstxt.org. Lives at the site root.
+    breezy_lines = "\n".join(
+        f"- [{m['name']}](https://polkcountygolfcarts.com/breezy-ev/{slug}/) — {m['seats']}-seater, "
+        f"{'lifted' if m['lifted'] else 'street'}, {m['range_mi']} mi range, "
+        f"from ${m['price_from']:,}"
+        for slug, m in BREEZY_EV_MODELS.items()
+    )
+    llms = f"""# {BIZ['name']}
+
+> {BIZ['tagline']} in Livingston, Texas. Authorized Breezy EV golf cart dealer for East Texas — sales, service, custom builds, and rentals.
+
+## About
+- Founded {BIZ['founded']} · Family-owned · BBB Accredited
+- Address: 1732 FM 3277, Livingston, TX 77351
+- Phone: {BIZ['phone_primary']} (alt {BIZ['phone_secondary']})
+- Email: {BIZ['email']}
+- Hours: Tue-Fri 9a-4p, Saturday 9a-2p, Closed Sun-Mon and holidays
+- Service area: {BIZ['service_area']} — free pickup & delivery within {BIZ['delivery_radius']} miles, extended up to {BIZ['extended_radius']} miles for a flat $75
+
+## What we sell
+{BIZ['inventory_line']}
+
+### Breezy EV models we stock
+{breezy_lines}
+
+## Services
+- 20-Point Inspection (Full Service Package) from $165
+- Battery service (lead-acid and Lithium — Bolt Energy + White Lightening)
+- Custom paint, lift kits, wheels & tires, sound systems, rear flip seats
+- Controller and motor upgrades (Navitas + White Lightening)
+- 10% off Parts & Labor — valid 1 year from initial service
+
+## Financing
+- Lendmark Financial
+- Dealer Direct
+
+## Key pages
+- [Home](https://polkcountygolfcarts.com/)
+- [Carts for sale](https://polkcountygolfcarts.com/carts/)
+- [Services & Custom Builds](https://polkcountygolfcarts.com/services/)
+- [About / our story](https://polkcountygolfcarts.com/about/)
+- [Contact](https://polkcountygolfcarts.com/contact/)
+- [Leave a review](https://polkcountygolfcarts.com/leave-a-review/)
+"""
+    with open(os.path.join(ROOT, "llms.txt"), "w") as f:
+        f.write(llms)
+
+    print(f"\nDone. Built {len(PAGES)} pages + robots + sitemap + llms.txt.")
 
 
 if __name__ == "__main__":

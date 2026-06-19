@@ -25,6 +25,7 @@ BIZ = {
     "founded": 2020,
     "service_area": "San Jacinto, Polk, Walker, Trinity & Angelina counties",
     "delivery_radius": 25,
+    "extended_radius": 75,
     "bbb_url": "https://www.bbb.org/us/tx/livingston/profile/recreational-vehicles/polk-county-golf-carts-0825-1000223827",
     # Family-shop tagline used wherever we used to say "Family-owned since 2020".
     "tagline": "Serving our community as a family owned business since 2020",
@@ -125,7 +126,7 @@ def footer():
               <div>
                 <img class="foot-mark" src="/assets/logos/logo-white.svg" alt="{BIZ['name']}" width="120" height="92">
                 <h4 class="brand-text-foot">{BIZ['name']}</h4>
-                <p>{BIZ['tagline']} in Livingston, Texas. {BIZ['inventory_line']} We service and customize every make and deliver across {BIZ['service_area']}.</p>
+                <p>{BIZ['tagline']} in Livingston, Texas. {BIZ['inventory_line']} Free pickup &amp; delivery within {BIZ['delivery_radius']} miles, extended service up to {BIZ['extended_radius']} miles for an additional charge.</p>
                 <a class="bbb-badge" href="{BIZ['bbb_url']}" target="_blank" rel="noopener">★ BBB Accredited</a>
               </div>
               <div>
@@ -258,7 +259,7 @@ def page_home():
     return (
         head(
             "Golf Cart Sales, Service & Custom Builds in Livingston, TX",
-            "Polk County Golf Carts: brand-new Breezy EV, refurbished, and used carts — electric and gas — plus full service, custom builds, and free pickup & delivery within 25 miles of Livingston, TX.",
+            "Polk County Golf Carts: brand-new Breezy EV, refurbished, and used carts — electric and gas — plus full service, custom builds, and free pickup & delivery within 25 miles of Livingston, TX (extended service up to 75 miles).",
             "/",
         )
         + header("/")
@@ -267,7 +268,7 @@ def page_home():
           <div class="container hero-split">
             <div>
               <h1>The cart you want, built and serviced by a neighbor you trust.</h1>
-              <p class="lede">{BIZ['tagline']}. {BIZ['inventory_line']} Plus full service and custom builds from a fresh paint job to a full lift kit, with free pickup &amp; delivery within {BIZ['delivery_radius']} miles of Livingston.</p>
+              <p class="lede">{BIZ['tagline']}. {BIZ['inventory_line']} Plus full service and custom builds from a fresh paint job to a full lift kit, with free pickup &amp; delivery within {BIZ['delivery_radius']} miles of Livingston — extended service up to {BIZ['extended_radius']} miles for an additional charge.</p>
               <div class="hero-ctas">
                 <a class="btn btn-coral" href="/carts/">See the new Breezy EV →</a>
                 <a class="btn btn-outline" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 {BIZ['phone_primary']}</a>
@@ -366,8 +367,8 @@ def page_home():
           <div class="container">
             <div class="section-head center" style="margin-left:auto; margin-right:auto; text-align:center">
               <span class="eyebrow">Service area</span>
-              <h2>Free pickup &amp; delivery.</h2>
-              <p class="lede-text">Free pickup &amp; delivery within {BIZ['delivery_radius']} miles of our Livingston shop. Proudly serving {BIZ['service_area']}.</p>
+              <h2>Free within 25 miles. Extended up to 75.</h2>
+              <p class="lede-text"><b>Free pickup &amp; delivery</b> for any service within {BIZ['delivery_radius']} miles of our Livingston shop. <b>Extended service area</b> up to {BIZ['extended_radius']} miles for an additional charge — just call us for a quote. Proudly serving {BIZ['service_area']} and beyond.</p>
               <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
             </div>
           </div>
@@ -539,7 +540,7 @@ def page_services():
             <div>
               <span class="eyebrow">Full Service Package · 20-Point Inspection</span>
               <h2>Get your cart road-ready.</h2>
-              <p class="lede-text">Our 20-point service package covers every system on your cart, top to bottom. Drop it off — or let us pick it up free within {BIZ['delivery_radius']} miles.</p>
+              <p class="lede-text">Our 20-point service package covers every system on your cart, top to bottom. Drop it off — or let us pick it up <b>free within {BIZ['delivery_radius']} miles</b> (extended up to {BIZ['extended_radius']} miles for an additional charge).</p>
               <ul class="checks">
                 <li>Check &amp; refill rear-end gear oil</li>
                 <li>Clean &amp; adjust brake shoes</li>
@@ -648,12 +649,12 @@ def page_services():
           <div class="container split">
             <div>
               <span class="eyebrow">Pickup &amp; delivery</span>
-              <h2>Free pickup &amp; delivery.</h2>
-              <p class="lede-text">Free pickup &amp; delivery within {BIZ['delivery_radius']} miles of Livingston. Our branded rig and trailer is on the road every week serving {BIZ['service_area']}.</p>
+              <h2>Free within 25 miles. Extended up to 75.</h2>
+              <p class="lede-text">Our branded rig and trailer is on the road every week serving {BIZ['service_area']}. Free pickup &amp; delivery for any service within {BIZ['delivery_radius']} miles of Livingston, with an <b>extended service area up to {BIZ['extended_radius']} miles</b> for an additional charge.</p>
               <ul class="checks">
-                <li>Free roundtrip within {BIZ['delivery_radius']} miles of our shop</li>
-                <li>Honest flat-rate quote outside the area</li>
-                <li>Event &amp; resort fleet delivery</li>
+                <li><b>Free</b> roundtrip pickup &amp; delivery within {BIZ['delivery_radius']} miles of our shop</li>
+                <li><b>Extended service</b> up to {BIZ['extended_radius']} miles for an additional charge — call us for a flat-rate quote</li>
+                <li>Event &amp; resort fleet delivery available across the entire service area</li>
               </ul>
               <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
             </div>
@@ -734,7 +735,7 @@ def page_about():
                   <li>BBB Accredited business</li>
                   <li>5.0-star customer reviews</li>
                   <li>Serving our community as a family owned business since {BIZ['founded']}</li>
-                  <li>Free pickup &amp; delivery within {BIZ['delivery_radius']} miles</li>
+                  <li>Free pickup &amp; delivery within {BIZ['delivery_radius']} miles; extended up to {BIZ['extended_radius']} miles</li>
                   <li>Service for any make of cart</li>
                   <li>2-year warranty on new Breezy EV carts</li>
                 </ul>
@@ -808,7 +809,7 @@ def page_contact():
           <div class="container hero-split">
             <div>
               <h1>Let's talk carts.</h1>
-              <p class="lede">Call, text, or email. We answer fast — and offer free pickup &amp; delivery within {BIZ['delivery_radius']} miles of Livingston.</p>
+              <p class="lede">Call, text, or email. We answer fast — and offer free pickup &amp; delivery within {BIZ['delivery_radius']} miles of Livingston, plus an extended service area up to {BIZ['extended_radius']} miles for an additional charge.</p>
               <div class="hero-ctas">
                 <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 {BIZ['phone_primary']}</a>
                 <a class="btn btn-outline" href="mailto:{BIZ['email']}">Email us</a>
@@ -854,8 +855,8 @@ def page_contact():
           <div class="container split">
             <div>
               <span class="eyebrow">Service area</span>
-              <h2>Free pickup &amp; delivery within {BIZ['delivery_radius']} miles.</h2>
-              <p class="lede-text">We proudly serve {BIZ['service_area']}. Outside that range? Call us — we'll quote it honest.</p>
+              <h2>Free within 25 miles. Extended up to 75.</h2>
+              <p class="lede-text"><b>Free</b> pickup &amp; delivery for any service within {BIZ['delivery_radius']} miles of our Livingston shop. <b>Extended service area</b> up to {BIZ['extended_radius']} miles for an additional charge — give us a call for a flat-rate quote. We proudly serve {BIZ['service_area']} and beyond.</p>
               <ul class="checks">
                 <li>Polk County</li>
                 <li>San Jacinto County</li>

@@ -37,6 +37,9 @@ export default {
     ) {
       return serveImage(request, env, url);
     }
+    if (url.pathname === "/api/feedback" && request.method === "DELETE") {
+      return clearFeedback(request, env);
+    }
 
     // Everything else flows to the static assets bound at env.ASSETS.
     return env.ASSETS.fetch(request);
@@ -140,6 +143,40 @@ async function serveImage(request, env, url) {
       "cache-control": "private, max-age=300",
     },
   });
+}
+
+async function clearFeedback(request, env) {
+  if (!env.FEEDBACK_KV || !env.FEEDBACK_R2) {
+    return json({ error: "storage not configured" }, 503);
+  }
+  const auth = checkAdminAuth(request, env);
+  if (auth) return auth;
+
+  let cursor;
+  let kvDeleted = 0;
+  let r2Deleted = 0;
+  do {
+    const page = await env.FEEDBACK_KV.list({ prefix: "fb:", cursor });
+    for (const k of page.keys) {
+      const raw = await env.FEEDBACK_KV.get(k.name);
+      if (raw) {
+        try {
+          const rec = JSON.parse(raw);
+          for (const im of rec.images || []) {
+            if (im.key) {
+              await env.FEEDBACK_R2.delete(im.key);
+              r2Deleted++;
+            }
+          }
+        } catch {}
+      }
+      await env.FEEDBACK_KV.delete(k.name);
+      kvDeleted++;
+    }
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+
+  return json({ ok: true, kvDeleted, r2Deleted });
 }
 
 // Returns a Response if auth fails, or null if it passes.

@@ -38,7 +38,7 @@ OUT_DIR = os.path.join(ROOT, "site", "assets", "og")
 CARDS = [
     ("home",      "hero-sign-corvette.jpg",     "Brand-new. Refurbished. Used.",   "Polk County's family-owned golf cart shop"),
     ("carts",     "breezy-ev-lake-grass.jpg",   "The 2026 Breezy EV.",              "Lithium battery · 37 mph · 2-year warranty"),
-    ("services",  "truck-towing-carts.jpg",     "Service. Custom. Anything cart.",  "20-point inspection · custom builds · free pickup"),
+    ("services",  "truck-towing-orange-cart.jpg", "Service. Custom. Anything cart.", "20-point inspection · custom builds · free pickup"),
     ("about",     "owner-john.jpg",             "Family-owned. Locally trusted.",   "Serving our community since 2020"),
     ("contact",   "shop-exterior.jpg",          "Let's talk carts.",                "1732 FM 3277 · Livingston, TX · 936-223-1182"),
     ("privacy",   "breezy-ev-lakeside.jpg",     "Polk County Golf Carts",           "Privacy Policy"),

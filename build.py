@@ -577,7 +577,7 @@ def page_services():
               <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
             </div>
             <div class="photo-block">
-              <img src="/assets/photos/truck-towing-carts.jpg" alt="PCGC branded GMC truck towing a trailer with two golf carts" width="1200" height="600" loading="lazy">
+              <img src="/assets/photos/truck-towing-orange-cart.jpg" alt="PCGC branded 'Cruise Different' GMC truck hitched to a trailer with an orange Breezy EV cart" width="1600" height="1200" loading="lazy">
             </div>
           </div>
         </section>

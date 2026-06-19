@@ -44,15 +44,76 @@
       </div>
     </header>
         <section class="hero" style="padding-bottom:3rem">
-          <div class="container">
-            <h1>Breezy EV at Polk County Golf Carts.</h1>
-            <p class="lede">Authorized Breezy EV dealer in Livingston, Texas. Four models, eight colors, one shop that delivers them to you. Test-drive any of them in person.</p>
-            <div class="hero-ctas">
-              <a class="btn btn-coral" href="tel:9362231182">📞 Call 936-223-1182</a>
-              <a class="btn btn-outline" href="/breezy-ev/compare/">Compare all four →</a>
+          <div class="container hero-split">
+            <div>
+              <h1>Breezy EV at Polk County Golf Carts.</h1>
+              <p class="lede">Authorized Breezy EV dealer in Livingston, Texas. Four models, eight colors, one shop that delivers them to you. Test-drive any of them in person.</p>
+              <div class="hero-ctas">
+                <a class="btn btn-coral" href="tel:9362231182">📞 Call 936-223-1182</a>
+                <a class="btn btn-outline" href="/breezy-ev/compare/">Compare all four →</a>
+              </div>
+            </div>
+            <div class="lineup-slideshow"
+                 role="region" aria-roledescription="carousel" aria-label="Breezy EV lineup"
+                 data-autoplay="5000">
+              <a class="slide is-active" href="/breezy-ev/breeze-4/" aria-hidden="false" tabindex="0"><img src="/assets/photos/breezy-ev/breeze-4.jpg" alt="Breezy EV Breeze 4" loading="eager" fetchpriority="high"><span class="slide-caption"><b>Breeze 4</b> · Street · 4-seater <em>→</em></span></a><a class="slide" href="/breezy-ev/breeze-4l/" aria-hidden="true" tabindex="-1"><img src="/assets/photos/breezy-ev/breeze-4l.jpg" alt="Breezy EV Breeze 4L" loading="lazy" fetchpriority="auto"><span class="slide-caption"><b>Breeze 4L</b> · Lifted · 4-seater <em>→</em></span></a><a class="slide" href="/breezy-ev/breeze-6l/" aria-hidden="true" tabindex="-1"><img src="/assets/photos/breezy-ev/breeze-6l.jpg" alt="Breezy EV Breeze 6L" loading="lazy" fetchpriority="auto"><span class="slide-caption"><b>Breeze 6L</b> · Lifted · 6-seater <em>→</em></span></a><a class="slide" href="/breezy-ev/terrain-6/" aria-hidden="true" tabindex="-1"><img src="/assets/photos/breezy-ev/terrain-6.jpg" alt="Breezy EV Terrain 6" loading="lazy" fetchpriority="auto"><span class="slide-caption"><b>Terrain 6</b> · Lifted · 6-seater <em>→</em></span></a>
+              <div class="slide-dots" role="tablist" aria-label="Choose a cart">
+                <button class="slide-dot is-active" type="button" role="tab" aria-selected="true" aria-label="Show Breeze 4" data-slide="0"></button><button class="slide-dot" type="button" role="tab" aria-selected="false" aria-label="Show Breeze 4L" data-slide="1"></button><button class="slide-dot" type="button" role="tab" aria-selected="false" aria-label="Show Breeze 6L" data-slide="2"></button><button class="slide-dot" type="button" role="tab" aria-selected="false" aria-label="Show Terrain 6" data-slide="3"></button>
+              </div>
+              <button class="slide-arrow slide-prev" type="button" aria-label="Previous cart">‹</button>
+              <button class="slide-arrow slide-next" type="button" aria-label="Next cart">›</button>
             </div>
           </div>
         </section>
+        <script>
+        (function(){
+          const root = document.querySelector('.lineup-slideshow');
+          if (!root) return;
+          const slides = root.querySelectorAll('.slide');
+          const dots = root.querySelectorAll('.slide-dot');
+          const total = slides.length;
+          let i = 0, timer = null;
+          const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          const delay = reduced ? 0 : (parseInt(root.dataset.autoplay, 10) || 5000);
+
+          function show(next){
+            slides[i].classList.remove('is-active');
+            slides[i].setAttribute('aria-hidden', 'true');
+            slides[i].setAttribute('tabindex', '-1');
+            dots[i].classList.remove('is-active');
+            dots[i].setAttribute('aria-selected', 'false');
+            i = (next + total) % total;
+            slides[i].classList.add('is-active');
+            slides[i].setAttribute('aria-hidden', 'false');
+            slides[i].setAttribute('tabindex', '0');
+            dots[i].classList.add('is-active');
+            dots[i].setAttribute('aria-selected', 'true');
+          }
+          function start(){ if (!delay || timer) return; timer = setInterval(() => show(i + 1), delay); }
+          function stop(){ if (timer) { clearInterval(timer); timer = null; } }
+
+          dots.forEach((d) => d.addEventListener('click', () => { stop(); show(parseInt(d.dataset.slide, 10)); start(); }));
+          root.querySelector('.slide-prev').addEventListener('click', () => { stop(); show(i - 1); start(); });
+          root.querySelector('.slide-next').addEventListener('click', () => { stop(); show(i + 1); start(); });
+          root.addEventListener('mouseenter', stop);
+          root.addEventListener('mouseleave', start);
+          root.addEventListener('focusin', stop);
+          root.addEventListener('focusout', start);
+
+          // Touch swipe (mobile)
+          let touchX = null;
+          root.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; stop(); }, {passive:true});
+          root.addEventListener('touchend', (e) => {
+            if (touchX === null) return;
+            const dx = e.changedTouches[0].clientX - touchX;
+            if (Math.abs(dx) > 40) show(dx < 0 ? i + 1 : i - 1);
+            touchX = null;
+            start();
+          });
+
+          start();
+        })();
+        </script>
 
         <section class="alt">
           <div class="container">

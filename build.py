@@ -1106,15 +1106,85 @@ def page_breezy_lineup():
         + header("/breezy-ev/")
         + dedent(f"""\
         <section class="hero" style="padding-bottom:3rem">
-          <div class="container">
-            <h1>Breezy EV at Polk County Golf Carts.</h1>
-            <p class="lede">Authorized Breezy EV dealer in Livingston, Texas. Four models, eight colors, one shop that delivers them to you. Test-drive any of them in person.</p>
-            <div class="hero-ctas">
-              <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
-              <a class="btn btn-outline" href="/breezy-ev/compare/">Compare all four →</a>
+          <div class="container hero-split">
+            <div>
+              <h1>Breezy EV at Polk County Golf Carts.</h1>
+              <p class="lede">Authorized Breezy EV dealer in Livingston, Texas. Four models, eight colors, one shop that delivers them to you. Test-drive any of them in person.</p>
+              <div class="hero-ctas">
+                <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+                <a class="btn btn-outline" href="/breezy-ev/compare/">Compare all four →</a>
+              </div>
+            </div>
+            <div class="lineup-slideshow"
+                 role="region" aria-roledescription="carousel" aria-label="Breezy EV lineup"
+                 data-autoplay="5000">
+              {''.join(
+                f'<a class="slide{" is-active" if i == 0 else ""}" href="/breezy-ev/{slug}/" aria-hidden="{"false" if i == 0 else "true"}" tabindex="{"0" if i == 0 else "-1"}">'
+                f'<img src="/assets/photos/breezy-ev/{slug}.jpg" alt="Breezy EV {m["name"]}" loading="{"eager" if i == 0 else "lazy"}" fetchpriority="{"high" if i == 0 else "auto"}">'
+                f'<span class="slide-caption"><b>{m["name"]}</b> · {"Lifted" if m["lifted"] else "Street"} · {m["seats"]}-seater <em>→</em></span>'
+                f'</a>'
+                for i, (slug, m) in enumerate(BREEZY_EV_MODELS.items())
+              )}
+              <div class="slide-dots" role="tablist" aria-label="Choose a cart">
+                {''.join(
+                  f'<button class="slide-dot{" is-active" if i == 0 else ""}" type="button" role="tab" aria-selected="{"true" if i == 0 else "false"}" aria-label="Show {m["name"]}" data-slide="{i}"></button>'
+                  for i, (slug, m) in enumerate(BREEZY_EV_MODELS.items())
+                )}
+              </div>
+              <button class="slide-arrow slide-prev" type="button" aria-label="Previous cart">‹</button>
+              <button class="slide-arrow slide-next" type="button" aria-label="Next cart">›</button>
             </div>
           </div>
         </section>
+        <script>
+        (function(){{
+          const root = document.querySelector('.lineup-slideshow');
+          if (!root) return;
+          const slides = root.querySelectorAll('.slide');
+          const dots = root.querySelectorAll('.slide-dot');
+          const total = slides.length;
+          let i = 0, timer = null;
+          const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          const delay = reduced ? 0 : (parseInt(root.dataset.autoplay, 10) || 5000);
+
+          function show(next){{
+            slides[i].classList.remove('is-active');
+            slides[i].setAttribute('aria-hidden', 'true');
+            slides[i].setAttribute('tabindex', '-1');
+            dots[i].classList.remove('is-active');
+            dots[i].setAttribute('aria-selected', 'false');
+            i = (next + total) % total;
+            slides[i].classList.add('is-active');
+            slides[i].setAttribute('aria-hidden', 'false');
+            slides[i].setAttribute('tabindex', '0');
+            dots[i].classList.add('is-active');
+            dots[i].setAttribute('aria-selected', 'true');
+          }}
+          function start(){{ if (!delay || timer) return; timer = setInterval(() => show(i + 1), delay); }}
+          function stop(){{ if (timer) {{ clearInterval(timer); timer = null; }} }}
+
+          dots.forEach((d) => d.addEventListener('click', () => {{ stop(); show(parseInt(d.dataset.slide, 10)); start(); }}));
+          root.querySelector('.slide-prev').addEventListener('click', () => {{ stop(); show(i - 1); start(); }});
+          root.querySelector('.slide-next').addEventListener('click', () => {{ stop(); show(i + 1); start(); }});
+          root.addEventListener('mouseenter', stop);
+          root.addEventListener('mouseleave', start);
+          root.addEventListener('focusin', stop);
+          root.addEventListener('focusout', start);
+
+          // Touch swipe (mobile)
+          let touchX = null;
+          root.addEventListener('touchstart', (e) => {{ touchX = e.touches[0].clientX; stop(); }}, {{passive:true}});
+          root.addEventListener('touchend', (e) => {{
+            if (touchX === null) return;
+            const dx = e.changedTouches[0].clientX - touchX;
+            if (Math.abs(dx) > 40) show(dx < 0 ? i + 1 : i - 1);
+            touchX = null;
+            start();
+          }});
+
+          start();
+        }})();
+        </script>
 
         <section class="alt">
           <div class="container">

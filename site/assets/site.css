@@ -499,3 +499,97 @@ ul.checks li::before {
 .faq[open] summary::after { content: "−"; }
 .faq-body { padding: 0 1.25rem 1.1rem; color: var(--ink); line-height: 1.65; }
 .faq-body p { margin: 0; }
+
+/* Lineup slideshow — used on /breezy-ev/ hero. Sized to fit the
+   hero-split layout, fades between slides, dots + arrows + touch
+   swipe controlled by inline JS on the page. */
+.lineup-slideshow {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  background: var(--bg-alt);
+}
+.lineup-slideshow .slide {
+  position: absolute; inset: 0;
+  opacity: 0;
+  transition: opacity .55s ease;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.lineup-slideshow .slide.is-active { opacity: 1; z-index: 2; }
+.lineup-slideshow .slide img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.lineup-slideshow .slide-caption {
+  position: absolute;
+  left: 1rem; right: 1rem; bottom: 3.25rem;
+  background: rgba(20, 50, 58, .82);
+  color: #fff;
+  padding: .6rem .9rem;
+  border-radius: 8px;
+  font: 500 .95rem -apple-system, sans-serif;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: .65rem;
+}
+.lineup-slideshow .slide-caption b { font-weight: 700; color: #fff; }
+.lineup-slideshow .slide-caption em {
+  font-style: normal;
+  color: var(--coral);
+  font-weight: 700;
+  transition: transform .15s ease;
+}
+.lineup-slideshow .slide:hover .slide-caption em { transform: translateX(4px); }
+
+/* Dot indicators */
+.lineup-slideshow .slide-dots {
+  position: absolute;
+  left: 0; right: 0; bottom: 1rem;
+  display: flex; justify-content: center; gap: .5rem;
+  z-index: 4;
+}
+.lineup-slideshow .slide-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .5);
+  border: 1.5px solid rgba(255, 255, 255, .9);
+  cursor: pointer;
+  padding: 0;
+  transition: background .15s ease, transform .15s ease;
+}
+.lineup-slideshow .slide-dot:hover { transform: scale(1.2); }
+.lineup-slideshow .slide-dot.is-active {
+  background: var(--coral);
+  border-color: #fff;
+}
+
+/* Prev/Next arrows */
+.lineup-slideshow .slide-arrow {
+  position: absolute;
+  top: 50%;
+  width: 38px; height: 38px;
+  transform: translateY(-50%);
+  background: rgba(20, 50, 58, .55);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  font: 700 1.5rem/1 inherit;
+  cursor: pointer;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity .2s ease, background .15s ease;
+}
+.lineup-slideshow:hover .slide-arrow,
+.lineup-slideshow:focus-within .slide-arrow { opacity: 1; }
+.lineup-slideshow .slide-arrow:hover { background: var(--coral); }
+.lineup-slideshow .slide-prev { left: .75rem; }
+.lineup-slideshow .slide-next { right: .75rem; }
+
+@media (max-width: 800px) {
+  .lineup-slideshow { aspect-ratio: 4 / 3; transform: none; }
+  .lineup-slideshow .slide-arrow { opacity: 1; width: 32px; height: 32px; font-size: 1.25rem; }
+}

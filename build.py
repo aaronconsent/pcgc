@@ -42,8 +42,9 @@ NAV = [
 ]
 
 
-def head(title, desc, path="/"):
+def head(title, desc, path="/", og_slug=None):
     canonical = f"https://polkcountygolfcarts.com{path}"
+    og_image = f"/assets/og/{og_slug}.png" if og_slug else "/assets/og/home.png"
     return dedent(f"""\
         <!doctype html>
         <html lang="en">
@@ -60,8 +61,15 @@ def head(title, desc, path="/"):
           <link rel="stylesheet" href="/assets/site.css">
           <meta property="og:title" content="{title} | {BIZ['name']}">
           <meta property="og:description" content="{desc}">
-          <meta property="og:image" content="/assets/logos/logo-color.png">
+          <meta property="og:image" content="https://polkcountygolfcarts.com{og_image}">
+          <meta property="og:image:width" content="1200">
+          <meta property="og:image:height" content="630">
           <meta property="og:type" content="website">
+          <meta property="og:url" content="{canonical}">
+          <meta name="twitter:card" content="summary_large_image">
+          <meta name="twitter:title" content="{title} | {BIZ['name']}">
+          <meta name="twitter:description" content="{desc}">
+          <meta name="twitter:image" content="https://polkcountygolfcarts.com{og_image}">
         </head>
         <body>
         <div class="banner">FREE WARRANTIES on every cart purchased through PCGC · BBB Accredited · {BIZ['tagline']}</div>
@@ -261,6 +269,7 @@ def page_home():
             "Golf Cart Sales, Service & Custom Builds in Livingston, TX",
             "Polk County Golf Carts: brand-new Breezy EV, refurbished, and used carts — electric and gas — plus full service, custom builds, and free pickup & delivery within 25 miles of Livingston, TX (extended service up to 75 miles).",
             "/",
+            og_slug="home",
         )
         + header("/")
         + dedent(f"""\
@@ -385,6 +394,7 @@ def page_carts():
             "Brand-New, Refurbished & Used Golf Carts",
             "We sell brand-new Breezy EV carts, refurbished carts, and used carts — electric and gas — out of Livingston, TX. Lithium battery, 2-year warranty, app speed lock, CarPlay, street-legal option.",
             "/carts/",
+            og_slug="carts",
         )
         + header("/carts/")
         + dedent(f"""\
@@ -525,6 +535,7 @@ def page_services():
             "Golf Cart Service, Custom Builds & Repairs",
             "Full-service golf cart maintenance and custom builds in Livingston, TX. Batteries, brakes, motors, controllers, lift kits, custom paint, wheels & tires. Service package from $165.",
             "/services/",
+            og_slug="services",
         )
         + header("/services/")
         + dedent(f"""\
@@ -690,6 +701,7 @@ def page_about():
             "About Polk County Golf Carts",
             "Serving our community as a family owned business since 2020. Read our story, see what customers say, and meet John — owner and lead mechanic.",
             "/about/",
+            og_slug="about",
         )
         + header("/about/")
         + dedent(f"""\
@@ -802,6 +814,7 @@ def page_contact():
             "Contact Polk County Golf Carts",
             f"Reach Polk County Golf Carts in Livingston, TX. Call {BIZ['phone_primary']}, email {BIZ['email']}, or visit us at {BIZ['addr']}.",
             "/contact/",
+            og_slug="contact",
         )
         + header("/contact/")
         + dedent(f"""\
@@ -886,6 +899,7 @@ def page_privacy():
             "Privacy Policy",
             "Privacy policy for Polk County Golf Carts.",
             "/privacy/",
+            og_slug="privacy",
         )
         + header("/privacy/")
         + dedent(f"""\

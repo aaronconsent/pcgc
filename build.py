@@ -1118,21 +1118,35 @@ def page_breezy_lineup():
             <div class="lineup-slideshow"
                  role="region" aria-roledescription="carousel" aria-label="Breezy EV lineup"
                  data-autoplay="5000">
-              {''.join(
-                f'<a class="slide{" is-active" if i == 0 else ""}" href="/breezy-ev/{slug}/" aria-hidden="{"false" if i == 0 else "true"}" tabindex="{"0" if i == 0 else "-1"}">'
-                f'<img src="/assets/photos/breezy-ev/{slug}.jpg" alt="Breezy EV {m["name"]}" loading="{"eager" if i == 0 else "lazy"}" fetchpriority="{"high" if i == 0 else "auto"}">'
-                f'<span class="slide-caption"><b>{m["name"]}</b> · {"Lifted" if m["lifted"] else "Street"} · {m["seats"]}-seater <em>→</em></span>'
-                f'</a>'
-                for i, (slug, m) in enumerate(BREEZY_EV_MODELS.items())
-              )}
-              <div class="slide-dots" role="tablist" aria-label="Choose a cart">
+              <div class="slideshow-stage">
                 {''.join(
-                  f'<button class="slide-dot{" is-active" if i == 0 else ""}" type="button" role="tab" aria-selected="{"true" if i == 0 else "false"}" aria-label="Show {m["name"]}" data-slide="{i}"></button>'
+                  f'<a class="slide{" is-active" if i == 0 else ""}" href="/breezy-ev/{slug}/" aria-hidden="{"false" if i == 0 else "true"}" tabindex="{"0" if i == 0 else "-1"}" data-slug="{slug}" data-name="{m["name"]}" data-meta="{"Lifted" if m["lifted"] else "Street"} · {m["seats"]}-seater · {m["range_mi"]} mi range">'
+                  f'<img src="/assets/photos/breezy-ev/{slug}.jpg" alt="Breezy EV {m["name"]}" loading="{"eager" if i == 0 else "lazy"}" fetchpriority="{"high" if i == 0 else "auto"}">'
+                  f'</a>'
                   for i, (slug, m) in enumerate(BREEZY_EV_MODELS.items())
                 )}
+                <button class="slide-arrow slide-prev" type="button" aria-label="Previous cart">‹</button>
+                <button class="slide-arrow slide-next" type="button" aria-label="Next cart">›</button>
               </div>
-              <button class="slide-arrow slide-prev" type="button" aria-label="Previous cart">‹</button>
-              <button class="slide-arrow slide-next" type="button" aria-label="Next cart">›</button>
+              <div class="slide-info" aria-live="polite">
+                <div class="slide-info-text">
+                  <b class="slide-info-name">Breeze 4</b>
+                  <small class="slide-info-meta">Street · 4-seater · 45–55 mi range</small>
+                </div>
+                <a class="slide-info-link" href="/breezy-ev/breeze-4/">View &rarr;</a>
+              </div>
+              <div class="slide-controls">
+                <div class="slide-dots" role="tablist" aria-label="Choose a cart">
+                  {''.join(
+                    f'<button class="slide-dot{" is-active" if i == 0 else ""}" type="button" role="tab" aria-selected="{"true" if i == 0 else "false"}" aria-label="Show {m["name"]}" data-slide="{i}"></button>'
+                    for i, (slug, m) in enumerate(BREEZY_EV_MODELS.items())
+                  )}
+                </div>
+                <div class="slide-countdown" aria-hidden="true">
+                  <span class="slide-countdown-label">Next in <b class="slide-countdown-num">5</b>s</span>
+                  <div class="slide-countdown-track"><div class="slide-countdown-bar"></div></div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -1142,11 +1156,22 @@ def page_breezy_lineup():
           if (!root) return;
           const slides = root.querySelectorAll('.slide');
           const dots = root.querySelectorAll('.slide-dot');
+          const nameEl = root.querySelector('.slide-info-name');
+          const metaEl = root.querySelector('.slide-info-meta');
+          const linkEl = root.querySelector('.slide-info-link');
+          const numEl = root.querySelector('.slide-countdown-num');
+          const barEl = root.querySelector('.slide-countdown-bar');
           const total = slides.length;
-          let i = 0, timer = null;
+          let i = 0, autoTimer = null, tickTimer = null, remaining = 0, startedAt = 0;
           const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
           const delay = reduced ? 0 : (parseInt(root.dataset.autoplay, 10) || 5000);
 
+          function syncInfo(){{
+            const s = slides[i];
+            nameEl.textContent = s.dataset.name;
+            metaEl.textContent = s.dataset.meta;
+            linkEl.href = '/breezy-ev/' + s.dataset.slug + '/';
+          }}
           function show(next){{
             slides[i].classList.remove('is-active');
             slides[i].setAttribute('aria-hidden', 'true');
@@ -1159,9 +1184,45 @@ def page_breezy_lineup():
             slides[i].setAttribute('tabindex', '0');
             dots[i].classList.add('is-active');
             dots[i].setAttribute('aria-selected', 'true');
+            syncInfo();
+            resetCountdown();
           }}
-          function start(){{ if (!delay || timer) return; timer = setInterval(() => show(i + 1), delay); }}
-          function stop(){{ if (timer) {{ clearInterval(timer); timer = null; }} }}
+
+          function resetCountdown(){{
+            if (!delay) {{ if (numEl) numEl.textContent = '–'; if (barEl) barEl.style.width = '0%'; return; }}
+            // Trigger reflow + restart the bar animation
+            if (barEl) {{
+              barEl.style.transition = 'none';
+              barEl.style.width = '100%';
+              barEl.offsetHeight;  // flush
+              barEl.style.transition = `width ${{delay}}ms linear`;
+              barEl.style.width = '0%';
+            }}
+            startedAt = Date.now();
+            remaining = delay;
+            if (numEl) numEl.textContent = Math.ceil(delay / 1000);
+            if (tickTimer) clearInterval(tickTimer);
+            tickTimer = setInterval(() => {{
+              const left = Math.max(0, delay - (Date.now() - startedAt));
+              if (numEl) numEl.textContent = Math.ceil(left / 1000);
+              if (left <= 0 && tickTimer) {{ clearInterval(tickTimer); tickTimer = null; }}
+            }}, 200);
+          }}
+          function start(){{
+            if (!delay || autoTimer) return;
+            autoTimer = setInterval(() => show(i + 1), delay);
+            resetCountdown();
+          }}
+          function stop(){{
+            if (autoTimer) {{ clearInterval(autoTimer); autoTimer = null; }}
+            if (tickTimer) {{ clearInterval(tickTimer); tickTimer = null; }}
+            // Freeze the bar where it is
+            if (barEl) {{
+              const cs = getComputedStyle(barEl);
+              barEl.style.transition = 'none';
+              barEl.style.width = cs.width;
+            }}
+          }}
 
           dots.forEach((d) => d.addEventListener('click', () => {{ stop(); show(parseInt(d.dataset.slide, 10)); start(); }}));
           root.querySelector('.slide-prev').addEventListener('click', () => {{ stop(); show(i - 1); start(); }});
@@ -1182,6 +1243,7 @@ def page_breezy_lineup():
             start();
           }});
 
+          syncInfo();
           start();
         }})();
         </script>

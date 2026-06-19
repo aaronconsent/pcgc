@@ -26,6 +26,10 @@ BIZ = {
     "service_area": "San Jacinto, Polk, Walker, Trinity & Angelina counties",
     "delivery_radius": 25,
     "bbb_url": "https://www.bbb.org/us/tx/livingston/profile/recreational-vehicles/polk-county-golf-carts-0825-1000223827",
+    # Family-shop tagline used wherever we used to say "Family-owned since 2020".
+    "tagline": "Serving our community as a family owned business since 2020",
+    # Brand inventory line — repeated across hero copy and the carts page.
+    "inventory_line": "We sell brand-new Breezy EV carts, refurbished carts, and used carts — electric and gas.",
 }
 
 NAV = [
@@ -59,7 +63,7 @@ def head(title, desc, path="/"):
           <meta property="og:type" content="website">
         </head>
         <body>
-        <div class="banner">FREE WARRANTIES on every cart purchased through PCGC · BBB Accredited · Family-owned since {BIZ['founded']}</div>
+        <div class="banner">FREE WARRANTIES on every cart purchased through PCGC · BBB Accredited · {BIZ['tagline']}</div>
         """)
 
 
@@ -103,8 +107,9 @@ def contact_strip():
             </div>
             <div>
               <h3>Hours</h3>
-              <span>Mon–Sat · By appointment</span><br>
-              <span style="opacity:.75">Closed on holidays</span>
+              <span>Tue–Fri · 9a–4p</span><br>
+              <span>Saturday · 9a–2p</span><br>
+              <span style="opacity:.75">Closed Sun–Mon &amp; holidays · emergency calls billed at additional rate</span>
             </div>
           </div>
         </section>
@@ -120,7 +125,7 @@ def footer():
               <div>
                 <img class="foot-mark" src="/assets/logos/logo-white.svg" alt="{BIZ['name']}" width="120" height="92">
                 <h4 class="brand-text-foot">{BIZ['name']}</h4>
-                <p>Family-owned in Livingston, Texas. We sell new Breezy EV carts, service and customize every make, and deliver across {BIZ['service_area']}.</p>
+                <p>{BIZ['tagline']} in Livingston, Texas. {BIZ['inventory_line']} We service and customize every make and deliver across {BIZ['service_area']}.</p>
                 <a class="bbb-badge" href="{BIZ['bbb_url']}" target="_blank" rel="noopener">★ BBB Accredited</a>
               </div>
               <div>
@@ -253,7 +258,7 @@ def page_home():
     return (
         head(
             "Golf Cart Sales, Service & Custom Builds in Livingston, TX",
-            "Polk County Golf Carts: family-owned dealer of new Breezy EV golf carts plus full service, custom builds, and free pickup & delivery within 25 miles of Livingston, TX.",
+            "Polk County Golf Carts: brand-new Breezy EV, refurbished, and used carts — electric and gas — plus full service, custom builds, and free pickup & delivery within 25 miles of Livingston, TX.",
             "/",
         )
         + header("/")
@@ -262,7 +267,7 @@ def page_home():
           <div class="container hero-split">
             <div>
               <h1>The cart you want, built and serviced by a neighbor you trust.</h1>
-              <p class="lede">Family-owned since {BIZ['founded']}, we sell brand-new Breezy EV carts, service every make, and customize anything from a fresh paint job to a full lift kit. Free pickup &amp; delivery within {BIZ['delivery_radius']} miles of Livingston.</p>
+              <p class="lede">{BIZ['tagline']}. {BIZ['inventory_line']} Plus full service and custom builds from a fresh paint job to a full lift kit, with free pickup &amp; delivery within {BIZ['delivery_radius']} miles of Livingston.</p>
               <div class="hero-ctas">
                 <a class="btn btn-coral" href="/carts/">See the new Breezy EV →</a>
                 <a class="btn btn-outline" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 {BIZ['phone_primary']}</a>
@@ -289,8 +294,8 @@ def page_home():
             <div class="cards">
               <div class="card">
                 <div class="icon">1</div>
-                <h3>Brand-new Breezy EV carts</h3>
-                <p>2026 models with Lithium batteries, Apple/Android CarPlay, app speed control, and street-legal kits available. 4- or 6-seater, eight color options.</p>
+                <h3>Carts for every budget</h3>
+                <p>Brand-new 2026 Breezy EV carts, refurbished carts, and used carts — electric and gas. 4- or 6-seater, eight color options, financing through Lendmark Financial or Dealer Direct.</p>
               </div>
               <div class="card alt">
                 <div class="icon">2</div>
@@ -323,8 +328,8 @@ def page_home():
             </div>
             <div class="price-box">
               <span class="eyebrow">Financing available</span>
-              <h3 class="mt-0" style="color:var(--ink)">Drive home today.</h3>
-              <p class="muted">Apply through Lendmark, Mariner, or Synchrony Bank — answer in minutes, pay over time.</p>
+              <h3 class="mt-0" style="color:var(--ink)">Pay over time.</h3>
+              <p class="muted">Apply through <b>Lendmark Financial</b> or <b>Dealer Direct</b> — answer in minutes, pay over time.</p>
               <a class="btn btn-teal" href="/contact/">Get a quote</a>
             </div>
           </div>
@@ -361,7 +366,7 @@ def page_home():
           <div class="container">
             <div class="section-head center" style="margin-left:auto; margin-right:auto; text-align:center">
               <span class="eyebrow">Service area</span>
-              <h2>We come to you.</h2>
+              <h2>Free pickup &amp; delivery.</h2>
               <p class="lede-text">Free pickup &amp; delivery within {BIZ['delivery_radius']} miles of our Livingston shop. Proudly serving {BIZ['service_area']}.</p>
               <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
             </div>
@@ -376,8 +381,8 @@ def page_home():
 def page_carts():
     return (
         head(
-            "Brand-New Breezy EV Golf Carts for Sale",
-            "Brand-new 2026 Breezy EV golf carts — Lithium battery, 2-year warranty, 37 mph top speed, app speed lock, CarPlay touchscreen, street-legal option. Sold in Livingston, TX.",
+            "Brand-New, Refurbished & Used Golf Carts",
+            "We sell brand-new Breezy EV carts, refurbished carts, and used carts — electric and gas — out of Livingston, TX. Lithium battery, 2-year warranty, app speed lock, CarPlay, street-legal option.",
             "/carts/",
         )
         + header("/carts/")
@@ -385,8 +390,8 @@ def page_carts():
         <section class="hero" style="padding-bottom:3rem">
           <div class="container hero-split">
             <div>
-              <h1>The 2026 Breezy EV.</h1>
-              <p class="lede">Style. Comfort. Speed. Fun. The cart we'd put our family in — so we'd put yours in it too.</p>
+              <h1>Brand-new. Refurbished. Used.</h1>
+              <p class="lede">{BIZ['inventory_line']} Below: the cart we built our reputation around — the 2026 Breezy EV.</p>
               <div class="hero-ctas">
                 <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">Call {BIZ['phone_primary']}</a>
                 <a class="btn btn-outline" href="/contact/">Get a quote</a>
@@ -453,8 +458,8 @@ def page_carts():
               </div>
               <div class="price-box">
                 <span class="eyebrow">Financing</span>
-                <h3 class="mt-0" style="color:var(--ink)">Drive home today, pay monthly.</h3>
-                <p class="muted">We work with <b>Lendmark Financial</b>, <b>Mariner</b>, and <b>Synchrony Bank</b>. Apply in minutes, answer same-day.</p>
+                <h3 class="mt-0" style="color:var(--ink)">Pay over time.</h3>
+                <p class="muted">We work with <b>Lendmark Financial</b> and <b>Dealer Direct</b>. Apply in minutes, answer same-day.</p>
                 <a class="btn btn-teal" href="tel:{BIZ['phone_primary'].replace('-','')}">Apply by phone</a>
               </div>
             </div>
@@ -469,7 +474,7 @@ def page_carts():
             <div>
               <span class="eyebrow">Built for the whole family</span>
               <h2>Room for six. Comfort for all of them.</h2>
-              <p class="lede-text">The six-seater configuration adds a rear-facing bench with the same quilted upholstery as the front. Pick a 4-seater for everyday cruising, a 6-seater for the whole family.</p>
+              <p class="lede-text">The six-seater configuration adds a rear flip seat with the same quilted upholstery as the front. Pick a 4-seater for everyday cruising, a 6-seater for the whole family.</p>
               <ul class="checks">
                 <li>Independent rear suspension for a smoother ride</li>
                 <li>Quilted vinyl seats — easy to clean, hot-weather friendly</li>
@@ -532,9 +537,9 @@ def page_services():
         <section>
           <div class="container split">
             <div>
-              <span class="eyebrow">Full service package</span>
+              <span class="eyebrow">Full Service Package · 20-Point Inspection</span>
               <h2>Get your cart road-ready.</h2>
-              <p class="lede-text">Our complete tune-up package covers every system on your cart, top to bottom. Drop it off — or let us pick it up free within {BIZ['delivery_radius']} miles.</p>
+              <p class="lede-text">Our 20-point service package covers every system on your cart, top to bottom. Drop it off — or let us pick it up free within {BIZ['delivery_radius']} miles.</p>
               <ul class="checks">
                 <li>Check &amp; refill rear-end gear oil</li>
                 <li>Clean &amp; adjust brake shoes</li>
@@ -547,11 +552,12 @@ def page_services():
                 <li>Full battery charge</li>
                 <li>Cart cleaned and returned</li>
               </ul>
+              <p><b>10% off Parts &amp; Labor</b> — valid for 1 year from the date of your initial service.</p>
             </div>
             <div class="price-box">
               <span class="eyebrow">Starting at</span>
               <span class="price">$165<small> + tax</small></span>
-              <p class="muted">Full-service tune-up · most carts</p>
+              <p class="muted">Full Service Package · 20-Point Inspection</p>
               <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">Schedule today</a>
             </div>
           </div>
@@ -566,27 +572,19 @@ def page_services():
             <div class="cards">
               <div class="card">
                 <h3>New batteries</h3>
-                <p>Lead-acid or Lithium, including the premium <b>Bolt Energy</b> Lithium line. We size, install, and dispose of the old set.</p>
+                <p>Lead-acid or Lithium, including <b>Bolt Energy</b> and <b>White Lightening</b>'s new line of Lithium batteries. We size, install, and dispose of the old set.</p>
               </div>
               <div class="card">
                 <h3>Battery problems</h3>
-                <p>Won't hold a charge? Won't take one? We diagnose chargers, cells, cables, and terminals in one visit.</p>
+                <p>Won't hold a charge? Won't take one? We diagnose chargers, cables, and terminals in one visit.</p>
               </div>
               <div class="card">
                 <h3>Electrical shorts</h3>
                 <p>Burnt fuses, flaky wiring, dead controllers — we trace it and fix it. (Yes, including the one your neighbor &ldquo;already looked at.&rdquo;)</p>
               </div>
               <div class="card">
-                <h3>Manufacturer service</h3>
-                <p>Scheduled service per your manufacturer's recommendations, with proper documentation for resale or warranty.</p>
-              </div>
-              <div class="card">
                 <h3>Engine tune-ups</h3>
                 <p>Gas-powered carts get spark, fuel, filters, and timing dialed in for fresh-from-the-factory feel.</p>
-              </div>
-              <div class="card">
-                <h3>Recharging problems</h3>
-                <p>Charger output, plug condition, charge controller — we get your cart taking a full charge again.</p>
               </div>
             </div>
           </div>
@@ -598,7 +596,7 @@ def page_services():
               <div>
                 <span class="eyebrow">Custom builds</span>
                 <h2>You are not ordinary. So why should your cart be?</h2>
-                <p class="lede-text">Whether you want a jump seat added or a full ground-up build with custom paint and a Navitas controller, we'll work to your budget and your taste.</p>
+                <p class="lede-text">Whether you want a rear flip seat added or a full ground-up build with custom paint and a Navitas controller, we'll work to your budget and your taste.</p>
                 <p>Lifts. Sound systems. Wheels. Paint. Controllers. Seats. We've done it. Look through real builds we've delivered to East Texas customers — yours could be next.</p>
                 <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">Book a free consultation</a>
               </div>
@@ -625,17 +623,22 @@ def page_services():
               <div class="card alt">
                 <div class="icon">⚙️</div>
                 <h3>Controllers &amp; motors</h3>
-                <p>Full <b>Navitas</b> DC &amp; AC controller line plus matched motors — more torque, smoother throttle, higher top speed.</p>
+                <p>Full <b>Navitas</b> DC &amp; AC controller line plus <b>White Lightening</b> motor upgrades. More torque, smoother throttle, higher top speed.</p>
               </div>
               <div class="card">
+                <div class="icon">🔋</div>
+                <h3>Lithium battery upgrades</h3>
+                <p>Premium Lithium packs from <b>Bolt Energy</b> and <b>White Lightening</b>'s new line — drop-in replacements, longer range, no acid topping.</p>
+              </div>
+              <div class="card alt">
                 <div class="icon">🔊</div>
                 <h3>Sound systems</h3>
                 <p>Bluetooth sound bars with LEDs, marine-grade speakers, sub-amp combos. Built to last in the elements.</p>
               </div>
-              <div class="card alt">
+              <div class="card">
                 <div class="icon">💺</div>
-                <h3>Seats &amp; jump seats</h3>
-                <p>Re-upholster, swap, or add. Rear-facing jump seats, captain's chairs, color-matched vinyl.</p>
+                <h3>Seats &amp; rear flip seats</h3>
+                <p>Re-upholster, swap, or add. Rear flip seats, color-matched quilted vinyl in any color you want.</p>
               </div>
             </div>
           </div>
@@ -645,7 +648,7 @@ def page_services():
           <div class="container split">
             <div>
               <span class="eyebrow">Pickup &amp; delivery</span>
-              <h2>We come to you.</h2>
+              <h2>Free pickup &amp; delivery.</h2>
               <p class="lede-text">Free pickup &amp; delivery within {BIZ['delivery_radius']} miles of Livingston. Our branded rig and trailer is on the road every week serving {BIZ['service_area']}.</p>
               <ul class="checks">
                 <li>Free roundtrip within {BIZ['delivery_radius']} miles of our shop</li>
@@ -684,7 +687,7 @@ def page_about():
     return (
         head(
             "About Polk County Golf Carts",
-            "Family-owned in Livingston, Texas since 2020. Read our story, see what customers say, and meet John — the guy who'll actually answer the phone.",
+            "Serving our community as a family owned business since 2020. Read our story, see what customers say, and meet John — owner and lead mechanic.",
             "/about/",
         )
         + header("/about/")
@@ -692,7 +695,7 @@ def page_about():
         <section class="hero" style="padding-bottom:3rem">
           <div class="container">
             <h1>A family shop that started with one custom cart.</h1>
-            <p class="lede">Polk County Golf Carts opened in {BIZ['founded']} when we built our own custom cart and friends started asking if they could buy it. The hobby turned into a business — but the family-shop attitude never left.</p>
+            <p class="lede">Polk County Golf Carts opened in {BIZ['founded']} when we built our own custom cart and friends started asking if they could buy it. {BIZ['tagline']}.</p>
           </div>
         </section>
 
@@ -701,14 +704,14 @@ def page_about():
             <div>
               <span class="eyebrow">Our story</span>
               <h2>Built one cart. Then another. Then a business.</h2>
-              <p>We're a family-owned shop in Polk County, Texas. The business began in {BIZ['founded']} when we built our own custom golf cart. Before long, friends and neighbors started asking if they could buy our cart — or if we'd build one for them.</p>
+              <p>We're a family-owned shop in Polk County, Texas — serving our community as a family owned business since {BIZ['founded']}. The business began when we built our own custom golf cart. Before long, friends and neighbors started asking if they could buy our cart — or if we'd build one for them.</p>
               <p>What started as a hobby quickly turned into a thriving business. But our goal hasn't changed: <b>make sure you, our customer, are satisfied</b>. We do that by providing honest and quick service at a reasonable price, with options for every budget.</p>
               <p>You have a lot of choices when it comes to customizing or servicing your golf cart. We're grateful you'd consider us for yours.</p>
-              <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Talk to John today</a>
+              <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Talk to Us today</a>
             </div>
             <div class="photo-block">
               <img src="/assets/photos/owner-john.jpg" alt="John, owner of Polk County Golf Carts, in front of the shop" width="1024" height="768" loading="lazy">
-              <div class="caption">John — owner, mechanic, and the guy who actually answers the phone.</div>
+              <div class="caption">John — owner and lead mechanic at Polk County Golf Carts.</div>
             </div>
           </div>
         </section>
@@ -730,7 +733,7 @@ def page_about():
                 <ul class="checks">
                   <li>BBB Accredited business</li>
                   <li>5.0-star customer reviews</li>
-                  <li>Family-owned since {BIZ['founded']}</li>
+                  <li>Serving our community as a family owned business since {BIZ['founded']}</li>
                   <li>Free pickup &amp; delivery within {BIZ['delivery_radius']} miles</li>
                   <li>Service for any make of cart</li>
                   <li>2-year warranty on new Breezy EV carts</li>
@@ -805,7 +808,7 @@ def page_contact():
           <div class="container hero-split">
             <div>
               <h1>Let's talk carts.</h1>
-              <p class="lede">Call, text, or email. We answer fast — and if you're within {BIZ['delivery_radius']} miles of Livingston, we'll come to you.</p>
+              <p class="lede">Call, text, or email. We answer fast — and offer free pickup &amp; delivery within {BIZ['delivery_radius']} miles of Livingston.</p>
               <div class="hero-ctas">
                 <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 {BIZ['phone_primary']}</a>
                 <a class="btn btn-outline" href="mailto:{BIZ['email']}">Email us</a>
@@ -837,7 +840,11 @@ def page_contact():
               <div class="card alt">
                 <div class="icon">🕘</div>
                 <h3>Hours</h3>
-                <p>Mon–Sat by appointment.<br><span class="muted">Closed on holidays. Emergency calls billed at additional rate.</span></p>
+                <p>
+                  Tue–Fri · 9a–4p<br>
+                  Saturday · 9a–2p<br>
+                  <span class="muted">Closed Sun–Mon &amp; holidays. Emergency calls billed at additional rate.</span>
+                </p>
               </div>
             </div>
           </div>
@@ -892,7 +899,7 @@ def page_privacy():
             <p>Our website may set basic cookies to remember your preferences and measure traffic. We do not sell or rent your information.</p>
 
             <h2>How we use it</h2>
-            <p>We use your information to respond to your inquiry, schedule service or delivery, process financing applications through our partners (Lendmark Financial, Mariner, Synchrony Bank), and follow up on your purchase.</p>
+            <p>We use your information to respond to your inquiry, schedule service or delivery, process financing applications through our partners (Lendmark Financial and Dealer Direct), and follow up on your purchase.</p>
 
             <h2>Sharing</h2>
             <p>We share information only with the financing partner you choose to apply with, and only with your consent.</p>

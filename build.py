@@ -1488,6 +1488,38 @@ def page_breezy_lineup():
         </section>
 
         <section>
+          <div class="container">
+            <div class="section-head">
+              <span class="eyebrow">Before you buy</span>
+              <h2>Three things worth knowing first.</h2>
+            </div>
+            <div class="cards">
+              <a class="card" href="/breezy-ev/financing/">
+                <div class="card-body">
+                  <span class="eyebrow">Financing</span>
+                  <h3>Pay over time</h3>
+                  <p>Lendmark Financial &amp; Dealer Direct — soft pulls, same-day decisions, terms 24-84 months.</p>
+                </div>
+              </a>
+              <a class="card alt" href="/breezy-ev/street-legal/">
+                <div class="card-body">
+                  <span class="eyebrow">Texas LSV</span>
+                  <h3>Street-legal in three steps</h3>
+                  <p>The kit we install, what Texas requires, and where you can legally drive an LSV-registered cart.</p>
+                </div>
+              </a>
+              <a class="card" href="/breezy-ev/lithium-vs-lead-acid/">
+                <div class="card-body">
+                  <span class="eyebrow">Battery tech</span>
+                  <h3>Lithium vs Lead-acid</h3>
+                  <p>Real numbers on cost, range, lifespan, and which one actually saves money over the life of the cart.</p>
+                </div>
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section class="alt">
           <div class="container split">
             <div>
               <span class="eyebrow">Why buy from PCGC</span>
@@ -1723,6 +1755,481 @@ def page_breezy_model(slug):
     )
 
 
+# ---------------- Tier-2 supporting Breezy EV pages ---------------- #
+#
+# Three supporting topics that ride on top of the four PDPs:
+#  - /breezy-ev/financing/                Lendmark + Dealer Direct deep-dive
+#  - /breezy-ev/street-legal/             Texas LSV kit + registration
+#  - /breezy-ev/lithium-vs-lead-acid/     Battery technology comparison
+#
+# Each is hidden alongside the rest of /breezy-ev/ until the client
+# unhides the tree publicly. Each carries FAQPage + BreadcrumbList
+# schema for AEO/SEO. Each ends with a CTA into the four PDPs.
+
+
+def _breezy_faq_section(title, faqs):
+    """Render an FAQ accordion block from a list of (q, a_html) tuples."""
+    items = "\n".join(
+        f'<details class="faq"><summary>{q}</summary><div class="faq-body"><p>{a}</p></div></details>'
+        for q, a in faqs
+    )
+    return dedent(f"""\
+        <section class="alt">
+          <div class="container">
+            <div class="section-head">
+              <span class="eyebrow">Common questions</span>
+              <h2>{title}</h2>
+            </div>
+            <div class="faq-list">
+              {items}
+            </div>
+          </div>
+        </section>
+        """)
+
+
+def _breezy_supporting_schemas(crumbs, faqs):
+    return _json.dumps([
+        breadcrumb_schema(crumbs),
+        {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+                {
+                    "@type": "Question",
+                    "name": _strip_tags(q),
+                    "acceptedAnswer": {"@type": "Answer", "text": _strip_tags(a)},
+                }
+                for q, a in faqs
+            ],
+        },
+    ])
+
+
+def page_breezy_financing():
+    faqs = [
+        ("How long does the application take?",
+         "Online, about <b>five minutes</b>. We submit to Lendmark Financial or Dealer Direct (or both) and most applicants get a soft decision the same business day. Hand us a driver's license, proof of income, and your contact info and we handle the rest."),
+        ("Will applying hurt my credit?",
+         "Lendmark and Dealer Direct both run <b>soft pulls</b> for the initial pre-qualification, which doesn't affect your credit score. A hard pull only happens once you decide to move forward with a specific offer."),
+        ("What credit score do I need?",
+         "We've placed loans across a wide range of credit profiles — there's no single cutoff. Lendmark in particular works with customers who have less-than-perfect credit. We'll always shop the application across both lenders and pick the better offer for you."),
+        ("How much down payment do I need?",
+         "It depends on the lender and the cart, but <b>10–20%</b> is typical. Cash, trade-in, or a combination — all work. We'll quote the monthly with and without a down payment so you can decide."),
+        ("What's the term length?",
+         "Lendmark and Dealer Direct both offer terms from <b>24 to 84 months</b>. The longer the term, the lower the monthly — but the more interest paid over the life of the loan. We help you find the sweet spot."),
+        ("Can I pay it off early?",
+         "Yes. Both lenders allow <b>early payoff with no prepayment penalty</b>. Some customers refinance after 12-18 months once the cart is broken in and they know they're keeping it."),
+    ]
+    sd = _breezy_supporting_schemas(
+        [("Home", "/"), ("Breezy EV", "/breezy-ev/"), ("Financing", "/breezy-ev/financing/")],
+        faqs,
+    )
+    return (
+        head(
+            "Golf Cart Financing — Lendmark Financial & Dealer Direct",
+            "Finance your Breezy EV at Polk County Golf Carts. We work with Lendmark Financial and Dealer Direct — soft credit pulls, same-day decisions, terms 24-84 months.",
+            "/breezy-ev/financing/",
+            og_slug="carts",
+            noindex=True,
+            structured_data=sd,
+        )
+        + header("/breezy-ev/")
+        + dedent(f"""\
+        <section class="hero" style="padding-bottom:3rem">
+          <div class="container hero-split">
+            <div>
+              <span class="eyebrow">Pay over time</span>
+              <h1>Golf cart financing, made simple.</h1>
+              <p class="lede">Two lenders, soft credit pulls, same-day decisions, and a shop that walks you through the application instead of pointing you at a form. {PRICE_TEXT}</p>
+              <div class="hero-ctas">
+                <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+                <a class="btn btn-outline" href="/breezy-ev/">See the lineup →</a>
+              </div>
+            </div>
+            <img src="/assets/photos/breezy-ev/breeze-6l.jpg" alt="Breezy EV cart" width="800" height="600" fetchpriority="high">
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container">
+            <div class="section-head">
+              <span class="eyebrow">Our partners</span>
+              <h2>Two lenders. We shop both.</h2>
+              <p class="lede-text">We don't make money on financing — we work with two lenders because their programs fit different customers, and we want to put you with the one that gives you the best terms.</p>
+            </div>
+            <div class="cards">
+              <div class="card">
+                <span class="eyebrow">Lender 1</span>
+                <h3>Lendmark Financial</h3>
+                <p>National lender, golf-cart-specific program, works across the credit spectrum. Often the better fit for customers with less-than-perfect credit, or for buyers who want a longer term to lower the monthly.</p>
+                <ul class="checks">
+                  <li>Soft pull pre-qualification</li>
+                  <li>Same-day decision in most cases</li>
+                  <li>Terms 24–84 months</li>
+                  <li>No prepayment penalty</li>
+                </ul>
+              </div>
+              <div class="card alt">
+                <span class="eyebrow">Lender 2</span>
+                <h3>Dealer Direct</h3>
+                <p>Manufacturer-backed program with competitive rates on new Breezy EV carts. Often the better fit for customers with stronger credit who want the lowest APR, especially on the new Breeze 4, 4L, 6L, and Terrain 6.</p>
+                <ul class="checks">
+                  <li>Soft pull pre-qualification</li>
+                  <li>Manufacturer-backed rates on new carts</li>
+                  <li>Terms 24–72 months</li>
+                  <li>No prepayment penalty</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="container">
+            <div class="section-head">
+              <span class="eyebrow">How it works</span>
+              <h2>Three steps, one afternoon.</h2>
+            </div>
+            <div class="cards">
+              <div class="card">
+                <div class="icon">1</div>
+                <h3>Bring three things</h3>
+                <p>A driver's license, proof of income (a pay stub or two months of bank statements), and your contact info. We'll handle the rest of the paperwork.</p>
+              </div>
+              <div class="card alt">
+                <div class="icon">2</div>
+                <h3>Pick the cart</h3>
+                <p>We'll match the cart to your budget rather than the other way around. Test-drive any of the four Breezy EV models in the showroom, walk the color options, decide on options like the street-legal kit.</p>
+              </div>
+              <div class="card">
+                <div class="icon">3</div>
+                <h3>Take it home</h3>
+                <p>Most approvals come back the same business day. We deliver free within 25 miles of Livingston, $75 flat to anywhere inside our 75-mile extended area.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="container split">
+            <div>
+              <span class="eyebrow">Estimating your monthly</span>
+              <h2>Rates vary. The math doesn't.</h2>
+              <p>We don't post specific monthly numbers because rates change with the market and depend on your credit profile. But the rough math: a $12,500 cart financed over 60 months at typical golf-cart rates lands in the <b>$230–$290/month</b> range for most customers. We'll quote your exact number after the soft pull.</p>
+              <ul class="checks">
+                <li>$0 down or 10-20% down — both options on the table</li>
+                <li>24-, 36-, 48-, 60-, 72-, 84-month terms available</li>
+                <li>Pay extra each month or refinance later — no penalty</li>
+                <li>Bundle the street-legal kit, sound system, or lift into the loan if you want</li>
+              </ul>
+              <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Talk to Us today</a>
+            </div>
+            <div class="price-box">
+              <span class="eyebrow">Apply by phone</span>
+              <h3 class="mt-0" style="color:var(--ink)">{BIZ['phone_primary']}</h3>
+              <p class="muted">We'll walk you through the application, submit to both lenders, and get back to you with the offers the same day.</p>
+              <a class="btn btn-teal" href="tel:{BIZ['phone_primary'].replace('-','')}">Get pre-qualified</a>
+            </div>
+          </div>
+        </section>
+        """)
+        + _breezy_faq_section(f"Financing questions.", faqs)
+        + dedent(f"""\
+        <section>
+          <div class="container center">
+            <h2>Ready to pick a cart?</h2>
+            <p class="lede-text">Test-drive any of the four Breezy EV models, walk through the colors, and we'll quote the monthly while you're here.</p>
+            <a class="btn btn-coral" href="/breezy-ev/">See the lineup →</a>
+            &nbsp;
+            <a class="btn btn-ghost" href="/breezy-ev/compare/">Compare side-by-side →</a>
+          </div>
+        </section>
+        """)
+        + contact_strip()
+        + footer()
+    )
+
+
+def page_breezy_street_legal():
+    faqs = [
+        ("Are golf carts street legal in Texas?",
+         "Yes — with the right equipment. Under Texas Transportation Code §551.301-551.350, a golf cart qualifies as a <b>Low Speed Vehicle (LSV)</b> when it has the required safety equipment installed. LSVs can be driven on public roads with posted speed limits of <b>35 mph or less</b>."),
+        ("What's included in the street-legal kit?",
+         "<b>Headlights, turn signals, brake lights, side mirrors, a horn, a windshield, seat belts</b>, and a license-plate mount. The kit is installed at our shop and inspected as part of the LSV registration process. We handle the install and the paperwork."),
+        ("Where can I legally drive an LSV in Texas?",
+         "On any street with a <b>posted speed limit of 35 mph or less</b>. That includes neighborhood streets, most residential roads, and the side streets in most East Texas towns. You can also <b>cross</b> a higher-speed road (e.g. cross US-59 at an intersection) but can't drive along one."),
+        ("Do I need insurance and a license?",
+         "Yes to both. Texas requires <b>liability insurance</b> on LSVs and a <b>valid driver's license</b> to operate one. Insurance is typically <b>$10-20 / month</b> through any standard auto insurer — much cheaper than a car policy. The driver's license requirement is the same as a passenger car: 16+, class C, no special endorsement needed."),
+        ("Do I need to register the cart?",
+         "Yes. After we install the kit, you'll register the LSV at the Polk County tax office (or the county where you live). Registration is <b>~$50/year</b>. We provide the title and paperwork you need to walk into the office and walk out registered."),
+        ("Can kids drive a street-legal cart?",
+         "Only with a valid driver's license — same as a car. Kids under 16 can ride as passengers but can't be the driver on public roads. Off-road on private property, no license required."),
+    ]
+    sd = _breezy_supporting_schemas(
+        [("Home", "/"), ("Breezy EV", "/breezy-ev/"), ("Street legal", "/breezy-ev/street-legal/")],
+        faqs,
+    )
+    return (
+        head(
+            "Texas Street-Legal Golf Carts — LSV Kit & Registration",
+            "Make your Breezy EV street legal in Texas. PCGC installs the LSV kit (lights, signals, mirrors, seat belts) and handles the registration paperwork. Drive on any road posted 35 mph or less.",
+            "/breezy-ev/street-legal/",
+            og_slug="carts",
+            noindex=True,
+            structured_data=sd,
+        )
+        + header("/breezy-ev/")
+        + dedent(f"""\
+        <section class="hero" style="padding-bottom:3rem">
+          <div class="container hero-split">
+            <div>
+              <span class="eyebrow">Texas LSV</span>
+              <h1>Street-legal golf carts in Texas.</h1>
+              <p class="lede">Texas law calls them Low Speed Vehicles. We install the kit, you drive it on any street posted 35 mph or less. Lights, signals, mirrors, seat belts, a horn, and the paperwork — done in one shop visit.</p>
+              <div class="hero-ctas">
+                <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+                <a class="btn btn-outline" href="/breezy-ev/">See the lineup →</a>
+              </div>
+            </div>
+            <img src="/assets/photos/breezy-ev/breeze-6l.jpg" alt="Street-legal Breezy EV golf cart" width="800" height="600" fetchpriority="high">
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container">
+            <div class="section-head">
+              <span class="eyebrow">What you get</span>
+              <h2>The Texas LSV kit, item by item.</h2>
+              <p class="lede-text">Every part of the kit exists because Texas Transportation Code §551.302 requires it. We don't bolt on parts you don't need — we install exactly what the LSV statute calls for, no more, no less.</p>
+            </div>
+            <div class="cards">
+              <div class="card">
+                <div class="icon">💡</div>
+                <h3>Headlights &amp; tail lights</h3>
+                <p>DOT-compliant LED headlamps and brake lights. Wired into the existing 12V system, no battery drain to speak of.</p>
+              </div>
+              <div class="card alt">
+                <div class="icon">↩️</div>
+                <h3>Turn signals &amp; brake lights</h3>
+                <p>Front and rear turn signals with audible click, plus hazard flashers. Required by Texas LSV statute.</p>
+              </div>
+              <div class="card">
+                <div class="icon">🪞</div>
+                <h3>Side &amp; rearview mirrors</h3>
+                <p>One rearview, two side mirrors. The same kind of glass that's on every passenger car.</p>
+              </div>
+              <div class="card alt">
+                <div class="icon">📯</div>
+                <h3>Horn</h3>
+                <p>An audible horn — required, and useful when the neighbor's dog forgets you cross the street every morning.</p>
+              </div>
+              <div class="card">
+                <div class="icon">🪟</div>
+                <h3>Windshield</h3>
+                <p>DOT-approved acrylic with wiper provision. Stock on most Breezy EVs; we upgrade if needed.</p>
+              </div>
+              <div class="card alt">
+                <div class="icon">🔒</div>
+                <h3>Seat belts</h3>
+                <p>3-point belts on every forward-facing seat. The 6L and Terrain 6 get six belts; the 4 and 4L get four.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="container split">
+            <div>
+              <span class="eyebrow">Where it drives</span>
+              <h2>Any road posted 35 mph or less.</h2>
+              <p>That's most of East Texas. Neighborhood streets in Livingston, Onalaska, Coldspring, Huntsville, Lufkin, Woodville — all green light. You can <b>cross</b> a higher-speed road at an intersection (e.g., crossing US-59 at a light), you just can't drive along one.</p>
+              <p>Off-road and on private property, the speed limit and licensing rules don't apply at all. That's where the Terrain 6 really earns its name.</p>
+              <ul class="checks">
+                <li><b>Residential streets</b> — 25-30 mph speed limits, all legal</li>
+                <li><b>Most downtown streets</b> in small East Texas towns</li>
+                <li><b>Lake-house neighborhoods</b> on Lake Livingston, Sam Rayburn, B.A. Steinhagen</li>
+                <li><b>Cross-traffic</b> on higher-speed roads at intersections — legal</li>
+                <li><b>Not legal:</b> US-59, I-45, SH-19 — anywhere posted 40 mph or higher</li>
+              </ul>
+            </div>
+            <div class="price-box">
+              <span class="eyebrow">Add-on</span>
+              <h3 class="mt-0" style="color:var(--ink)">Street-legal kit</h3>
+              <p class="muted">Bundled with the cart, or added to an existing cart. We install, we hand you the paperwork, you drive home registered.</p>
+              <a class="btn btn-teal" href="tel:{BIZ['phone_primary'].replace('-','')}">Quote the kit</a>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="container">
+            <div class="section-head">
+              <span class="eyebrow">After the install</span>
+              <h2>Registration, license, insurance.</h2>
+              <p class="lede-text">Three things to handle after we hand you the kit and the title. We walk you through all three.</p>
+            </div>
+            <div class="cards">
+              <div class="card">
+                <h3>Title &amp; registration</h3>
+                <p>Walk into the Polk County tax office with the title we provide. Registration is <b>~$50/year</b>. They issue a license plate; we mount it.</p>
+              </div>
+              <div class="card alt">
+                <h3>Driver's license</h3>
+                <p>Same Class C license you use for a passenger car. No special LSV endorsement needed. Passengers don't need a license.</p>
+              </div>
+              <div class="card">
+                <h3>Liability insurance</h3>
+                <p>Any standard auto insurer adds an LSV to your policy for <b>$10-20/month</b>. Bring proof to the tax office.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+        """)
+        + _breezy_faq_section("Texas LSV questions.", faqs)
+        + dedent(f"""\
+        <section>
+          <div class="container center">
+            <h2>Ready to make it street legal?</h2>
+            <p class="lede-text">Call us, schedule the install, drive home with the paperwork.</p>
+            <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 {BIZ['phone_primary']}</a>
+            &nbsp;
+            <a class="btn btn-ghost" href="/breezy-ev/">Pick a cart first →</a>
+          </div>
+        </section>
+        """)
+        + contact_strip()
+        + footer()
+    )
+
+
+def page_breezy_lithium_vs_lead_acid():
+    faqs = [
+        ("Which is cheaper, lithium or lead-acid?",
+         "Upfront, <b>lead-acid is cheaper</b> — a full lead-acid pack costs roughly $1,200-$1,800, vs. $3,500-$5,500 for an equivalent Lithium pack. Over the cart's lifetime, <b>Lithium wins on total cost of ownership</b> because you don't replace it every 3-5 years like you do with lead-acid."),
+        ("How much longer does a Lithium battery last?",
+         "Lead-acid packs typically last <b>3-5 years</b> with proper maintenance (watering, equalization charges). Lithium packs last <b>8-12 years</b> with virtually no maintenance. Over the same 10-year window, you'd replace lead-acid 2-3 times — that math is what makes Lithium cheaper long-term."),
+        ("Will Lithium really give me more range?",
+         "Yes — <b>30-50% more</b> in real-world conditions. A new Breezy EV with the standard 48V/125Ah Lithium pack delivers 45-55 miles per charge. The same cart with comparable lead-acid would do 25-35 miles before voltage sag becomes noticeable."),
+        ("Is the Lithium battery safer?",
+         "The cells we install — including the <b>Bolt Energy</b> and <b>White Lightening</b> lines — are LiFePO4 (Lithium Iron Phosphate). LiFePO4 is the safest Lithium chemistry on the market, with a much higher thermal-runaway threshold than the Lithium-ion in laptops or EVs. They're more thermally stable than a lead-acid pack actually."),
+        ("Can I upgrade my existing cart to Lithium?",
+         "Yes. We pull the lead-acid pack, install the Lithium pack and a compatible charger, and reprogram the controller for the Lithium voltage curve. <b>Typical conversion: $3,500-$5,500</b> depending on the pack size. Most customers see the range boost on the first drive."),
+        ("What about charging — does Lithium charge faster?",
+         "Yes. A flat-to-full charge on Lithium takes <b>4-6 hours</b> vs. <b>8-10 hours</b> for lead-acid. Lithium also accepts partial charges without damage — you can top up for 30 minutes between trips without shortening the battery life, which lead-acid hates."),
+    ]
+    sd = _breezy_supporting_schemas(
+        [("Home", "/"), ("Breezy EV", "/breezy-ev/"), ("Lithium vs Lead-acid", "/breezy-ev/lithium-vs-lead-acid/")],
+        faqs,
+    )
+    return (
+        head(
+            "Lithium vs Lead-Acid Golf Cart Batteries — Which Saves Money?",
+            "Lithium vs lead-acid golf cart batteries: real numbers on cost, range, lifespan, and maintenance. Polk County Golf Carts breaks down the math, sells both, and tells you which to pick.",
+            "/breezy-ev/lithium-vs-lead-acid/",
+            og_slug="carts",
+            noindex=True,
+            structured_data=sd,
+        )
+        + header("/breezy-ev/")
+        + dedent(f"""\
+        <section class="hero" style="padding-bottom:3rem">
+          <div class="container">
+            <span class="eyebrow">Battery tech</span>
+            <h1>Lithium vs lead-acid: which actually saves you money?</h1>
+            <p class="lede">Lithium costs more upfront. Lead-acid costs less. <b>Lithium wins on total cost of ownership</b> — here's the math, the real-world range, and how to decide for your cart.</p>
+            <div class="hero-ctas">
+              <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+              <a class="btn btn-outline" href="/breezy-ev/">See the lineup →</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container">
+            <div class="section-head">
+              <span class="eyebrow">At a glance</span>
+              <h2>The headline numbers.</h2>
+            </div>
+            <div class="compare-wrap">
+              <table class="compare-table">
+                <thead><tr><th></th><th>Lead-acid</th><th>Lithium (LiFePO4)</th></tr></thead>
+                <tbody>
+                  <tr><th>Upfront cost (48V pack)</th><td>$1,200-$1,800</td><td>$3,500-$5,500</td></tr>
+                  <tr><th>Lifespan</th><td>3-5 years</td><td>8-12 years</td></tr>
+                  <tr><th>Real-world range per charge</th><td>25-35 miles</td><td>45-55 miles</td></tr>
+                  <tr><th>Weight</th><td>~300 lbs</td><td>~150 lbs</td></tr>
+                  <tr><th>Charge time</th><td>8-10 hours</td><td>4-6 hours</td></tr>
+                  <tr><th>Maintenance</th><td>Water levels, equalize, terminals</td><td>None</td></tr>
+                  <tr><th>Partial charges OK?</th><td>No (damages battery)</td><td>Yes</td></tr>
+                  <tr><th>10-year total cost of ownership</th><td>$3,600-$5,400 (2-3 replacements)</td><td>$3,500-$5,500 (one pack)</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="container split">
+            <div>
+              <span class="eyebrow">The case for Lithium</span>
+              <h2>Why most new carts ship Lithium now.</h2>
+              <p>Five years ago Lithium was a premium upgrade. Today every Breezy EV ships Lithium standard — because the math finally caught up. Buy it once, get 8-12 years out of it, get 30-50% more range every charge, and never check water levels again.</p>
+              <p>The Lithium packs we install — <b>Bolt Energy</b> and <b>White Lightening</b>'s new line — are LiFePO4 (Lithium Iron Phosphate), the safest and most stable Lithium chemistry. Same family as solar storage banks and grid backups, not the energy-dense Lithium-ion you'd find in a laptop.</p>
+              <ul class="checks">
+                <li>30-50% more range per charge</li>
+                <li>Charges in half the time</li>
+                <li>Half the weight = better cart handling</li>
+                <li>No watering, no equalization, no maintenance</li>
+                <li>Partial charges welcome — top up anytime</li>
+                <li>8-12 year lifespan vs. 3-5 for lead-acid</li>
+              </ul>
+            </div>
+            <div class="price-box">
+              <span class="eyebrow">Lithium upgrade</span>
+              <h3 class="mt-0" style="color:var(--ink)">Bolt Energy &amp; White Lightening</h3>
+              <p class="muted">We install both lines. White Lightening's newest pack is particularly strong for the Breeze 6L and Terrain 6 — pairs with their motor-upgrade kit.</p>
+              <a class="btn btn-teal" href="tel:{BIZ['phone_primary'].replace('-','')}">Quote a Lithium upgrade</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container split reverse">
+            <div>
+              <span class="eyebrow">The case for lead-acid</span>
+              <h2>When lead-acid still makes sense.</h2>
+              <p>Lead-acid isn't dead — it's just not the default anymore. There are real cases where lead-acid is the right call:</p>
+              <ul class="checks">
+                <li><b>Short-term ownership:</b> if you're flipping the cart in 1-2 years, you won't see the Lithium ROI.</li>
+                <li><b>Light use:</b> if the cart sits in the garage and only comes out for the occasional weekend, the longer Lithium lifespan doesn't help you as much.</li>
+                <li><b>Budget-first first cart:</b> if the cart needs to fit a tight upfront number, lead-acid gets you on the road for less.</li>
+              </ul>
+              <p>If any of those is you, lead-acid is fine — we install it, service it, and you'll get 3-5 good years before you decide between another lead-acid pack and a Lithium upgrade.</p>
+            </div>
+            <div class="photo-block">
+              <img src="/assets/photos/breezy-ev/breeze-4.jpg" alt="Breezy EV Breeze 4 golf cart" width="800" height="600" loading="lazy">
+            </div>
+          </div>
+        </section>
+        """)
+        + _breezy_faq_section("Battery questions.", faqs)
+        + dedent(f"""\
+        <section>
+          <div class="container center">
+            <h2>Not sure which to pick?</h2>
+            <p class="lede-text">Tell us how you use the cart and we'll tell you which pack we'd actually buy if it were ours. Honest answers, no upsell.</p>
+            <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+            &nbsp;
+            <a class="btn btn-ghost" href="/breezy-ev/">See the lineup →</a>
+          </div>
+        </section>
+        """)
+        + contact_strip()
+        + footer()
+    )
+
+
 # ---------------- Hidden /golf-carts/<town>/ pages ---------------- #
 #
 # Geo landing pages, one per town in the service area. Hidden the same
@@ -1896,14 +2403,10 @@ def page_reviews():
     buttons + a soft escape hatch for "tell us first if something's
     wrong" feedback. NOT hidden — this one's meant to be linked from
     follow-up messages."""
-    google_review_url = (
-        # Until the GBP CID/place_id is captured, search.google.com is
-        # the most reliable fallback — the panel offers "Write a review".
-        "https://search.google.com/local/writereview?placeid="
-        # Aaron: replace with the actual placeid from your Google
-        # Business Profile when ready. Until then this falls back to
-        # the search URL below via JS-less click.
-    )
+    # Direct-to-review deep link for the PCGC Google Business Profile.
+    # `placeid=ChIJdwtETV1LvG4RYshRu-lxOnI` lands on the review form
+    # immediately — no extra tap to find the business first.
+    google_review_url = "https://search.google.com/local/writereview?placeid=ChIJdwtETV1LvG4RYshRu-lxOnI"
     return (
         head(
             "Leave a Review · Polk County Golf Carts",
@@ -1928,7 +2431,7 @@ def page_reviews():
               <h2>Where would you like to leave it?</h2>
             </div>
             <div class="cards" style="max-width:880px; margin: 0 auto;">
-              <a class="card" href="https://www.google.com/search?q=Polk+County+Golf+Carts+Livingston+TX+reviews" target="_blank" rel="noopener">
+              <a class="card" href="{google_review_url}" target="_blank" rel="noopener">
                 <div class="card-body" style="text-align:center; padding:1.5rem;">
                   <div style="font-size:2.5rem; line-height:1; margin-bottom:.5rem;">⭐</div>
                   <h3>Google</h3>
@@ -2058,8 +2561,11 @@ PAGES = {
     "privacy/index.html": page_privacy,
     # Hidden Breezy EV product tree (noindex + robots Disallow + no
     # sitemap + no nav link). Direct URL only until client signs off.
-    "breezy-ev/index.html":          page_breezy_lineup,
-    "breezy-ev/compare/index.html":  page_breezy_compare,
+    "breezy-ev/index.html":                       page_breezy_lineup,
+    "breezy-ev/compare/index.html":               page_breezy_compare,
+    "breezy-ev/financing/index.html":             page_breezy_financing,
+    "breezy-ev/street-legal/index.html":          page_breezy_street_legal,
+    "breezy-ev/lithium-vs-lead-acid/index.html":  page_breezy_lithium_vs_lead_acid,
     # Hidden tier-3 town pages — same hidden-while-reviewing pattern.
     "golf-carts/index.html":         page_town_index,
     # Public review landing page — meant to be linked from post-sale

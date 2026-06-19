@@ -10,6 +10,7 @@ uploads the directory).
 Run:  python3 build.py
 """
 import os
+import re
 from textwrap import dedent
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
@@ -42,9 +43,13 @@ NAV = [
 ]
 
 
-def head(title, desc, path="/", og_slug=None):
+def head(title, desc, path="/", og_slug=None, noindex=False, structured_data=None):
     canonical = f"https://polkcountygolfcarts.com{path}"
     og_image = f"/assets/og/{og_slug}.png" if og_slug else "/assets/og/home.png"
+    robots = '<meta name="robots" content="noindex, nofollow">' if noindex else ''
+    sd = ""
+    if structured_data:
+        sd = f'<script type="application/ld+json">{structured_data}</script>'
     return dedent(f"""\
         <!doctype html>
         <html lang="en">
@@ -53,6 +58,7 @@ def head(title, desc, path="/", og_slug=None):
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <title>{title} | {BIZ['name']}</title>
           <meta name="description" content="{desc}">
+          {robots}
           <link rel="canonical" href="{canonical}">
           <link rel="icon" type="image/svg+xml" href="/assets/logos/logo-color.svg">
           <link rel="icon" type="image/png" sizes="256x256" href="/assets/logos/favicon.png">
@@ -70,6 +76,7 @@ def head(title, desc, path="/", og_slug=None):
           <meta name="twitter:title" content="{title} | {BIZ['name']}">
           <meta name="twitter:description" content="{desc}">
           <meta name="twitter:image" content="https://polkcountygolfcarts.com{og_image}">
+          {sd}
         </head>
         <body>
         <div class="banner">FREE WARRANTIES on every cart purchased through PCGC · BBB Accredited · {BIZ['tagline']}</div>
@@ -166,6 +173,227 @@ def footer():
         """)
 
 
+
+
+# ---------------- Breezy EV product catalog ---------------- #
+#
+# Source: https://breezyev.com/ (verified specs as of June 2026).
+# Pricing is a placeholder — set `price_from` per model when PCGC's
+# current pricing is confirmed.  The whole /breezy-ev/ tree is hidden
+# from search engines (noindex + robots Disallow + no sitemap entry +
+# no nav link) until the client signs off.
+
+import json as _json
+
+BREEZY_EV_MODELS = {
+    "breeze-4": {
+        "name": "Breeze 4",
+        "tagline": "The everyday 4-seater. Street-cruiser stance, family-cruiser comfort.",
+        "summary": "Our entry into the Breezy EV lineup. Four passengers, low-profile street stance, all the modern touches (Lithium battery, CarPlay, Bluetooth sound bar) without the lift kit. Perfect for the neighborhood, the cul-de-sac, and the front-nine path.",
+        "seats": 4,
+        "lifted": False,
+        "ground_clearance_in": 5.0,
+        "tire": "215/35 R14 DOT",
+        "weight_lbs": 1102,
+        "length_in": 116.7,
+        "width_in": 48.8,
+        "height_in": 78.0,
+        "range_mi": "45–55",
+        "price_from": 11995,
+        "best_for": "Neighborhood cruising · golf course paths · low-speed in-town runs · first-time golf cart owners",
+        "color_swatches": True,
+    },
+    "breeze-4l": {
+        "name": "Breeze 4L",
+        "tagline": "The 4-seater, lifted. Off-road tires, lake-life attitude.",
+        "summary": "Same Breeze 4 platform with a lift kit and aggressive 23x10-14 DOT tires. Ride higher, see further, hit gravel roads and grass and the trail to the deer lease without thinking twice. Same Lithium powertrain, same warranty, more capability.",
+        "seats": 4,
+        "lifted": True,
+        "ground_clearance_in": 6.85,
+        "tire": "23x10-14 DOT off-road",
+        "weight_lbs": 1213,
+        "length_in": 119.3,
+        "width_in": 51.6,
+        "height_in": 82.5,
+        "range_mi": "35–50",
+        "price_from": 13495,
+        "best_for": "Lake Livingston · ranch & deer-lease · gravel-road cruising · weekends at the cabin",
+        "color_swatches": True,
+    },
+    "breeze-6l": {
+        "name": "Breeze 6L",
+        "tagline": "Six seats. Lifted. Built for the whole family.",
+        "summary": "The family flagship. Six forward-facing seats with quilted upholstery, the same lift and tire package as the Breeze 4L, and the room to load up the kids, the cousins, and a cooler. Our best-selling rental fleet model and our most-asked-for new cart.",
+        "seats": 6,
+        "lifted": True,
+        "ground_clearance_in": 6.85,
+        "tire": "23x10-14 DOT off-road",
+        "weight_lbs": 1389,
+        "length_in": 149.0,
+        "width_in": 51.6,
+        "height_in": 82.2,
+        "range_mi": "45–55",
+        "price_from": 15495,
+        "best_for": "Family lake days · resort & event fleets · group hauling · rental income properties",
+        "color_swatches": True,
+    },
+    "terrain-6": {
+        "name": "Terrain 6",
+        "tagline": "When you need to go places golf carts don't go.",
+        "summary": "Six seats and the highest ground clearance in the Breezy EV lineup. Built for the customer who wants the lift, the room, and the toughest stance we sell. Ranches, deer leases, beach houses, sand — the Terrain 6 is the cart that gets there.",
+        "seats": 6,
+        "lifted": True,
+        "ground_clearance_in": 7.1,
+        "tire": "23x10-14 DOT off-road (heavy-duty)",
+        "weight_lbs": 1299,
+        "length_in": 146.0,
+        "width_in": 51.8,
+        "height_in": 80.4,
+        "range_mi": "35–50",
+        "price_from": 16995,
+        "best_for": "Ranch & ag use · sand & beach · trail riding · the most demanding terrain",
+        "color_swatches": True,
+    },
+}
+
+# Spec fields shared across every Breezy EV model.
+BREEZY_EV_COMMON = {
+    "motor": "5 kW AC induction (Navitas 600A controller)",
+    "battery": "48V · 125Ah Lithium",
+    "charger": "Smart on-board (120V / 220V AC)",
+    "drive": "Rear-wheel drive",
+    "brakes": "4-wheel disc + electronic parking brake",
+    "warranty": "2-year bumper-to-bumper · 8-year Lithium battery",
+    "tech": "Wireless CarPlay/Android Auto display · Bluetooth sound bar · LED lighting",
+    "storage": "39-gallon rear trunk with drain holes",
+    "speed_lsv": "Programmable up to 25 mph (Texas LSV limit)",
+}
+
+
+def breezy_color_swatches_html():
+    """Eight color chips matching the carts page color section."""
+    colors = [
+        ("Vibrant Orange", "#ff7d28"),
+        ("Candy Apple Red", "#c8102e"),
+        ("Ocean Blue", "#0a4d8c"),
+        ("Electric Blue", "#00a3d9"),
+        ("Green Apple", "#5fa830"),
+        ("Pearl White", "#f7f5ec"),
+        ("Matte Black", "#1d1d1d"),
+        ("Gun Metal Grey", "#4a4d52"),
+    ]
+    return "\n".join(
+        f'<span class="swatch"><span class="dot" style="background:{hex_};{"border-color:#cdcdc0" if hex_ == "#f7f5ec" else ""}"></span>{name}</span>'
+        for name, hex_ in colors
+    )
+
+
+def breezy_model_faqs(model):
+    """Five FAQ entries per model — written for AEO (clear answer in
+    the first sentence) AND as schema.org FAQPage entries."""
+    name = model["name"]
+    seats = model["seats"]
+    lifted = model["lifted"]
+    range_mi = model["range_mi"]
+    gc = model["ground_clearance_in"]
+    return [
+        {
+            "q": f"How fast does the {name} go?",
+            "a": f"The {name} is programmable up to <b>25 mph</b>, which is the maximum allowed for a Low Speed Vehicle (LSV) on Texas streets. We program every cart at delivery to match how you plan to drive it — slower for kid-driving, faster for property use.",
+        },
+        {
+            "q": f"What's the range on a single charge?",
+            "a": f"Breezy EV rates the {name} at <b>{range_mi} miles</b> per charge on the standard 48V 125Ah Lithium pack. Real-world range depends on terrain, payload, and speed — Lake Livingston customers typically get a full weekend of cruising without needing to plug in.",
+        },
+        {
+            "q": "Is it street legal in Texas?",
+            "a": "Yes — with the optional <b>street-legal kit</b> the {0} is registered as a Low Speed Vehicle, which Texas allows on roads posted 35 mph or less. The kit adds headlights, turn signals, mirrors, seat belts, a horn, and a license-plate mount. We handle the install and the paperwork.".format(name),
+        },
+        {
+            "q": "What's the warranty?",
+            "a": "Every new Breezy EV comes with a <b>2-year bumper-to-bumper warranty</b> on the cart and an <b>8-year warranty</b> on the Lithium battery pack. PCGC backs the warranty locally — call us, we pick the cart up, we fix it, we bring it back.",
+        },
+        {
+            "q": (
+                f"Is the {name} good for off-road and ranch use?"
+                if lifted else
+                f"Can I take the {name} off-road?"
+            ),
+            "a": (
+                f"Yes — the {name} ships lifted from the factory with <b>{gc} inches of ground clearance</b> and 23x10-14 DOT-rated off-road tires. It's the right fit for gravel roads, pasture, and the trail to the dock or the deer blind."
+                if lifted else
+                f"The {name} is the non-lifted street model with <b>{gc} inches of ground clearance</b>, which is plenty for paved roads and golf paths but not the right cart for ranch or trail use. If you need a lift, look at the Breeze 4L, Breeze 6L, or Terrain 6."
+            ),
+        },
+    ]
+
+
+def faq_schema(faqs):
+    """JSON-LD FAQPage schema (returns the dict; caller serializes)."""
+    return {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": _strip_tags(f["q"]),
+                "acceptedAnswer": {"@type": "Answer", "text": _strip_tags(f["a"])},
+            }
+            for f in faqs
+        ],
+    }
+
+
+def product_schema(slug, model):
+    return {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": f"Breezy EV {model['name']}",
+        "description": _strip_tags(model["summary"]),
+        "brand": {"@type": "Brand", "name": "Breezy EV"},
+        "image": f"https://polkcountygolfcarts.com/assets/photos/breezy-ev/{slug}.jpg",
+        "sku": slug,
+        "offers": {
+            "@type": "Offer",
+            "url": f"https://polkcountygolfcarts.com/breezy-ev/{slug}/",
+            "priceCurrency": "USD",
+            "price": str(model["price_from"]),
+            "availability": "https://schema.org/InStock",
+            "seller": {
+                "@type": "AutoDealer",
+                "name": BIZ["name"],
+                "telephone": BIZ["phone_primary"],
+                "address": {
+                    "@type": "PostalAddress",
+                    "streetAddress": "1732 FM 3277",
+                    "addressLocality": "Livingston",
+                    "addressRegion": "TX",
+                    "postalCode": "77351",
+                    "addressCountry": "US",
+                },
+            },
+        },
+    }
+
+
+def breadcrumb_schema(crumbs):
+    return {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": i + 1,
+                "name": name,
+                "item": f"https://polkcountygolfcarts.com{path}",
+            }
+            for i, (name, path) in enumerate(crumbs)
+        ],
+    }
+
+
+def _strip_tags(s):
+    return re.sub(r"<[^>]+>", "", s)
 
 
 # ---------------- Pages ---------------- #
@@ -836,6 +1064,308 @@ def page_privacy():
     )
 
 
+# ---------------- Hidden /breezy-ev/ pages ---------------- #
+#
+# These render with noindex+nofollow, are not linked from the primary
+# nav, are not in sitemap.xml, and robots.txt Disallows /breezy-ev/.
+# They're meant to be reviewed via direct URL before being unhidden.
+
+def _format_dollars(n):
+    return "${:,}".format(int(n))
+
+
+def page_breezy_lineup():
+    """Overview page at /breezy-ev/ — the lineup hub."""
+    cards = []
+    for slug, m in BREEZY_EV_MODELS.items():
+        cards.append(dedent(f"""\
+            <a class="card breezy-card{' alt' if m['seats'] == 6 else ''}" href="/breezy-ev/{slug}/">
+              <img src="/assets/photos/breezy-ev/{slug}.jpg" alt="Breezy EV {m['name']}" width="800" height="600" loading="lazy">
+              <div class="card-body">
+                <span class="eyebrow">{'Lifted' if m['lifted'] else 'Street'}</span>
+                <h3>{m['name']}</h3>
+                <p class="muted">{m['tagline']}</p>
+                <ul class="checks compact">
+                  <li>{m['seats']}-seater · {m['ground_clearance_in']}" clearance</li>
+                  <li>{m['range_mi']} mi range · 48V Lithium</li>
+                </ul>
+                <p class="price-line">From <b>{_format_dollars(m['price_from'])}</b> · <span class="muted">call for current pricing</span></p>
+              </div>
+            </a>"""))
+    cards_html = "\n".join(cards)
+    sd = breadcrumb_schema([("Home", "/"), ("Breezy EV", "/breezy-ev/")])
+    return (
+        head(
+            "Breezy EV Golf Carts — The Lineup",
+            "PCGC carries the full Breezy EV lineup: Breeze 4, Breeze 4L, Breeze 6L, and Terrain 6. Authorized dealer, Texas-based service, free pickup & delivery within 25 miles of Livingston.",
+            "/breezy-ev/",
+            og_slug="carts",
+            noindex=True,
+            structured_data=_json.dumps(sd),
+        )
+        + header("/breezy-ev/")
+        + dedent(f"""\
+        <section class="hero" style="padding-bottom:3rem">
+          <div class="container">
+            <h1>Breezy EV at Polk County Golf Carts.</h1>
+            <p class="lede">Authorized Breezy EV dealer in Livingston, Texas. Four models, eight colors, one shop that delivers them to you. Test-drive any of them in person.</p>
+            <div class="hero-ctas">
+              <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+              <a class="btn btn-outline" href="/breezy-ev/compare/">Compare all four →</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container">
+            <div class="section-head">
+              <span class="eyebrow">The lineup</span>
+              <h2>Four carts. One platform. Pick the one that fits the way you ride.</h2>
+              <p class="lede-text">Every Breezy EV shares the same Lithium powertrain, the same 2-year + 8-year warranty, and the same CarPlay-equipped infotainment. What changes is the stance, the seats, and the terrain it's built for.</p>
+            </div>
+            <div class="cards breezy-grid">
+              {cards_html}
+            </div>
+            <p class="center" style="margin-top:2rem"><a class="btn btn-ghost" href="/breezy-ev/compare/">Compare side-by-side →</a></p>
+          </div>
+        </section>
+
+        <section>
+          <div class="container split">
+            <div>
+              <span class="eyebrow">Why buy from PCGC</span>
+              <h2>The only Breezy EV dealer with boots on the ground in East Texas.</h2>
+              <p>Buying a $12,000+ golf cart shouldn't mean waiting on a freight truck from another state and crossing your fingers. We stock Breezy EVs in Livingston, deliver them free within 25 miles, service them in our shop, and pick them up free under warranty.</p>
+              <ul class="checks">
+                <li>BBB Accredited · 5.0-star Google reviews</li>
+                <li>Free pickup &amp; delivery within 25 miles, extended up to 75 miles</li>
+                <li>Financing through Lendmark Financial &amp; Dealer Direct</li>
+                <li>Custom paint, lift kits, sound systems &amp; more in-house</li>
+              </ul>
+              <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Talk to Us today</a>
+            </div>
+            <div class="photo-block">
+              <img src="/assets/photos/shop-exterior.jpg" alt="Polk County Golf Carts shop in Livingston, Texas" width="1024" height="500" loading="lazy">
+            </div>
+          </div>
+        </section>
+        """)
+        + contact_strip()
+        + footer()
+    )
+
+
+def page_breezy_compare():
+    """Side-by-side compare page at /breezy-ev/compare/."""
+    headers = "".join(f'<th>{m["name"]}</th>' for m in BREEZY_EV_MODELS.values())
+    def row(label, fn):
+        cells = "".join(f"<td>{fn(m)}</td>" for m in BREEZY_EV_MODELS.values())
+        return f"<tr><th>{label}</th>{cells}</tr>"
+    rows = [
+        row("Seats", lambda m: f"{m['seats']}-seater"),
+        row("Lift", lambda m: "Lifted" if m["lifted"] else "Street stance"),
+        row("Ground clearance", lambda m: f'{m["ground_clearance_in"]}"'),
+        row("Tires", lambda m: m["tire"]),
+        row("Range (per Breezy EV)", lambda m: f'{m["range_mi"]} mi'),
+        row("Dry weight", lambda m: f'{m["weight_lbs"]:,} lbs'),
+        row("Length", lambda m: f'{m["length_in"]}"'),
+        row("Best for", lambda m: m["best_for"]),
+        row("Price from", lambda m: _format_dollars(m["price_from"])),
+    ]
+    sd = breadcrumb_schema([("Home", "/"), ("Breezy EV", "/breezy-ev/"), ("Compare", "/breezy-ev/compare/")])
+    return (
+        head(
+            "Compare Every Breezy EV Model",
+            "Side-by-side comparison of the Breeze 4, Breeze 4L, Breeze 6L, and Terrain 6 — seats, lift, range, tires, dimensions, and price.",
+            "/breezy-ev/compare/",
+            og_slug="carts",
+            noindex=True,
+            structured_data=_json.dumps(sd),
+        )
+        + header("/breezy-ev/")
+        + dedent(f"""\
+        <section class="hero" style="padding-bottom:3rem">
+          <div class="container">
+            <h1>Compare the Breezy EV lineup.</h1>
+            <p class="lede">Four carts. One platform. Here's how they line up against each other so you can pick the one that fits the way you actually ride.</p>
+          </div>
+        </section>
+
+        <section>
+          <div class="container">
+            <div class="compare-wrap">
+              <table class="compare-table">
+                <thead><tr><th></th>{headers}</tr></thead>
+                <tbody>
+                  {''.join(rows)}
+                </tbody>
+              </table>
+            </div>
+            <div class="cards breezy-grid" style="margin-top:3rem">
+              {"".join(
+                f'<a class="card" href="/breezy-ev/{slug}/"><img src="/assets/photos/breezy-ev/{slug}.jpg" alt="{m["name"]}" loading="lazy"><div class="card-body"><h3>{m["name"]}</h3><p class="muted">{m["tagline"]}</p></div></a>'
+                for slug, m in BREEZY_EV_MODELS.items()
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container center">
+            <h2>Still on the fence?</h2>
+            <p class="lede-text">Come ride them all. We're in Livingston off FM 3277 and the shop is open Tue–Sat.</p>
+            <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+          </div>
+        </section>
+        """)
+        + contact_strip()
+        + footer()
+    )
+
+
+def page_breezy_model(slug):
+    """Product detail page for one Breezy EV model."""
+    m = BREEZY_EV_MODELS[slug]
+    name = m["name"]
+    faqs = breezy_model_faqs(m)
+    faq_html = "\n".join(
+        f'<details class="faq"><summary>{f["q"]}</summary><div class="faq-body"><p>{f["a"]}</p></div></details>'
+        for f in faqs
+    )
+    sd_list = [
+        product_schema(slug, m),
+        faq_schema(faqs),
+        breadcrumb_schema([
+            ("Home", "/"),
+            ("Breezy EV", "/breezy-ev/"),
+            (name, f"/breezy-ev/{slug}/"),
+        ]),
+    ]
+    sd = _json.dumps(sd_list)
+    return (
+        head(
+            f"Breezy EV {name}",
+            f"{name} at Polk County Golf Carts in Livingston, TX. {_strip_tags(m['summary'])[:120]}",
+            f"/breezy-ev/{slug}/",
+            og_slug="carts",
+            noindex=True,
+            structured_data=sd,
+        )
+        + header("/breezy-ev/")
+        + dedent(f"""\
+        <section class="hero" style="padding-bottom:3rem">
+          <div class="container hero-split">
+            <div>
+              <span class="eyebrow">Breezy EV · {'Lifted' if m['lifted'] else 'Street'}</span>
+              <h1>{name}</h1>
+              <p class="lede">{m['tagline']}</p>
+              <div class="hero-meta">
+                <span><b>{m['seats']}-seater</b></span>
+                <span><b>{m['range_mi']} mi</b> range</span>
+                <span><b>From {_format_dollars(m['price_from'])}</b></span>
+              </div>
+              <div class="hero-ctas">
+                <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+                <a class="btn btn-outline" href="/contact/">Schedule a test drive</a>
+              </div>
+            </div>
+            <img src="/assets/photos/breezy-ev/{slug}.jpg" alt="Breezy EV {name}" width="800" height="600" fetchpriority="high">
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container">
+            <div class="section-head">
+              <span class="eyebrow">At a glance</span>
+              <h2>{name} specifications.</h2>
+              <p class="lede-text">{m['summary']}</p>
+            </div>
+            <div class="spec-grid">
+              <div class="spec"><b>Seats</b><span>{m['seats']} passengers</span></div>
+              <div class="spec"><b>Ground clearance</b><span>{m['ground_clearance_in']}"</span></div>
+              <div class="spec"><b>Tires</b><span>{m['tire']}</span></div>
+              <div class="spec"><b>Top speed</b><span>{BREEZY_EV_COMMON['speed_lsv']}</span></div>
+              <div class="spec"><b>Range</b><span>{m['range_mi']} miles per charge</span></div>
+              <div class="spec"><b>Motor</b><span>{BREEZY_EV_COMMON['motor']}</span></div>
+              <div class="spec"><b>Battery</b><span>{BREEZY_EV_COMMON['battery']}</span></div>
+              <div class="spec"><b>Charger</b><span>{BREEZY_EV_COMMON['charger']}</span></div>
+              <div class="spec"><b>Brakes</b><span>{BREEZY_EV_COMMON['brakes']}</span></div>
+              <div class="spec"><b>Warranty</b><span>{BREEZY_EV_COMMON['warranty']}</span></div>
+              <div class="spec"><b>Tech</b><span>{BREEZY_EV_COMMON['tech']}</span></div>
+              <div class="spec"><b>Storage</b><span>{BREEZY_EV_COMMON['storage']}</span></div>
+              <div class="spec"><b>Dimensions (L × W × H)</b><span>{m['length_in']}" × {m['width_in']}" × {m['height_in']}"</span></div>
+              <div class="spec"><b>Dry weight</b><span>{m['weight_lbs']:,} lbs</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="container split">
+            <div>
+              <span class="eyebrow">Pick your finish</span>
+              <h2>Eight factory colors. Or pick your own.</h2>
+              <p class="lede-text">Every Breezy EV ships in one of eight factory colors. Want a custom shade, a fade, or a team-flag wrap? We do that in-house too.</p>
+              <div class="swatches">
+                {breezy_color_swatches_html()}
+              </div>
+            </div>
+            <div class="price-box">
+              <span class="eyebrow">Best for</span>
+              <h3 class="mt-0" style="color:var(--ink)">{m['best_for'].split(' · ')[0]}</h3>
+              <p class="muted">{m['best_for']}.</p>
+              <a class="btn btn-teal" href="tel:{BIZ['phone_primary'].replace('-','')}">Get a quote</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container">
+            <div class="section-head">
+              <span class="eyebrow">Common questions</span>
+              <h2>What people ask about the {name}.</h2>
+            </div>
+            <div class="faq-list">
+              {faq_html}
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="container split reverse">
+            <div class="photo-block">
+              <img src="/assets/photos/owner-john.jpg" alt="John, owner of Polk County Golf Carts" width="1024" height="768" loading="lazy">
+            </div>
+            <div>
+              <span class="eyebrow">Authorized dealer · East Texas</span>
+              <h2>Buy local. Service local.</h2>
+              <p class="lede-text">Every {name} we sell comes with the same set of things you can't get online: free pickup &amp; delivery within 25 miles (75 with our extended service), in-house warranty work, financing through Lendmark or Dealer Direct, and the same family-owned shop standing behind it for the life of the cart.</p>
+              <ul class="checks">
+                <li>BBB Accredited · 5.0-star Google reviews</li>
+                <li>Free pickup &amp; delivery within 25 miles</li>
+                <li>Extended service up to 75 miles ($75 flat)</li>
+                <li>Financing through Lendmark &amp; Dealer Direct</li>
+                <li>{BREEZY_EV_COMMON['warranty']}</li>
+              </ul>
+              <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Talk to Us today</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container center">
+            <h2>Ready to see the {name} in person?</h2>
+            <p class="lede-text">We're in Livingston, just off FM 3277. Come take it for a spin.</p>
+            <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+            &nbsp;
+            <a class="btn btn-ghost" href="/breezy-ev/compare/">Compare with the other models →</a>
+          </div>
+        </section>
+        """)
+        + contact_strip()
+        + footer()
+    )
+
+
 # ---------------- Build ---------------- #
 
 PAGES = {
@@ -845,7 +1375,13 @@ PAGES = {
     "about/index.html":   page_about,
     "contact/index.html": page_contact,
     "privacy/index.html": page_privacy,
+    # Hidden Breezy EV product tree (noindex + robots Disallow + no
+    # sitemap + no nav link). Direct URL only until client signs off.
+    "breezy-ev/index.html":          page_breezy_lineup,
+    "breezy-ev/compare/index.html":  page_breezy_compare,
 }
+for _slug in BREEZY_EV_MODELS:
+    PAGES[f"breezy-ev/{_slug}/index.html"] = (lambda s=_slug: page_breezy_model(s))
 
 
 def main():
@@ -863,6 +1399,7 @@ def main():
             "Disallow: /admin/\n"
             "Disallow: /api/\n"
             "Disallow: /rentals/\n"
+            "Disallow: /breezy-ev/\n"
             "Sitemap: https://polkcountygolfcarts.com/sitemap.xml\n"
         )
     urls = ["/", "/carts/", "/services/", "/about/", "/contact/", "/privacy/"]

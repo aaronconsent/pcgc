@@ -402,3 +402,100 @@ ul.checks li::before {
   background: rgba(255,255,255,.08);
   border-color: rgba(255,255,255,.85);
 }
+
+/* ===================================================================
+   /breezy-ev/ product pages — lineup cards, spec grid, comparison
+   table, and FAQ accordion. All scoped to .breezy-* / .spec-* /
+   .compare-* / .faq-* so they don't fight the rest of the site.
+   =================================================================== */
+
+.breezy-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.breezy-card { padding: 0 !important; overflow: hidden; text-decoration: none; color: inherit; display: flex; flex-direction: column; }
+.breezy-card:hover { text-decoration: none; }
+.breezy-card img {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover;
+  display: block; background: var(--bg);
+}
+.breezy-card .card-body { padding: 1.1rem 1.25rem 1.35rem; }
+.breezy-card h3 { margin-bottom: .25rem; }
+.breezy-card .checks.compact { margin: .5rem 0 .75rem; font-size: .88rem; }
+.breezy-card .checks.compact li { margin-bottom: .25rem; padding-left: 1.25rem; }
+.breezy-card .checks.compact li::before { font-size: .9rem; }
+.breezy-card .price-line { font-size: .95rem; margin: 0; color: var(--ink); }
+.breezy-card .price-line b { color: var(--teal-dk); font: 700 1.05rem Georgia, serif; }
+
+.spec-grid {
+  display: grid; gap: .75rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.spec {
+  background: var(--bg-alt);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--coral);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+}
+.spec b {
+  display: block;
+  font-size: .72rem; letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-soft); margin-bottom: .35rem;
+  font-family: -apple-system, sans-serif; font-weight: 700;
+}
+.spec span { font: 600 1rem inherit; color: var(--ink); }
+
+.compare-wrap { overflow-x: auto; }
+.compare-table {
+  width: 100%; border-collapse: collapse;
+  font-size: .92rem; min-width: 720px;
+  background: var(--bg-alt);
+  border-radius: 10px; overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.compare-table thead th {
+  background: var(--teal-dk); color: #fff;
+  padding: .85rem 1rem; text-align: left;
+  font: 700 1rem Georgia, serif;
+}
+.compare-table tbody th {
+  background: var(--bg); color: var(--ink-soft);
+  text-align: left; padding: .7rem 1rem;
+  font: 700 .8rem -apple-system, sans-serif;
+  letter-spacing: .08em; text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.compare-table tbody td {
+  padding: .7rem 1rem; color: var(--ink);
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.compare-table tbody tr:last-child th,
+.compare-table tbody tr:last-child td { border-bottom: none; }
+
+.faq-list { display: grid; gap: .65rem; max-width: 880px; }
+.faq {
+  background: var(--bg-alt);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--coral);
+  border-radius: 8px;
+  padding: 0;
+}
+.faq summary {
+  cursor: pointer;
+  padding: 1rem 1.25rem;
+  font: 600 1.02rem Georgia, serif;
+  color: var(--teal-dk);
+  list-style: none;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after {
+  content: "+";
+  color: var(--coral); font-size: 1.5rem; font-weight: 700;
+  margin-left: 1rem;
+  transition: transform .15s ease;
+}
+.faq[open] summary::after { content: "−"; }
+.faq-body { padding: 0 1.25rem 1.1rem; color: var(--ink); line-height: 1.65; }
+.faq-body p { margin: 0; }

@@ -192,10 +192,13 @@ def footer():
 # ---------------- Breezy EV product catalog ---------------- #
 #
 # Source: https://breezyev.com/ (verified specs as of June 2026).
-# Pricing is a placeholder — set `price_from` per model when PCGC's
-# current pricing is confirmed.  The whole /breezy-ev/ tree is hidden
-# from search engines (noindex + robots Disallow + no sitemap entry +
-# no nav link) until the client signs off.
+# Per the owner: don't quote per-model prices on the page.  All four
+# models share the same "Prices start at $12,500 and up depending on
+# the model chosen — call for current pricing" framing.  Capture this
+# floor in ONE constant so the language stays consistent and any
+# future change is a single-line edit.
+PRICE_FROM = 12500
+PRICE_TEXT = "Prices start at $12,500 and up depending on the model chosen — call for current pricing."
 
 import json as _json
 
@@ -307,7 +310,6 @@ BREEZY_EV_MODELS = {
         "width_in": 48.8,
         "height_in": 78.0,
         "range_mi": "45–55",
-        "price_from": 11995,
         "best_for": "Neighborhood cruising · golf course paths · low-speed in-town runs · first-time golf cart owners",
         "color_swatches": True,
     },
@@ -324,7 +326,6 @@ BREEZY_EV_MODELS = {
         "width_in": 51.6,
         "height_in": 82.5,
         "range_mi": "35–50",
-        "price_from": 13495,
         "best_for": "Lake Livingston · ranch & deer-lease · gravel-road cruising · weekends at the cabin",
         "color_swatches": True,
     },
@@ -341,7 +342,6 @@ BREEZY_EV_MODELS = {
         "width_in": 51.6,
         "height_in": 82.2,
         "range_mi": "45–55",
-        "price_from": 15495,
         "best_for": "Family lake days · resort & event fleets · group hauling · rental income properties",
         "color_swatches": True,
     },
@@ -358,7 +358,6 @@ BREEZY_EV_MODELS = {
         "width_in": 51.8,
         "height_in": 80.4,
         "range_mi": "35–50",
-        "price_from": 16995,
         "best_for": "Ranch & ag use · sand & beach · trail riding · the most demanding terrain",
         "color_swatches": True,
     },
@@ -461,11 +460,16 @@ def product_schema(slug, model):
         "brand": {"@type": "Brand", "name": "Breezy EV"},
         "image": f"https://polkcountygolfcarts.com/assets/photos/breezy-ev/{slug}.jpg",
         "sku": slug,
+        # AggregateOffer is the right schema.org type when pricing varies
+        # by configuration (color, options, lift kits, etc.). It tells
+        # search engines the cart "starts at" the floor without locking
+        # in a specific number.
         "offers": {
-            "@type": "Offer",
+            "@type": "AggregateOffer",
             "url": f"https://polkcountygolfcarts.com/breezy-ev/{slug}/",
             "priceCurrency": "USD",
-            "price": str(model["price_from"]),
+            "lowPrice": str(PRICE_FROM),
+            "offerCount": 1,
             "availability": "https://schema.org/InStock",
             "seller": {"@id": ENTITY_BUSINESS},
         },
@@ -1310,7 +1314,7 @@ def page_breezy_lineup():
                   <li>{m['seats']}-seater · {m['ground_clearance_in']}" clearance</li>
                   <li>{m['range_mi']} mi range · 48V Lithium</li>
                 </ul>
-                <p class="price-line">From <b>{_format_dollars(m['price_from'])}</b> · <span class="muted">call for current pricing</span></p>
+                <p class="price-line">Prices from <b>{_format_dollars(PRICE_FROM)}</b> · <span class="muted">call for current pricing</span></p>
               </div>
             </a>"""))
     cards_html = "\n".join(cards)
@@ -1523,7 +1527,7 @@ def page_breezy_compare():
         row("Dry weight", lambda m: f'{m["weight_lbs"]:,} lbs'),
         row("Length", lambda m: f'{m["length_in"]}"'),
         row("Best for", lambda m: m["best_for"]),
-        row("Price from", lambda m: _format_dollars(m["price_from"])),
+        row("Pricing", lambda m: f"From {_format_dollars(PRICE_FROM)} · call for current pricing"),
     ]
     sd = breadcrumb_schema([("Home", "/"), ("Breezy EV", "/breezy-ev/"), ("Compare", "/breezy-ev/compare/")])
     return (
@@ -1615,7 +1619,7 @@ def page_breezy_model(slug):
               <div class="hero-meta">
                 <span><b>{m['seats']}-seater</b></span>
                 <span><b>{m['range_mi']} mi</b> range</span>
-                <span><b>From {_format_dollars(m['price_from'])}</b></span>
+                <span><b>From {_format_dollars(PRICE_FROM)}</b></span>
               </div>
               <div class="hero-ctas">
                 <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
@@ -1663,9 +1667,9 @@ def page_breezy_model(slug):
               </div>
             </div>
             <div class="price-box">
-              <span class="eyebrow">Best for</span>
-              <h3 class="mt-0" style="color:var(--ink)">{m['best_for'].split(' · ')[0]}</h3>
-              <p class="muted">{m['best_for']}.</p>
+              <span class="eyebrow">Pricing</span>
+              <h3 class="mt-0" style="color:var(--ink)">From {_format_dollars(PRICE_FROM)}</h3>
+              <p class="muted">{PRICE_TEXT}</p>
               <a class="btn btn-teal" href="tel:{BIZ['phone_primary'].replace('-','')}">Get a quote</a>
             </div>
           </div>
@@ -2100,8 +2104,7 @@ def main():
     # Claude, Gemini) modeled on llmstxt.org. Lives at the site root.
     breezy_lines = "\n".join(
         f"- [{m['name']}](https://polkcountygolfcarts.com/breezy-ev/{slug}/) — {m['seats']}-seater, "
-        f"{'lifted' if m['lifted'] else 'street'}, {m['range_mi']} mi range, "
-        f"from ${m['price_from']:,}"
+        f"{'lifted' if m['lifted'] else 'street'}, {m['range_mi']} mi range"
         for slug, m in BREEZY_EV_MODELS.items()
     )
     llms = f"""# {BIZ['name']}
@@ -2121,6 +2124,9 @@ def main():
 
 ### Breezy EV models we stock
 {breezy_lines}
+
+### Pricing
+Prices start at $12,500 and up depending on the model chosen — call for current pricing.
 
 ## Services
 - 20-Point Inspection (Full Service Package) from $165

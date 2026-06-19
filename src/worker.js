@@ -26,6 +26,12 @@ export default {
       return listBookings(request, env);
     }
 
+    // Legacy URLs from the original site — 301 to the new locations
+    // so search engines (and bookmarks) move with us.
+    if (url.pathname === "/about" || url.pathname === "/about/") {
+      return Response.redirect(`${url.origin}/about-us/`, 301);
+    }
+
     // Everything else flows to the static assets bound at env.ASSETS.
     return env.ASSETS.fetch(request);
   },

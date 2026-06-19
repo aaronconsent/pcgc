@@ -52,7 +52,7 @@ NAV = [
     ("Home", "/"),
     ("Breezy EV Carts", "/carts/"),
     ("Service & Custom", "/services/"),
-    ("About", "/about/"),
+    ("About", "/about-us/"),
     ("Contact", "/contact/"),
 ]
 
@@ -724,7 +724,7 @@ def page_home():
                 <p class="cite">— H&amp;M</p>
               </div>
             </div>
-            <p class="center" style="margin-top:2rem"><a href="/about/">Read more reviews →</a></p>
+            <p class="center" style="margin-top:2rem"><a href="/about-us/">Read more reviews →</a></p>
           </div>
         </section>
 
@@ -1056,10 +1056,10 @@ def page_about():
         head(
             "About Polk County Golf Carts",
             "Serving our community as a family owned business since 2020. Read our story, see what customers say, and meet John — owner and lead mechanic.",
-            "/about/",
+            "/about-us/",
             og_slug="about",
         )
-        + header("/about/")
+        + header("/about-us/")
         + dedent(f"""\
         <section class="hero" style="padding-bottom:3rem">
           <div class="container">
@@ -1970,13 +1970,86 @@ def page_reviews():
     )
 
 
+def page_404():
+    """Custom 404 page. Served by Cloudflare's static-assets handler
+    when not_found_handling = "404-page" is configured in wrangler.toml.
+    Marked noindex so search engines don't try to rank the error page."""
+    return (
+        head(
+            "Page Not Found",
+            f"That page took a wrong turn. Back to the lineup, or call {BIZ['phone_primary']}.",
+            "/404.html",
+            og_slug="home",
+            noindex=True,
+        )
+        + header("/404.html")
+        + dedent(f"""\
+        <section class="hero" style="padding: 5rem 0;">
+          <div class="container">
+            <div style="max-width: 760px; text-align: center; margin: 0 auto;">
+              <p style="font: 700 6.5rem/1 Georgia, serif; color: #fff; margin: 0 0 .5rem; letter-spacing: -.04em;">404</p>
+              <h1 style="color: #fff;">That page took a wrong turn.</h1>
+              <p class="lede" style="max-width: 60ch; margin: 0 auto 2rem;">The URL you're looking for isn't here — it might have moved, been renamed, or never existed. Try one of the spots below, or give John a call.</p>
+              <div class="hero-ctas" style="justify-content: center;">
+                <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+                <a class="btn btn-outline" href="/">Back to the home page</a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container">
+            <div class="section-head center" style="margin-left: auto; margin-right: auto; text-align: center;">
+              <span class="eyebrow">Try one of these</span>
+              <h2>Where were you headed?</h2>
+            </div>
+            <div class="cards">
+              <a class="card" href="/carts/">
+                <div class="card-body">
+                  <span class="eyebrow">Carts</span>
+                  <h3>Brand-new, refurbished, and used</h3>
+                  <p>{BIZ['inventory_line']}</p>
+                </div>
+              </a>
+              <a class="card alt" href="/services/">
+                <div class="card-body">
+                  <span class="eyebrow">Service</span>
+                  <h3>20-Point Inspection &amp; custom builds</h3>
+                  <p>Tune-ups from $165, plus lift kits, paint, sound systems, and more.</p>
+                </div>
+              </a>
+              <a class="card" href="/about-us/">
+                <div class="card-body">
+                  <span class="eyebrow">Our story</span>
+                  <h3>Family-owned since {BIZ['founded']}</h3>
+                  <p>BBB Accredited, 5-star reviews, the only Breezy EV dealer in East Texas with a service center.</p>
+                </div>
+              </a>
+              <a class="card alt" href="/contact/">
+                <div class="card-body">
+                  <span class="eyebrow">Contact</span>
+                  <h3>Visit, call, or email</h3>
+                  <p>1732 FM 3277, Livingston, TX 77351 · {BIZ['phone_primary']} · {BIZ['email']}</p>
+                </div>
+              </a>
+            </div>
+          </div>
+        </section>
+        """)
+        + contact_strip()
+        + footer()
+    )
+
+
 # ---------------- Build ---------------- #
 
 PAGES = {
     "index.html":         page_home,
     "carts/index.html":   page_carts,
     "services/index.html":page_services,
-    "about/index.html":   page_about,
+    "about-us/index.html": page_about,
+    "404.html":           page_404,
     "contact/index.html": page_contact,
     "privacy/index.html": page_privacy,
     # Hidden Breezy EV product tree (noindex + robots Disallow + no
@@ -2014,7 +2087,7 @@ def main():
             "Disallow: /golf-carts/\n"
             "Sitemap: https://polkcountygolfcarts.com/sitemap.xml\n"
         )
-    urls = ["/", "/carts/", "/services/", "/about/", "/contact/", "/privacy/", "/leave-a-review/"]
+    urls = ["/", "/carts/", "/services/", "/about-us/", "/contact/", "/privacy/", "/leave-a-review/"]
     sm = ['<?xml version="1.0" encoding="UTF-8"?>',
           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     for u in urls:

@@ -4,10 +4,13 @@ compatibility_date = "2026-04-01"
 
 # Static-asset bucket: the worker calls env.ASSETS.fetch(request) for
 # anything not handled by /api/booking. Directory-index resolution
-# (e.g. /about/ -> site/about/index.html) happens automatically.
+# (e.g. /about-us/ -> site/about-us/index.html) happens automatically.
+# not_found_handling = "404-page" makes the assets handler serve
+# /404.html for any request that doesn't resolve to a real asset.
 [assets]
 directory = "./site"
 binding = "ASSETS"
+not_found_handling = "404-page"
 
 # Stores one record per rental booking under the `booking:<ts>:<id>`
 # prefix. (The name FEEDBACK_KV is kept as the binding for backwards

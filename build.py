@@ -941,6 +941,7 @@ def main():
             "Allow: /\n"
             "Disallow: /admin/\n"
             "Disallow: /api/\n"
+            "Disallow: /rentals/\n"
             "Sitemap: https://polkcountygolfcarts.com/sitemap.xml\n"
         )
     urls = ["/", "/carts/", "/services/", "/about/", "/contact/", "/privacy/"]

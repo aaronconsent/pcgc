@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Rental Bookings · PCGC Admin</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/logos/logo-color.svg">
+  <link rel="stylesheet" href="/assets/site.css">
+  <style>
+    .bk-page { max-width: 960px; margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+    .bk-page h1 { color: var(--teal-dk); margin-bottom: .35rem; }
+    .bk-page .sub { color: var(--ink-soft); margin-bottom: 2rem; }
+    .bk-status { text-align: center; padding: 3rem; color: var(--ink-soft); }
+    .bk-entry {
+      background: #fff; border: 1px solid var(--line);
+      border-left: 4px solid var(--teal-dk);
+      border-radius: 10px; padding: 1.25rem 1.4rem;
+      margin-bottom: 1rem;
+      box-shadow: var(--shadow);
+    }
+    .bk-entry header {
+      display: flex; gap: 1rem; align-items: baseline;
+      justify-content: space-between; flex-wrap: wrap;
+      font-size: .85rem; color: var(--ink-soft); margin-bottom: .65rem;
+    }
+    .bk-entry .id { font: 700 .95rem ui-monospace, monospace; color: var(--coral); }
+    .bk-entry .ts { color: var(--ink-soft); }
+    .bk-entry .grid {
+      display: grid; gap: .85rem;
+      grid-template-columns: 1fr 1fr;
+      margin: .65rem 0;
+    }
+    @media (max-width: 600px) { .bk-entry .grid { grid-template-columns: 1fr; } }
+    .bk-entry .field b { display: block; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
+    .bk-entry .field span { color: var(--ink); }
+    .bk-items {
+      background: var(--bg); border-radius: 8px;
+      padding: .65rem .85rem; margin-top: .65rem;
+      font-size: .9rem;
+    }
+    .bk-items .row {
+      display: flex; justify-content: space-between;
+      padding: .15rem 0; color: var(--ink);
+    }
+    .bk-items .row.total { font-weight: 700; border-top: 1px solid var(--line); padding-top: .35rem; margin-top: .35rem; }
+    .bk-empty { text-align: center; padding: 3rem 1rem; color: var(--ink-soft); }
+    .bk-empty h2 { color: var(--teal-dk); }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="/">
+        <img class="brand-mark" src="/assets/logos/logo-color.svg" alt="" width="144" height="112" aria-hidden="true">
+        <span class="brand-text">Polk County Golf Carts<small>Admin · Rentals</small></span>
+      </a>
+    </div>
+  </header>
+  <main class="bk-page">
+    <h1>Rental bookings</h1>
+    <p class="sub">Submissions through the hidden <a href="/rentals/">/rentals/</a> flow, newest first.</p>
+    <div id="bk-out" class="bk-status">Loading…</div>
+  </main>
+  <script>
+  (async () => {
+    const out = document.getElementById("bk-out");
+    let data;
+    try {
+      const res = await fetch("/api/booking");
+      if (res.status === 401) { out.textContent = "Authentication failed. Reload to try again."; return; }
+      if (!res.ok) {
+        const t = await res.text();
+        out.textContent = "Error " + res.status + ": " + t;
+        return;
+      }
+      data = await res.json();
+    } catch (e) {
+      out.textContent = "Network error: " + e.message;
+      return;
+    }
+    const entries = (data && data.entries) || [];
+    if (!entries.length) {
+      out.outerHTML = '<div class="bk-empty"><h2>No bookings yet</h2><p>Customer rentals from /rentals/ will appear here.</p></div>';
+      return;
+    }
+    out.className = "";
+    out.textContent = "";
+    const fmtMoney = n => "$" + (Number(n) || 0).toFixed(2);
+    const fmtDate = iso => iso ? new Date(iso + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
+    const deliveryLabel = { pickup: "Pickup at shop", local: "Free delivery (≤25 mi)", extended: "Extended delivery (25–75 mi)" };
+    for (const b of entries) {
+      const wrap = document.createElement("article");
+      wrap.className = "bk-entry";
+      const head = document.createElement("header");
+      head.innerHTML = `<span class="id"></span><span class="ts"></span>`;
+      head.querySelector(".id").textContent = b.id || "—";
+      head.querySelector(".ts").textContent = new Date(b.ts).toLocaleString();
+      wrap.appendChild(head);
+
+      const grid = document.createElement("div");
+      grid.className = "grid";
+      const c = b.contact || {};
+      grid.innerHTML = `
+        <div class="field"><b>Customer</b><span></span></div>
+        <div class="field"><b>Trip</b><span></span></div>
+        <div class="field"><b>Contact</b><span></span></div>
+        <div class="field"><b>Delivery</b><span></span></div>
+      `;
+      const cells = grid.querySelectorAll(".field span");
+      cells[0].textContent = (c.name || "—") + " · " + (c.guests || 1) + " guests";
+      cells[1].textContent = fmtDate(b.dates?.start) + " → " + fmtDate(b.dates?.end) + " (" + (b.dates?.days || 0) + " day" + ((b.dates?.days || 0) === 1 ? "" : "s") + ")";
+      cells[2].textContent = (c.phone || "—") + " · " + (c.email || "—");
+      cells[3].textContent = (deliveryLabel[b.delivery] || b.delivery || "—") + (c.address ? " · " + c.address : "");
+      wrap.appendChild(grid);
+
+      if (c.notes) {
+        const notes = document.createElement("p");
+        notes.style.cssText = "margin: .35rem 0; font-style: italic; color: var(--ink-soft);";
+        notes.textContent = "Notes: " + c.notes;
+        wrap.appendChild(notes);
+      }
+
+      const items = document.createElement("div");
+      items.className = "bk-items";
+      const p = b.pricing || {};
+      const rows = [];
+      for (const it of (b.items || [])) {
+        rows.push('<div class="row"><span>' + it.name + ' × ' + it.qty + '</span><span>' + fmtMoney(it.lineTotal) + '</span></div>');
+      }
+      if (p.groupDiscount) rows.push('<div class="row"><span>Group discount</span><span>−' + fmtMoney(p.groupDiscount) + '</span></div>');
+      if (p.deliveryFee)   rows.push('<div class="row"><span>Extended delivery</span><span>' + fmtMoney(p.deliveryFee) + '</span></div>');
+      if (p.tax)           rows.push('<div class="row"><span>Tax</span><span>' + fmtMoney(p.tax) + '</span></div>');
+      rows.push('<div class="row total"><span>Paid</span><span>' + fmtMoney(p.total) + '</span></div>');
+      items.innerHTML = rows.join("");
+      wrap.appendChild(items);
+
+      document.querySelector(".bk-page").appendChild(wrap);
+    }
+  })();
+  </script>
+</body>
+</html>

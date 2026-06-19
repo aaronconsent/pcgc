@@ -1,0 +1,268 @@
+/* Polk County Golf Carts — rental flow styles.
+   Inherits the shared design tokens from /assets/site.css so the
+   palette, fonts, and primitives stay consistent. Everything here
+   is scoped to the rental experience. */
+
+.rental-body { background: var(--bg); }
+
+/* Progress dots */
+.rental-progress {
+  position: sticky; top: 0; z-index: 40;
+  background: var(--bg-alt);
+  border-bottom: 1px solid var(--line);
+  padding: .75rem 1rem;
+}
+.rental-progress ol {
+  display: flex; justify-content: center; align-items: center;
+  gap: .35rem; max-width: 720px; margin: 0 auto;
+  list-style: none; padding: 0;
+  font-size: .82rem; color: var(--ink-soft);
+}
+.rental-progress li {
+  display: flex; align-items: center; gap: .45rem;
+  flex: 0 0 auto;
+}
+.rental-progress li::after {
+  content: "";
+  width: 1.5rem; height: 2px;
+  background: var(--line);
+  margin: 0 .15rem;
+}
+.rental-progress li:last-child::after { display: none; }
+.rental-progress li span {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--ink-soft);
+  font-weight: 700; font-size: .82rem;
+  flex-shrink: 0;
+}
+.rental-progress li.active { color: var(--ink); font-weight: 600; }
+.rental-progress li.active span { background: var(--coral); color: #fff; }
+.rental-progress li.done span { background: var(--teal-dk); color: #fff; }
+.rental-progress li.done::after { background: var(--teal); }
+
+@media (max-width: 520px) {
+  .rental-progress ol { font-size: .72rem; gap: .15rem; }
+  .rental-progress li::after { width: .9rem; }
+  .rental-progress li span { width: 22px; height: 22px; font-size: .75rem; }
+}
+
+.rental { max-width: 880px; margin: 0 auto; padding: 1.5rem 1rem 6rem; }
+
+/* Card containers used by steps 1, 3, 4, 5 */
+.rental-card {
+  background: var(--bg-alt);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.75rem;
+  box-shadow: var(--shadow);
+}
+.rental-card.center { text-align: center; }
+.rental-card h1 { font-size: clamp(1.6rem, 3.2vw, 2.2rem); margin: .25rem 0 .35rem; }
+
+.rental-back {
+  background: transparent; border: none;
+  color: var(--teal-dk); font: 600 .9rem inherit;
+  padding: 0 0 1rem; margin-left: -.25rem;
+  cursor: pointer;
+}
+.rental-back:hover { text-decoration: underline; }
+
+.rental-step-head {
+  background: var(--bg-alt);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow);
+}
+.rental-step-head h1 { font-size: clamp(1.5rem, 3vw, 2rem); margin: .25rem 0 .35rem; }
+
+/* Fields */
+.rental-field { display: flex; flex-direction: column; gap: .35rem; margin-top: 1rem; }
+.rental-field > span {
+  font: 600 .9rem inherit; color: var(--ink);
+}
+.rental-field em { font-style: normal; color: var(--ink-soft); font-weight: 400; }
+.rental-field input,
+.rental-field textarea {
+  font: 16px/1.4 inherit; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: .75rem .85rem;
+  background: var(--bg);
+  width: 100%;
+}
+.rental-field input:focus,
+.rental-field textarea:focus {
+  outline: none; border-color: var(--coral); background: #fff;
+}
+.rental-grid-2 {
+  display: grid; gap: 1rem;
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 520px) { .rental-grid-2 { grid-template-columns: 1fr; } }
+
+.rental-meta { font-size: .85rem; color: var(--ink-soft); margin: .8rem 0 0; }
+.rental-meta code { background: var(--bg); padding: 2px 6px; border-radius: 4px; }
+.rental-error {
+  background: #fff4e6; color: #8a4a00;
+  border: 1px solid #f3c98a; border-radius: 8px;
+  padding: .6rem .85rem; font-size: .9rem; margin: 1rem 0 0;
+}
+.rental-fineprint { font-size: .82rem; color: var(--ink-soft); margin: 1.25rem auto 0; max-width: 56ch; text-align: center; }
+.rental-cta-row { margin-top: 1.5rem; display: flex; gap: .75rem; flex-wrap: wrap; }
+.rental-cta-row.center { justify-content: center; }
+.rental-cta-row .btn { min-width: 200px; }
+
+/* Choice cards (delivery, etc.) */
+.rental-fieldset { border: none; padding: 0; margin: 1.5rem 0 0; }
+.rental-fieldset legend { font: 600 .9rem inherit; color: var(--ink); padding: 0 0 .5rem; }
+.rental-choice {
+  display: flex; align-items: center; gap: 1rem;
+  background: var(--bg);
+  border: 1.5px solid var(--line); border-radius: 12px;
+  padding: 1rem 1.1rem; margin-bottom: .65rem;
+  cursor: pointer;
+  transition: border-color .12s ease, background .12s ease;
+}
+.rental-choice input[type="radio"] {
+  flex-shrink: 0;
+  accent-color: var(--coral);
+  width: 20px; height: 20px;
+}
+.rental-choice-body { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.rental-choice-body b { color: var(--ink); }
+.rental-choice-body small { color: var(--ink-soft); font-size: .85rem; }
+.rental-choice-price { color: var(--teal-dk); font-size: 1.05rem; }
+.rental-choice:hover { background: #fff; }
+.rental-choice:has(input:checked) { border-color: var(--coral); background: #fff; box-shadow: 0 4px 16px rgba(232,90,79,.1); }
+
+/* ========== Cart grid (step 2) ========== */
+.cart-grid {
+  display: grid; gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  margin-bottom: 6rem; /* leave room for sticky total bar on mobile */
+}
+.cart-tile {
+  background: var(--bg-alt);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  display: flex; flex-direction: column;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.cart-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.cart-tile.selected { border-color: var(--coral); box-shadow: 0 8px 28px rgba(232,90,79,.18); }
+.cart-tile img {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover;
+  display: block;
+}
+.cart-tile-body { padding: 1rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: .35rem; flex: 1; }
+.cart-tile h3 { margin: 0; font-size: 1.05rem; color: var(--teal-dk); }
+.cart-tile .badges { display: flex; flex-wrap: wrap; gap: .35rem; margin: .25rem 0 .35rem; }
+.cart-tile .badge {
+  background: var(--bg); color: var(--ink-soft);
+  font: 600 .72rem inherit; letter-spacing: .04em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 999px;
+  border: 1px solid var(--line);
+}
+.cart-tile .desc { color: var(--ink-soft); font-size: .88rem; margin: 0; min-height: 2.4rem; }
+.cart-tile .footer {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: auto; padding-top: .85rem;
+}
+.cart-tile .price { font: 700 1.15rem Georgia, serif; color: var(--ink); }
+.cart-tile .price small { font: 400 .75rem -apple-system, sans-serif; color: var(--ink-soft); }
+
+.stepper {
+  display: inline-flex; align-items: center; gap: .55rem;
+  background: var(--bg);
+  border: 1.5px solid var(--line); border-radius: 999px;
+  padding: 4px;
+}
+.stepper button {
+  width: 32px; height: 32px;
+  border: none; border-radius: 50%;
+  background: var(--bg-alt);
+  color: var(--teal-dk);
+  font: 700 1.2rem inherit;
+  cursor: pointer;
+  line-height: 1;
+}
+.stepper button:hover { background: var(--teal-dk); color: #fff; }
+.stepper button:disabled { opacity: .35; cursor: not-allowed; background: var(--bg-alt); color: var(--ink-soft); }
+.stepper b { min-width: 24px; text-align: center; font-size: 1.05rem; color: var(--ink); }
+.cart-tile.selected .stepper { background: #ffe9e6; border-color: var(--coral); }
+
+/* Sticky total bar (mobile) -- becomes sidebar on desktop */
+.rental-total {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: var(--bg-alt);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 24px rgba(20,50,58,.1);
+  padding: .85rem 1.25rem env(safe-area-inset-bottom, .85rem);
+  z-index: 30;
+  display: flex; align-items: center; gap: 1rem;
+  flex-wrap: wrap;
+}
+.rental-total-line { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.rental-total-line span:first-child { color: var(--ink-soft); font-size: .82rem; }
+.rental-total-line b { font: 700 1.25rem Georgia, serif; color: var(--ink); }
+.rental-total .btn { white-space: nowrap; min-width: 180px; }
+
+/* Summary block (steps 4 and 5) */
+.rental-summary {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: .94rem;
+}
+.rental-summary .row {
+  display: flex; justify-content: space-between; gap: 1rem;
+  padding: .25rem 0;
+}
+.rental-summary .row.total {
+  border-top: 1.5px solid var(--line);
+  padding-top: .75rem; margin-top: .35rem;
+  font: 700 1.15rem Georgia, serif;
+}
+.rental-summary .row span:last-child { font-variant-numeric: tabular-nums; }
+.rental-summary .group-discount span:last-child { color: var(--coral); font-weight: 600; }
+.rental-summary .row.muted { color: var(--ink-soft); font-size: .85rem; padding-top: 0; }
+
+/* Confirmation */
+.rental-check {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: var(--coral);
+  color: #fff; font: 700 3.5rem/80px inherit;
+  margin: 0 auto 1rem;
+  animation: rental-pop .35s ease-out;
+}
+@keyframes rental-pop {
+  from { transform: scale(.4); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  to   { transform: scale(1); opacity: 1; }
+}
+.rental-confirm code {
+  font: 700 1.05rem ui-monospace, "SF Mono", monospace;
+  background: var(--bg); padding: 4px 10px; border-radius: 6px;
+}
+
+.rental-footer {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--ink-soft);
+  font-size: .85rem;
+  border-top: 1px solid var(--line);
+  background: var(--bg-alt);
+}
+
+/* Hide step sections with this attribute */
+.rental-step[hidden] { display: none !important; }

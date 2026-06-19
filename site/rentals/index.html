@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Rent a Cart · Polk County Golf Carts</title>
+  <link rel="canonical" href="https://polkcountygolfcarts.com/rentals/">
+  <link rel="icon" type="image/svg+xml" href="/assets/logos/logo-color.svg">
+  <link rel="preconnect" href="https://fonts.cdnfonts.com">
+  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/grobold">
+  <link rel="stylesheet" href="/assets/site.css">
+  <link rel="stylesheet" href="/assets/rentals.css">
+</head>
+<body class="rental-body">
+
+<header class="site-header">
+  <div class="container">
+    <a class="brand" href="/">
+      <img class="brand-mark" src="/assets/logos/logo-color.svg" alt="" width="144" height="112" aria-hidden="true">
+      <span class="brand-text">Polk County Golf Carts<small>Rent a cart</small></span>
+    </a>
+    <nav class="primary">
+      <a class="cta" href="tel:9362231182">📞 936-223-1182</a>
+    </nav>
+  </div>
+</header>
+
+<!-- Progress dots, fixed top under header -->
+<nav class="rental-progress" aria-label="Booking progress">
+  <ol>
+    <li data-step="1" class="active"><span>1</span>Dates</li>
+    <li data-step="2"><span>2</span>Carts</li>
+    <li data-step="3"><span>3</span>Details</li>
+    <li data-step="4"><span>4</span>Pay</li>
+  </ol>
+</nav>
+
+<main class="rental">
+  <!-- ============ STEP 1 · DATES ============ -->
+  <section class="rental-step" data-step="1" aria-labelledby="s1-title">
+    <div class="rental-card">
+      <span class="eyebrow">Step 1 of 4</span>
+      <h1 id="s1-title">When do you need it?</h1>
+      <p class="lede-text">Pick up and return dates — we'll show you what's available.</p>
+      <div class="rental-grid-2">
+        <label class="rental-field">
+          <span>Pickup</span>
+          <input type="date" id="date-start" required>
+        </label>
+        <label class="rental-field">
+          <span>Return</span>
+          <input type="date" id="date-end" required>
+        </label>
+      </div>
+      <p class="rental-meta" id="duration-out" aria-live="polite"></p>
+      <p class="rental-error" id="date-error" hidden></p>
+      <div class="rental-cta-row">
+        <button class="btn btn-coral" id="to-step-2" type="button">Continue →</button>
+      </div>
+    </div>
+    <p class="rental-fineprint">Cancellation policy: 50% refund if you cancel more than 72 hours before pickup. Within 72 hours of pickup, non-refundable.</p>
+  </section>
+
+  <!-- ============ STEP 2 · CARTS ============ -->
+  <section class="rental-step" data-step="2" hidden aria-labelledby="s2-title">
+    <div class="rental-step-head">
+      <button class="rental-back" id="back-to-1" type="button">← Dates</button>
+      <span class="eyebrow">Step 2 of 4</span>
+      <h1 id="s2-title">Pick your carts.</h1>
+      <p class="lede-text"><span id="trip-summary">—</span> · group discount kicks in at 4 or more carts.</p>
+    </div>
+    <div class="cart-grid" id="cart-grid"></div>
+    <!-- Sticky total bar (mobile) / fixed sidebar (desktop) -->
+    <aside class="rental-total" id="rental-total" hidden>
+      <div class="rental-total-line">
+        <span><b id="total-count">0</b> cart<span id="total-count-s">s</span> selected</span>
+        <span><b id="total-amount">$0</b></span>
+      </div>
+      <button class="btn btn-coral" id="to-step-3" type="button" disabled>Continue →</button>
+    </aside>
+  </section>
+
+  <!-- ============ STEP 3 · DETAILS ============ -->
+  <section class="rental-step" data-step="3" hidden aria-labelledby="s3-title">
+    <div class="rental-card">
+      <button class="rental-back" id="back-to-2" type="button">← Carts</button>
+      <span class="eyebrow">Step 3 of 4</span>
+      <h1 id="s3-title">Where and who?</h1>
+
+      <fieldset class="rental-fieldset">
+        <legend>Pickup or delivery</legend>
+        <label class="rental-choice">
+          <input type="radio" name="delivery" value="pickup" checked>
+          <span class="rental-choice-body">
+            <b>Pickup at our shop</b>
+            <small>1732 FM 3277, Livingston, TX · free</small>
+          </span>
+          <b class="rental-choice-price">Free</b>
+        </label>
+        <label class="rental-choice">
+          <input type="radio" name="delivery" value="local">
+          <span class="rental-choice-body">
+            <b>Free delivery — within 25 miles</b>
+            <small>We bring the carts to you and pick them up after</small>
+          </span>
+          <b class="rental-choice-price">Free</b>
+        </label>
+        <label class="rental-choice">
+          <input type="radio" name="delivery" value="extended">
+          <span class="rental-choice-body">
+            <b>Extended delivery — 25 to 75 miles</b>
+            <small>Anywhere in our extended service area</small>
+          </span>
+          <b class="rental-choice-price">$75</b>
+        </label>
+      </fieldset>
+
+      <div class="rental-grid-2">
+        <label class="rental-field">
+          <span>Your name</span>
+          <input type="text" id="contact-name" required autocomplete="name">
+        </label>
+        <label class="rental-field">
+          <span>Phone</span>
+          <input type="tel" id="contact-phone" required autocomplete="tel" placeholder="(936) 555-1234">
+        </label>
+        <label class="rental-field">
+          <span>Email</span>
+          <input type="email" id="contact-email" required autocomplete="email">
+        </label>
+        <label class="rental-field">
+          <span># of guests</span>
+          <input type="number" id="contact-guests" min="1" max="48" value="2" required>
+        </label>
+      </div>
+
+      <label class="rental-field" id="address-field" hidden>
+        <span>Delivery address</span>
+        <input type="text" id="contact-address" placeholder="Street, city, ZIP" autocomplete="street-address">
+      </label>
+
+      <label class="rental-field">
+        <span>Anything we should know? <em>(optional)</em></span>
+        <textarea id="contact-notes" rows="3" placeholder="Event details, special requests, etc."></textarea>
+      </label>
+
+      <p class="rental-error" id="details-error" hidden></p>
+      <div class="rental-cta-row">
+        <button class="btn btn-coral" id="to-step-4" type="button">Continue to payment →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 4 · PAYMENT ============ -->
+  <section class="rental-step" data-step="4" hidden aria-labelledby="s4-title">
+    <div class="rental-card">
+      <button class="rental-back" id="back-to-3" type="button">← Details</button>
+      <span class="eyebrow">Step 4 of 4</span>
+      <h1 id="s4-title">Confirm and pay.</h1>
+
+      <div class="rental-summary" id="rental-summary"></div>
+
+      <fieldset class="rental-fieldset rental-payment">
+        <legend>Card details</legend>
+        <label class="rental-field">
+          <span>Card number</span>
+          <input type="text" id="pay-card" inputmode="numeric" autocomplete="cc-number" placeholder="4242 4242 4242 4242" required>
+        </label>
+        <div class="rental-grid-2">
+          <label class="rental-field">
+            <span>Expiry (MM/YY)</span>
+            <input type="text" id="pay-exp" inputmode="numeric" autocomplete="cc-exp" placeholder="12/28" required>
+          </label>
+          <label class="rental-field">
+            <span>CVC</span>
+            <input type="text" id="pay-cvc" inputmode="numeric" autocomplete="cc-csc" placeholder="123" required>
+          </label>
+        </div>
+        <label class="rental-field">
+          <span>Name on card</span>
+          <input type="text" id="pay-name" autocomplete="cc-name" required>
+        </label>
+        <label class="rental-field">
+          <span>ZIP</span>
+          <input type="text" id="pay-zip" inputmode="numeric" autocomplete="postal-code" placeholder="77351" required>
+        </label>
+      </fieldset>
+      <p class="rental-fineprint">A $200 refundable damage deposit will be held at pickup, not charged now. Cancel more than 72 hours before pickup for a 50% refund; within 72 hours, non-refundable.</p>
+
+      <p class="rental-error" id="pay-error" hidden></p>
+      <div class="rental-cta-row">
+        <button class="btn btn-coral" id="pay-now" type="button">Pay <b id="pay-amount">$0</b> now</button>
+      </div>
+      <p class="rental-meta">🔒 This is a mock checkout. No real card is charged.</p>
+    </div>
+  </section>
+
+  <!-- ============ STEP 5 · CONFIRMATION ============ -->
+  <section class="rental-step rental-confirm" data-step="5" hidden aria-labelledby="s5-title">
+    <div class="rental-card center">
+      <div class="rental-check">✓</div>
+      <h1 id="s5-title">You're booked!</h1>
+      <p class="lede-text">Confirmation code: <code id="booking-id">PCGC-——</code></p>
+      <div class="rental-summary" id="confirm-summary"></div>
+      <p>A receipt is on its way to <span id="confirm-email">your email</span>. We'll text you at <span id="confirm-phone">your phone</span> the day before pickup.</p>
+      <div class="rental-cta-row center">
+        <a class="btn btn-coral" href="/rentals/" onclick="sessionStorage.clear()">Book another</a>
+        <a class="btn btn-ghost" href="/">Back to PCGC</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="rental-footer">
+  Polk County Golf Carts · 1732 FM 3277, Livingston, TX · <a href="tel:9362231182">936-223-1182</a>
+</footer>
+
+<script src="/assets/rentals.js"></script>
+</body>
+</html>

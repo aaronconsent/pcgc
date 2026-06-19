@@ -373,19 +373,7 @@ def product_schema(slug, model):
             "priceCurrency": "USD",
             "price": str(model["price_from"]),
             "availability": "https://schema.org/InStock",
-            "seller": {
-                "@type": "AutoDealer",
-                "name": BIZ["name"],
-                "telephone": BIZ["phone_primary"],
-                "address": {
-                    "@type": "PostalAddress",
-                    "streetAddress": "1732 FM 3277",
-                    "addressLocality": "Livingston",
-                    "addressRegion": "TX",
-                    "postalCode": "77351",
-                    "addressCountry": "US",
-                },
-            },
+            "seller": {"@id": ENTITY_BUSINESS},
         },
     }
 
@@ -410,6 +398,130 @@ def _strip_tags(s):
     return re.sub(r"<[^>]+>", "", s)
 
 
+# Stable @id anchors used to wire entity references between the three
+# site-wide schemas and the per-page Product/Offer schemas. Search
+# engines de-dupe references by @id, so using these consistently
+# tells them the dealer mentioned in a Product offer is the same
+# entity described on the home page.
+ENTITY_BUSINESS = "https://polkcountygolfcarts.com/#business"
+ENTITY_ORG      = "https://polkcountygolfcarts.com/#org"
+ENTITY_WEBSITE  = "https://polkcountygolfcarts.com/#website"
+
+
+def site_entity_schemas():
+    """Returns the site-wide schema.org @graph: AutoDealer (a
+    LocalBusiness subtype), Organization, and WebSite. Emitted on the
+    home page so search engines and AI engines have a single
+    authoritative entity to dedupe against."""
+    return {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "AutoDealer",
+                "@id": ENTITY_BUSINESS,
+                "name": BIZ["name"],
+                "alternateName": BIZ["short"],
+                "description": BIZ["tagline"] + ". " + BIZ["inventory_line"],
+                "url": "https://polkcountygolfcarts.com/",
+                "telephone": BIZ["phone_primary"],
+                "email": BIZ["email"],
+                "image": "https://polkcountygolfcarts.com/assets/logos/logo-color.png",
+                "logo": "https://polkcountygolfcarts.com/assets/logos/logo-color.png",
+                "priceRange": "$$",
+                "paymentAccepted": "Cash, Credit Card, Financing",
+                "currenciesAccepted": "USD",
+                "foundingDate": str(BIZ["founded"]),
+                "founder": {"@type": "Person", "name": BIZ["owner"]},
+                "address": {
+                    "@type": "PostalAddress",
+                    "streetAddress": "1732 FM 3277",
+                    "addressLocality": "Livingston",
+                    "addressRegion": "TX",
+                    "postalCode": "77351",
+                    "addressCountry": "US",
+                },
+                "geo": {
+                    "@type": "GeoCoordinates",
+                    "latitude": 30.7128,
+                    "longitude": -94.9319,
+                },
+                "hasMap": "https://maps.google.com/?q=1732+FM+3277+Livingston+TX+77351",
+                "openingHoursSpecification": [
+                    {
+                        "@type": "OpeningHoursSpecification",
+                        "dayOfWeek": ["Tuesday", "Wednesday", "Thursday", "Friday"],
+                        "opens": "09:00",
+                        "closes": "16:00",
+                    },
+                    {
+                        "@type": "OpeningHoursSpecification",
+                        "dayOfWeek": "Saturday",
+                        "opens": "09:00",
+                        "closes": "14:00",
+                    },
+                ],
+                "areaServed": [
+                    {"@type": "AdministrativeArea", "name": "Polk County, Texas"},
+                    {"@type": "AdministrativeArea", "name": "San Jacinto County, Texas"},
+                    {"@type": "AdministrativeArea", "name": "Walker County, Texas"},
+                    {"@type": "AdministrativeArea", "name": "Trinity County, Texas"},
+                    {"@type": "AdministrativeArea", "name": "Angelina County, Texas"},
+                ],
+                "serviceArea": {
+                    "@type": "GeoCircle",
+                    "geoMidpoint": {
+                        "@type": "GeoCoordinates",
+                        "latitude": 30.7128,
+                        "longitude": -94.9319,
+                    },
+                    "geoRadius": "120700",  # 75 miles in meters
+                },
+                "knowsAbout": [
+                    "Breezy EV golf carts",
+                    "Golf cart sales",
+                    "Golf cart service and repair",
+                    "Golf cart customization",
+                    "Lithium battery upgrades",
+                    "Lifted golf carts",
+                    "Street-legal golf cart conversions",
+                ],
+                "brand": {"@type": "Brand", "name": "Breezy EV"},
+                "sameAs": [BIZ["bbb_url"]],
+                "parentOrganization": {"@id": ENTITY_ORG},
+            },
+            {
+                "@type": "Organization",
+                "@id": ENTITY_ORG,
+                "name": BIZ["name"],
+                "url": "https://polkcountygolfcarts.com/",
+                "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://polkcountygolfcarts.com/assets/logos/logo-color.png",
+                    "width": 1200,
+                    "height": 1200,
+                },
+                "contactPoint": {
+                    "@type": "ContactPoint",
+                    "telephone": BIZ["phone_primary"],
+                    "contactType": "sales",
+                    "email": BIZ["email"],
+                    "areaServed": "US-TX",
+                    "availableLanguage": "English",
+                },
+                "sameAs": [BIZ["bbb_url"]],
+            },
+            {
+                "@type": "WebSite",
+                "@id": ENTITY_WEBSITE,
+                "url": "https://polkcountygolfcarts.com/",
+                "name": BIZ["name"],
+                "publisher": {"@id": ENTITY_ORG},
+                "inLanguage": "en-US",
+            },
+        ],
+    }
+
+
 # ---------------- Pages ---------------- #
 
 def page_home():
@@ -419,6 +531,7 @@ def page_home():
             "Polk County Golf Carts: brand-new Breezy EV, refurbished, and used carts — electric and gas — plus full service, custom builds, and free pickup & delivery within 25 miles of Livingston, TX (extended service up to 75 miles).",
             "/",
             og_slug="home",
+            structured_data=_json.dumps(site_entity_schemas()),
         )
         + header("/")
         + dedent(f"""\

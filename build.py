@@ -15,6 +15,20 @@ from textwrap import dedent
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 
+# Short content hash of site.css for cache-busting the <link> tag. The
+# CSS file itself is served unchanged; browsers see a new URL when the
+# file content changes, so they fetch the new bytes instead of reusing
+# a stale cached copy.
+def _site_css_version():
+    import hashlib
+    css_path = os.path.join(ROOT, "assets", "site.css")
+    try:
+        with open(css_path, "rb") as f:
+            return hashlib.sha1(f.read()).hexdigest()[:8]
+    except FileNotFoundError:
+        return "0"
+SITE_CSS_VER = _site_css_version()
+
 BIZ = {
     "name": "Polk County Golf Carts",
     "short": "PCGC",
@@ -64,7 +78,7 @@ def head(title, desc, path="/", og_slug=None, noindex=False, structured_data=Non
           <link rel="icon" type="image/png" sizes="256x256" href="/assets/logos/favicon.png">
           <link rel="preconnect" href="https://fonts.cdnfonts.com">
           <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/grobold">
-          <link rel="stylesheet" href="/assets/site.css">
+          <link rel="stylesheet" href="/assets/site.css?v={SITE_CSS_VER}">
           <meta property="og:title" content="{title} | {BIZ['name']}">
           <meta property="og:description" content="{desc}">
           <meta property="og:image" content="https://polkcountygolfcarts.com{og_image}">

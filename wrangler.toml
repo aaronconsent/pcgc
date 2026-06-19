@@ -3,19 +3,15 @@ main = "src/worker.js"
 compatibility_date = "2026-04-01"
 
 # Static-asset bucket: the worker calls env.ASSETS.fetch(request) for
-# anything not handled by /api/feedback.* routes. Directory-index
-# resolution (e.g. /about/ -> site/about/index.html) happens automatically.
+# anything not handled by /api/booking. Directory-index resolution
+# (e.g. /about/ -> site/about/index.html) happens automatically.
 [assets]
 directory = "./site"
 binding = "ASSETS"
 
-# Stores one record per feedback submission (text, page url, image refs).
+# Stores one record per rental booking under the `booking:<ts>:<id>`
+# prefix. (The name FEEDBACK_KV is kept as the binding for backwards
+# compatibility with the existing namespace id.)
 [[kv_namespaces]]
 binding = "FEEDBACK_KV"
 id = "be6aa9b721f34655b1596c8d8660097f"
-
-# Stores the attached image bytes.
-# Create with:  npx wrangler r2 bucket create pcgc-feedback
-[[r2_buckets]]
-binding = "FEEDBACK_R2"
-bucket_name = "pcgc-feedback"

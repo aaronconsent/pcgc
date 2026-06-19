@@ -1,63 +1,45 @@
 # Polk County Golf Carts (pcgc)
 
 Static site for polkcountygolfcarts.com, deployed as a Cloudflare Worker
-with static assets and a small `/api/feedback` endpoint backed by KV + R2.
+with static assets plus a hidden `/rentals/` rental-booking flow backed
+by Cloudflare KV.
 
 ## Layout
 
-- `site/` — static assets (HTML/CSS/JS/images). Worker falls through to
-  this for any request that isn't an `/api/feedback*` route.
+- `site/` — static assets (HTML/CSS/JS/images). Worker falls through
+  to this for any request that isn't an `/api/booking` route.
 - `build.py` — generates every page in `site/` from shared header /
   footer / contact-strip fragments. Run `python3 build.py` to rebuild.
-- `src/worker.js` — Cloudflare Worker. Handles `POST /api/feedback`
-  (public) and `GET /api/feedback{,/image/:key}` (admin, basic auth).
-- `site/admin/feedback/` — admin UI that lists submitted feedback;
-  shares its auth with the GET endpoints above.
-- `wrangler.toml` — Worker config + KV / R2 / asset bindings.
+- `gen_og.py` — generates 1200×630 social-share PNGs to
+  `site/assets/og/`. Run after content edits that change titles.
+- `src/worker.js` — Cloudflare Worker. Handles `POST /api/booking`
+  (public) and `GET /api/booking` (admin, basic auth).
+- `site/rentals/` — hidden customer-facing rental flow (`noindex`,
+  not linked from primary nav).
+- `site/admin/rentals/` — admin booking review UI.
+- `wrangler.toml` — Worker config + KV + asset bindings.
 
-## Local preview (static only)
+## Local preview
 
 ```
 python3 build.py
+python3 gen_og.py        # only when titles/photos change
 python3 -m http.server -d site 8000
 ```
 
-The feedback widget will be present but submissions need the deployed
-Worker to land.
+Rental submissions need the deployed Worker to actually persist.
 
 ## Deploy
 
-Cloudflare auto-deploys on every push to `main` (it runs the **Deploy
-command** `npx wrangler deploy`). Before the first deploy with the
-feedback feature, run the one-time setup on a machine with `wrangler`:
+Cloudflare auto-deploys on every push to `main` via `npx wrangler
+deploy`. KV namespace + admin password are already provisioned. To
+rotate the password, set a new value in:
 
-```sh
-# 1. Create the KV namespace and paste the returned id into
-#    wrangler.toml (replace REPLACE_WITH_KV_NAMESPACE_ID).
-npx wrangler kv:namespace create FEEDBACK_KV
+  **Cloudflare dashboard → Workers & Pages → pcgc → Settings →
+  Variables and Secrets → FEEDBACK_ADMIN_PASS**
 
-# 2. Create the R2 bucket that stores attached images.
-npx wrangler r2 bucket create pcgc-feedback
+## Reviewing rental bookings
 
-# 3. Set the admin password (and optionally a non-default user).
-npx wrangler secret put FEEDBACK_ADMIN_PASS
-# optional:
-npx wrangler secret put FEEDBACK_ADMIN_USER
-
-# 4. Deploy.
-npx wrangler deploy
-```
-
-## Reviewing feedback
-
-Visit `/admin/feedback/` on the deployed site. The browser will prompt
-for HTTP basic auth — enter `FEEDBACK_ADMIN_USER` (default `admin`) and
-`FEEDBACK_ADMIN_PASS`. The page lists every submission newest-first
-with the page URL, timestamp, text, and inline image attachments.
-
-## Files of interest
-
-- `build.py` — page generation + the floating feedback widget HTML/JS
-- `site/assets/site.css` — design system + `.pcgc-fb-*` widget styles
-- `src/worker.js` — API endpoints
-- `site/admin/feedback/index.html` — admin review UI
+Visit `/admin/rentals/` on the deployed site. Browser prompts for HTTP
+basic auth — enter `admin` and the password above. Newest first, with
+trip dates, line items, contact details, and price breakdown.

@@ -663,3 +663,47 @@ ul.checks li::before {
   .slide-countdown-track { width: 60px; }
   .slideshow-stage .slide-arrow { opacity: 1; width: 34px; height: 34px; font-size: 1.3rem; }
 }
+
+/* /guides/<slug>/ pillar articles — long-form typography + table of
+   contents nav. Wraps the article in a narrow column so line lengths
+   stay readable (~65-75 chars). */
+.guide { padding: 1rem 0 3rem; }
+.guide-toc {
+  background: var(--bg-alt);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--coral);
+  border-radius: 8px;
+  padding: 1.1rem 1.4rem;
+  margin: 0 0 2.5rem;
+  display: flex; flex-direction: column; gap: .4rem;
+  font-size: .92rem;
+}
+.guide-toc b {
+  display: block;
+  font: 600 .78rem -apple-system, sans-serif;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: .35rem;
+}
+.guide-toc a {
+  display: block;
+  padding: .15rem 0;
+  color: var(--teal-dk);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  padding-left: .65rem;
+  transition: border-color .12s ease;
+}
+.guide-toc a:hover { border-left-color: var(--coral); color: var(--coral); text-decoration: none; }
+
+.guide-section { margin: 0 0 2.25rem; scroll-margin-top: 80px; }
+.guide-section h2 {
+  margin: 0 0 .9rem;
+  font-size: clamp(1.4rem, 2.4vw, 1.8rem);
+}
+.guide-section p { font-size: 1.04rem; line-height: 1.7; color: var(--ink); margin: 0 0 1rem; }
+.guide-section ul,
+.guide-section ol { font-size: 1.04rem; line-height: 1.7; color: var(--ink); padding-left: 1.4rem; margin: 0 0 1rem; }
+.guide-section li { margin-bottom: .55rem; }
+.guide-section li b { color: var(--teal-dk); }
+.guide-section p b { color: var(--teal-dk); }

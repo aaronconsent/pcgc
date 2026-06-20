@@ -5,4 +5,5 @@ Disallow: /api/
 Disallow: /rentals/
 Disallow: /breezy-ev/
 Disallow: /golf-carts/
+Disallow: /guides/
 Sitemap: https://polkcountygolfcarts.com/sitemap.xml

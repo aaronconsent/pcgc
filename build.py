@@ -2230,6 +2230,439 @@ def page_breezy_lithium_vs_lead_acid():
     )
 
 
+# ---------------- /guides/ pillar content (hidden) ---------------- #
+#
+# Phase-3 pillar guides — long-form buyer's-guide and local-flavor
+# content that ranks for high-traffic informational queries and feeds
+# AI-engine answers (ChatGPT, Perplexity, Google AI Overviews). Each
+# guide is structured for AEO: leading sentence answers the headline
+# query, FAQPage schema attached, internal links to PDPs at the end.
+
+GUIDES = {
+    "cost-of-owning-a-golf-cart": {
+        "title": "What does it actually cost to own a golf cart?",
+        "kicker": "Buyer's guide",
+        "read_time": "9 min read",
+        "lede": "Sticker price is one number. Total cost of ownership is another. Here's the real math — purchase, financing, insurance, batteries, maintenance, depreciation — from a Texas dealer who's been running the numbers since 2020.",
+        "summary": "A 10-year, total-cost-of-ownership breakdown for a typical Breezy EV golf cart in East Texas: purchase price, financing, insurance, batteries, maintenance, electricity, depreciation, with real numbers from PCGC's books.",
+        "sections": [
+            ("The number most people miss", """
+                <p>When someone asks "how much does a golf cart cost?", they usually mean the sticker price. That's a $12,500-$18,000 number for a new Breezy EV at our shop. But the right question is "how much does owning a golf cart cost <em>per year</em>?" Once you back out the resale value at the end and add in financing, insurance, batteries, electricity, and maintenance, the real number lands somewhere around <b>$1,600-$2,400 per year</b> for a new cart — less than most people spend on a streaming service stack.</p>
+                <p>The math below is for a 4-seater lifted cart (Breeze 4L) bought new at our shop, financed over 60 months, and kept for 10 years. We'll break down what changes if you go used, if you skip financing, or if you stretch the ownership horizon out further.</p>
+            """),
+            ("Purchase price (year 1)", """
+                <p>New Breezy EV carts at PCGC start at <b>$12,500</b> and run up to about $18,000 once you load options. Used and refurbished carts run $4,000-$10,000 depending on age, hours, and condition. We'll assume a $14,500 mid-trim new cart for this walkthrough — call it the median PCGC sale.</p>
+                <p>Add Texas sales tax (~8.25% statewide-plus-local) and you're at roughly <b>$15,700 out the door</b>. If you finance through Lendmark Financial or Dealer Direct, you'll typically put 10-20% down and roll the rest. Standard golf-cart loans run 24-84 months at rates that depend on credit and the lender — for this exercise, assume $1,500 down and 60 months at 8.9% APR.</p>
+            """),
+            ("Financing cost over 5 years", """
+                <p>$14,200 financed at 8.9% over 60 months = roughly <b>$294/month</b>, total paid <b>$17,640</b>. Subtract the principal ($14,200) and the cost of financing is about <b>$3,440 over five years</b>, or ~$690/year.</p>
+                <p>That's a real number to plan around. It's not unique to golf carts — it's just what borrowing $14k looks like in 2026. If you pay cash, this line item is zero and the rest of the math gets friendlier. About 70% of our customers finance, so we lead with the financing case here.</p>
+            """),
+            ("Insurance: cheaper than people expect", """
+                <p>If you want to drive the cart on Texas streets, you'll register it as a Low Speed Vehicle (LSV) and carry liability insurance. Most major insurers (State Farm, Allstate, Progressive, etc.) add an LSV to an existing auto policy for <b>$10-$25/month</b> — far less than a car policy because the speeds and damages are smaller.</p>
+                <p>Annual cost: <b>$120-$300/year</b>. Many of our customers don't get insurance at all because they only use the cart on private property — in that case this line item is zero.</p>
+            """),
+            ("Battery replacement (the big one)", """
+                <p>The battery is the single most expensive maintenance item, and it depends entirely on which chemistry you bought. Lead-acid packs last 3-5 years and cost $1,200-$1,800 to replace. Lithium packs last 8-12 years and cost $3,500-$5,500.</p>
+                <p>Over 10 years of ownership, a lead-acid cart needs <b>2-3 replacements</b> ($2,400-$5,400 total). A Lithium cart needs <b>zero or one</b> replacements ($0-$5,500). The math basically breaks even — but Lithium gives you 30-50% more range every single ride and never needs water topped off or terminals cleaned. Every new Breezy EV ships with Lithium standard, so this isn't a decision most new buyers make.</p>
+                <p>Annual cost (amortized over 10 years): <b>$350-$550/year</b> either way.</p>
+            """),
+            ("Maintenance and tires", """
+                <p>Golf carts are mechanically simple compared to cars. There's no engine oil, no transmission fluid, no air filters, no spark plugs (on electric carts). What you do spend on:</p>
+                <ul>
+                    <li><b>20-Point Inspection / annual service</b> — $165-$300 at our shop. Recommended yearly. Covers brakes, suspension grease, battery health, tire rotation, accessory check.</li>
+                    <li><b>Tires</b> — $60-$120 per tire, replaced every 3-5 years depending on use. Off-road tires on lifted carts wear faster.</li>
+                    <li><b>Brake pads</b> — $80-$120 per axle, every 5-7 years for most drivers.</li>
+                    <li><b>Random fix-it items</b> — fuses, bulbs, wiring, charger plugs. Budget $100/year.</li>
+                </ul>
+                <p>Total annual maintenance for a typical owner: <b>$300-$500/year</b>.</p>
+            """),
+            ("Electricity (it's basically free)", """
+                <p>This is the line item that surprises new buyers in the best way. A full charge on a 48V/125Ah Lithium pack uses about <b>6 kWh</b> of electricity. At Texas's average residential rate of $0.14/kWh, that's <b>$0.84 per charge</b>. If you charge twice a week year-round, that's about <b>$90/year</b> in electricity — what you'd spend on a single tank of gas for a car.</p>
+            """),
+            ("Depreciation and resale", """
+                <p>Here's the kindest line of the math: golf carts hold their value remarkably well. A well-maintained Breezy EV that was $14,500 new will typically resell for <b>$8,000-$10,500</b> after 10 years — depreciation of 30-45% over a decade. Compare that to a car, which loses 60% of its value in five years.</p>
+                <p>Amortized over 10 years, that's roughly <b>$500-$700/year</b> in depreciation cost.</p>
+            """),
+            ("Adding it all up", """
+                <p>Year-over-year ownership cost for our example $14,500 Breezy EV:</p>
+                <ul>
+                    <li>Financing (years 1-5 only): ~$690/year</li>
+                    <li>Insurance: $120-$300/year</li>
+                    <li>Battery (amortized): $350-$550/year</li>
+                    <li>Maintenance: $300-$500/year</li>
+                    <li>Electricity: $90/year</li>
+                    <li>Depreciation: $500-$700/year</li>
+                </ul>
+                <p><b>Total: ~$2,050-$2,830/year while financing, ~$1,360-$2,140/year after the loan is paid off.</b></p>
+                <p>That's lower than most boat-ownership numbers, lower than RV ownership, and competitive with a used car's total cost if you drove the same miles. And unlike all three of those, the cart is going to be the thing your kids ask to drive first.</p>
+            """),
+            ("Three ways to lower this number", """
+                <p><b>1. Buy used or refurbished.</b> A 3-5 year-old refurbished cart at $7,500 cuts the financing and depreciation lines roughly in half. Total annual cost drops to $1,100-$1,600/year.</p>
+                <p><b>2. Pay cash.</b> Skip the financing line entirely ($690/year). Reduces total to $1,360-$2,140/year while the cart is being amortized.</p>
+                <p><b>3. Skip insurance.</b> If you only drive on private property, you don't need an LSV policy. Saves $120-$300/year. (We don't recommend skipping it if you ever take the cart on public roads.)</p>
+            """),
+        ],
+        "faqs": [
+            ("How much does a new golf cart cost in Texas?",
+             "New Breezy EV golf carts at Polk County Golf Carts start at <b>$12,500</b> and run up to about <b>$18,000</b> depending on options (street-legal kit, lift, color, sound system, etc.). Used and refurbished carts run $4,000-$10,000."),
+            ("Are golf carts cheaper to own than cars?",
+             "Yes, by a wide margin. A new golf cart's total cost of ownership lands around <b>$1,600-$2,400 per year</b> over a 10-year horizon, vs. $7,000-$10,000+ for an equivalent-age compact car. The biggest savings are fuel ($90/year of electricity vs. $1,500+ of gas) and insurance ($10-$25/month vs. $80-$150/month)."),
+            ("How long does a golf cart last?",
+             "With basic maintenance, a quality cart from a reputable dealer lasts <b>15-20 years</b>. The battery is the consumable — lithium packs go 8-12 years before replacement, lead-acid 3-5. Everything else (frame, motor, controller, suspension) outlasts the battery several times over."),
+            ("How much does insurance cost on a golf cart?",
+             "If you register your cart as a Texas Low Speed Vehicle (LSV) and add it to an existing auto policy, expect <b>$10-$25 per month</b>. If you only use the cart on private property, you don't need insurance at all."),
+            ("What's the biggest hidden cost?",
+             "Battery replacement on lead-acid carts. A new lead-acid pack runs $1,200-$1,800 and needs replacement every 3-5 years — so over a 10-year ownership window you'll likely spend more on batteries than on the original cart's purchase price. This is the math that makes lithium worth the upfront premium for long-term owners."),
+        ],
+        "related": [
+            ("Browse the Breezy EV lineup", "/breezy-ev/"),
+            ("Financing options", "/breezy-ev/financing/"),
+            ("Lithium vs lead-acid", "/breezy-ev/lithium-vs-lead-acid/"),
+        ],
+    },
+    "4-seater-vs-6-seater": {
+        "title": "4-seater vs 6-seater golf cart: how to pick the right one",
+        "kicker": "Buyer's guide",
+        "read_time": "6 min read",
+        "lede": "Two passengers and a cooler, or six kids and a dog? Here's how to choose between a 4-seater and a 6-seater golf cart without buyer's remorse.",
+        "summary": "Side-by-side comparison of 4-seater vs 6-seater golf carts: when each makes sense, what changes in handling and storage, what you actually pay extra for, and the real-world break-points for choosing one over the other.",
+        "sections": [
+            ("The honest answer", """
+                <p>If you're buying for two adults and you occasionally have one or two passengers, a <b>4-seater is the right cart</b>. If you regularly carry more than four — or you have a multi-generation family that travels together — you want the <b>6-seater</b>. The break-point isn't usually about cost, it's about how often you'll wish you had the extra row.</p>
+                <p>Below: when the 4 makes sense, when the 6 wins, and the three things that change when you go bigger.</p>
+            """),
+            ("When the 4-seater wins", """
+                <p>The Breeze 4 and Breeze 4L are the right cart for most first-time buyers. Here's when:</p>
+                <ul>
+                    <li><b>Your household is 1-3 people.</b> You can fit four when guests come, but you don't routinely need to.</li>
+                    <li><b>You park in a single-bay garage.</b> The 4-seater is 117-119" long. A 6-seater is 146-149" — that's <b>2.5 feet longer</b> and matters in tight garages.</li>
+                    <li><b>You drive shorter trips.</b> Around the neighborhood, to the mailbox, to the lake dock. The 4 is more nimble for tight turns and back-in parking.</li>
+                    <li><b>Price matters.</b> 4-seaters land near the $12,500 floor; 6-seaters typically run $1,500-$2,500 more.</li>
+                </ul>
+            """),
+            ("When the 6-seater wins", """
+                <p>The Breeze 6L and Terrain 6 are bigger, heavier, and more capable. Here's when the trade-off pays:</p>
+                <ul>
+                    <li><b>You have kids.</b> Two adults plus two kids plus two friends plus a cooler is a Saturday-morning lake run. The 6-seater carries all six without anyone sitting in a lap.</li>
+                    <li><b>You host.</b> Lake house guests, tailgate buddies, grandkids visiting — if you regularly find yourself needing one more seat than you have, the 6 is the answer.</li>
+                    <li><b>You haul.</b> The rear-facing flip seat folds down to a flat deck — perfect for coolers, groceries, beach gear, deer feeders, the dog crate. You can't do that with a 4-seater.</li>
+                    <li><b>You run a rental or fleet.</b> Six seats × $X per day always beats four seats × $X per day. Every rental fleet we sell is heavy on 6-seaters.</li>
+                </ul>
+            """),
+            ("Three things that change when you go bigger", """
+                <p><b>1. The wheelbase.</b> A 6-seater has a wheelbase of 105"-106" vs. 81"-83" on a 4-seater. That's <b>~24" of extra wheelbase</b>. More stable at speed, less nimble in tight turns. You feel it the most backing up.</p>
+                <p><b>2. The weight.</b> 6-seaters are about 200 lbs heavier (1,389 lbs vs 1,213 lbs on the lifted versions). That means slightly less range per charge, slightly slower acceleration, and slightly more energy needed to charge from empty. The difference is small but measurable: ~5-8 miles less range in real-world use.</p>
+                <p><b>3. The footprint.</b> The 6-seater is roughly 30" longer overall. If your garage is short or your storage shed is sized for a 4-seater, measure twice before you buy.</p>
+            """),
+            ("Resale and rental value", """
+                <p>6-seaters hold their value slightly better than 4-seaters because the market for them is broader — they appeal to families AND rental operators AND lake-house owners. If you think you might resell within 5 years, the 6-seater has the edge.</p>
+                <p>If you rent the cart out (e.g. you have a vacation rental or Airbnb), the 6-seater earns more per booking and gets booked more often. Multi-cart group bookings at our rental fleet skew almost 80% toward 6-seaters.</p>
+            """),
+            ("Lifted vs. street: a different question", """
+                <p>4 vs. 6 is one decision. Lifted (4L, 6L, Terrain 6) vs. street (4) is a separate one. Most customers who want a 6 also want the lift — there's no street-stance 6-seater in the Breezy EV lineup. If you want a non-lifted, non-aggressive cart, the Breeze 4 is the only option.</p>
+            """),
+        ],
+        "faqs": [
+            ("Is a 6-seater really worth the extra money?",
+             "If you regularly carry more than 4 people — yes, every time. The $1,500-$2,500 premium pays for itself in convenience the first weekend you'd have otherwise had to take two trips. If you rarely carry more than 4, save the money and get a 4-seater."),
+            ("Can a 6-seater fit in a standard garage?",
+             "A typical 6-seater is about 149\" (12.4 ft) long. Most single-bay garages are 18-20 ft deep, so it fits. Two-bay garages handle it easily. Measure the depth (not just the door width) before you commit — and account for the windshield, which on some carts extends past the bumper."),
+            ("How much faster is a 4-seater?",
+             "Top speed is identical — both are programmable up to the Texas LSV limit of 25 mph. Acceleration on the 4 is slightly quicker because it's about 200 lbs lighter, but the difference is small. If you're not racing, you won't notice."),
+            ("Can I put 6 adults in a 6-seater cart?",
+             "Yes — Breezy EV rates the 6-seater for six adults. Range and acceleration decrease a bit at full load, and any cart feels different with six full-grown passengers vs. four, but it's designed for it."),
+            ("Do 6-seaters need a stronger motor?",
+             "No — the standard 5 kW AC motor and 48V/125Ah lithium pack are the same across the entire Breezy EV lineup. The 6-seater just gives up about 5-8 miles of range due to the extra weight."),
+        ],
+        "related": [
+            ("Breeze 4 (4-seater, street)", "/breezy-ev/breeze-4/"),
+            ("Breeze 6L (6-seater, lifted)", "/breezy-ev/breeze-6l/"),
+            ("Compare every model", "/breezy-ev/compare/"),
+        ],
+    },
+    "buying-a-used-golf-cart": {
+        "title": "Buying a used golf cart: 8 things to check first",
+        "kicker": "Buyer's guide",
+        "read_time": "7 min read",
+        "lede": "A good used cart is a great value. A bad used cart is a $5,000 lawn ornament with a dead battery. Here's how to tell the difference before you pay.",
+        "summary": "A pre-purchase checklist for used golf carts: 8 specific things to inspect or ask about before handing over money. Written from the perspective of a Texas dealer who refurbishes and resells dozens of used carts per year.",
+        "sections": [
+            ("Why used can be a great deal — or a disaster", """
+                <p>Golf carts depreciate slowly, which is bad if you're selling but great if you're buying used. A 3-5 year-old cart in good shape can save you 30-50% off the new-cart sticker — that's a $4,000-$8,000 swing.</p>
+                <p>But there's a catch: the single most expensive maintenance item (the battery) wears with age. A used cart with a dying battery is a cart with a hidden $1,500-$5,500 invoice attached. Most other components last way longer than the battery, so battery condition is the question that decides whether a used cart is a deal or a money pit.</p>
+                <p>Here's the 8-point inspection we run on every cart we take in as a trade-in at PCGC. Run through these before you write a check.</p>
+            """),
+            ("1. Ask for the battery's age", """
+                <p>For lead-acid: when were the batteries last replaced? If the seller doesn't know, that's a yellow flag. If the batteries are 4+ years old, plan for replacement soon ($1,200-$1,800).</p>
+                <p>For lithium: how old is the pack and what's the cycle count if known? Lithium is more forgiving — a 5-year-old pack might still have 80% of original capacity. But if the cart is more than 8 years old and still on the original lithium pack, factor in replacement.</p>
+            """),
+            ("2. Run a load test", """
+                <p>The seller may say "the batteries are great." The cart may even start and roll fine in the driveway. The real test: drive it for <b>at least 15 minutes</b>, hills if available. A weak pack will surge fine off the line but bog down as voltage sags under continuous load.</p>
+                <p>If the seller won't let you drive it for that long, walk away.</p>
+            """),
+            ("3. Check for water damage", """
+                <p>East Texas carts get rained on. That's fine — they're designed for it. What's not fine is water sitting in the controller compartment for years. Lift the seat, look at the controller and wiring harness. Look for green corrosion on copper connections, white powder on aluminum, or any standing water. Any of those = walk away or negotiate hard.</p>
+            """),
+            ("4. Inspect the frame for corrosion", """
+                <p>Lake carts especially. Get on your knees and look at the underside of the frame, the leaf spring mounts, and the steering linkage. Surface rust is normal. Deep pitting, cracked welds, or any structural rust around suspension mounts means the cart's life is shorter than the seller claims.</p>
+            """),
+            ("5. Listen to the controller and motor", """
+                <p>With the cart running, listen for clicking, whining, or hesitation in the controller. Then ride it under load. A healthy AC motor (like the one in every Breezy EV) is nearly silent. A DC motor with brush wear will whine increasingly with age — replaceable, but factor in $300-$500 of work.</p>
+                <p>Hard clunks when pressing the accelerator usually mean the rear-end gears need service. Not a deal-killer, but $400-$800 of work.</p>
+            """),
+            ("6. Check the tires and brakes", """
+                <p>Tires aren't expensive but they're a tell. Mismatched tires, dry-rot cracks, or uneven wear all suggest the cart has been ridden hard or sat unused for years. Brakes should feel firm — a spongy pedal means rebuilds are needed.</p>
+            """),
+            ("7. Verify the title and ownership", """
+                <p>If the cart has been street-legal-registered as a Low Speed Vehicle, there should be a title. Get it. If the seller says "I never registered it," that's fine for off-road use but means you can't easily register it later — Texas requires the manufacturer's certificate of origin to title an LSV, and that's often lost on older carts.</p>
+                <p>Check that the VIN on the cart matches the title (or registration). Don't skip this.</p>
+            """),
+            ("8. Ask why they're selling", """
+                <p>Best answer: "We're upgrading to a bigger cart" or "Moving and can't take it." Worst answer: "The batteries kept needing replacement" or "I never got around to fixing the controller."</p>
+                <p>Listen for what they DON'T say. If they answer evasively or change topics, the cart probably has a story you don't want to inherit.</p>
+            """),
+            ("The dealer-vs-private alternative", """
+                <p>One last thing. Every refurbished cart we sell at PCGC has been through this exact 8-point inspection plus a full 20-point service. We replace what needs replacing, document what we touched, and stand behind the cart with a limited warranty.</p>
+                <p>That refurbished cart costs a few hundred more than the same cart in someone's driveway — but you don't inherit the surprises, and you have somewhere to bring it back if something goes wrong. For most first-time buyers, that math works out.</p>
+            """),
+        ],
+        "faqs": [
+            ("How can I tell how old a used golf cart is?",
+             "Look for the manufacturer's date plate (usually under the seat or on the frame near the rear axle). Most Breezy EV, Yamaha, Club Car, and EZGO carts have a build date stamped. For more precise age, look up the serial number in the manufacturer's database — your local dealer can help with this in five minutes."),
+            ("How much should a used golf cart cost?",
+             "A 3-5 year-old quality cart in good shape with healthy batteries runs <b>$5,000-$8,000</b> at private sale, $6,500-$10,000 from a dealer (with warranty). Carts older than 7-8 years or with sketchy battery history can be had for $3,000-$5,000 — but plan to spend another $1,500-$5,500 to get them road-worthy."),
+            ("Should I buy a used golf cart from a private seller or a dealer?",
+             "Dealer carts cost 10-20% more but come with an inspection, a warranty, and someone to call if it breaks. Private-sale carts can be cheaper but you inherit every problem the seller didn't mention. First-time buyers — start at a dealer. Experienced buyers who can do their own inspection can save with a private deal."),
+            ("Can I get financing on a used golf cart?",
+             "Yes — Lendmark Financial finances used and refurbished carts the same way they finance new ones. Terms are typically a bit shorter (24-60 months vs. 24-84 for new) because the cart has fewer years of life left."),
+            ("What's the most common thing wrong with a used cart?",
+             "Tired batteries, by a wide margin. About 60% of the used carts we evaluate need a battery service or replacement to be road-worthy. Second most common: corroded electrical connections from sitting outside without a charger plugged in for months."),
+        ],
+        "related": [
+            ("Browse used carts at PCGC", "/carts/"),
+            ("Service & Custom builds", "/services/"),
+            ("The Breezy EV lineup", "/breezy-ev/"),
+        ],
+    },
+    "lake-livingston-golf-cart-life": {
+        "title": "Lake Livingston golf cart life: where to ride, dock, and park",
+        "kicker": "Local",
+        "read_time": "5 min read",
+        "lede": "Lake Livingston is a 90,000-acre lake with a thousand reasons to own a golf cart. Here's the local guide to riding, parking, and not getting stuck.",
+        "summary": "A local guide to using a golf cart around Lake Livingston, Texas. Best neighborhoods to cruise, lake-house tips, what to know about the south shore vs. west shore, where to charge, and how to handle the unpaved roads.",
+        "sections": [
+            ("Why Lake Livingston is golf-cart country", """
+                <p>Lake Livingston is the second-largest lake in Texas — 90,000 acres of impoundment on the Trinity River, ringed by hundreds of subdivisions, RV parks, marinas, and lake houses. The water draws the crowds, but the <b>way you get around</b> shore-side is mostly via golf cart. Streets are short, speed limits are low, and the distance from your dock to the marina to the boat ramp is exactly the distance a 48V Lithium cart was made for.</p>
+                <p>If you own (or rent) a lake house, the question isn't whether you'll want a cart — it's which cart, and where you can take it.</p>
+            """),
+            ("The west shore: Onalaska and Yaupon Cove", """
+                <p>The west side of the lake — Onalaska, Yaupon Cove, Beacon Bay, Lakeside Estates — is the densest cart community on the lake. Most of these subdivisions are <b>cart-friendly by design</b>: 20-25 mph speed limits, paved roads, lots that funnel toward the water. You can cruise from your house to the community ramp, to the local restaurant, to the gas station, to a neighbor's, and not need a car for an entire weekend.</p>
+                <p>A standard Breeze 4 or 4L works great here. The roads are smooth, distances are short, and you'll never need the extreme ground clearance of a Terrain 6 unless you're hitting unpaved access lanes.</p>
+            """),
+            ("The south shore: Coldspring and Point Blank", """
+                <p>The south end of the lake — toward Coldspring and Point Blank — runs to bigger lots, more wooded land, and a fair amount of gravel road. This is <b>lift territory</b>. The Breeze 4L, Breeze 6L, or Terrain 6 with the 23x10-14 off-road tires handle the rougher access roads, the loose gravel marina driveways, and the occasional 200-yard run from the cabin to the lake.</p>
+                <p>If your property is on the south shore, plan on a lifted cart. The street stance carts can do it, but they'll bottom out on the worst sections.</p>
+            """),
+            ("Charging at the lake house", """
+                <p>Every Breezy EV charges on standard 120V household outlets, so your existing lake house wiring is enough. A full 0%-to-100% charge takes 4-6 hours on the standard Lithium pack, so most lake-house owners plug in overnight Friday and have a full pack by Saturday morning.</p>
+                <p>One tip: install a <b>dedicated outlet in the garage or under the carport</b>, not an extension cord across the driveway. Cleaner, safer, and your charger lives in one spot.</p>
+            """),
+            ("Dock-to-house runs", """
+                <p>The single most common use case at the lake: parking the boat trailer at the ramp, then taking the cart to and from the dock. A 6-seater carries the family, the cooler, the floats, the dog, and the boat keys. A 4-seater carries the parents and the gear.</p>
+                <p>Time saved per weekend: probably an hour and a half of walking, plus all the trips back to the car for stuff you forgot.</p>
+            """),
+            ("Tournament weekends and the marina shuttle", """
+                <p>Lake Livingston hosts dozens of fishing tournaments a year. If you're tournament-active, a cart is the difference between waking up at 4:00 AM to drive to the ramp and waking up at 5:30 AM to roll the cart over.</p>
+                <p>Most marinas around the lake — including the public ramps at Pine Island Park, Wolf Creek Park, and Cedar Point — are cart-accessible, with parking near the launch lanes.</p>
+            """),
+            ("What we deliver to the lake", """
+                <p>PCGC delivers free to anywhere within 25 miles of our Livingston shop, which covers <b>most of Lake Livingston's east and north shores</b>. For the west shore (Onalaska, Point Blank), the south shore (Coldspring area), and out toward Lake Tejas — we're still inside the 75-mile extended service area, flat $75 delivery.</p>
+                <p>We've delivered to most of the major Lake Livingston subdivisions enough times to know the access roads, the gate codes, and which streets the carts get to use. Tell us your subdivision, we'll quote you door-to-dock.</p>
+            """),
+        ],
+        "faqs": [
+            ("Can I drive a golf cart on Lake Livingston roads?",
+             "Yes, on any road posted 35 mph or less, with the cart registered as a Texas LSV (Low Speed Vehicle). That includes nearly every street in Onalaska, Coldspring, Point Blank, and the lake-house subdivisions. For unregistered carts, you're limited to private property — which is still 90% of where most lake-house owners drive."),
+            ("Do I need a lifted cart for Lake Livingston?",
+             "Depends on your shore. The west shore (Onalaska, Yaupon Cove) is mostly paved and a street-stance Breeze 4 handles fine. The south shore (Coldspring, Point Blank) has more gravel and unpaved access roads — get a lifted cart (4L, 6L, or Terrain 6)."),
+            ("Can I park my golf cart at the boat ramp?",
+             "Yes at all the major public ramps (Wolf Creek Park, Pine Island Park, Cedar Point Park) and most private marinas. Check with your specific marina — some require you to park outside the trailer lanes."),
+            ("How far can I drive on one charge around the lake?",
+             "A typical Lake Livingston weekend (dock runs, marina trips, neighborhood cruising) uses 20-35 miles per day. The standard Breezy EV Lithium pack gives 35-55 miles per charge depending on model, so most owners only need to charge every other day or so."),
+            ("Can I tow a golf cart from town to the lake?",
+             "Yes, on a standard 14-16 ft trailer (a 6-seater is 12.4 ft long; a 4-seater is 9.7 ft). PCGC's rig and trailer can deliver any cart to anywhere on Lake Livingston for free (within 25 mi) or $75 flat (25-75 mi)."),
+        ],
+        "related": [
+            ("Onalaska, TX golf carts", "/golf-carts/onalaska-tx/"),
+            ("Coldspring, TX golf carts", "/golf-carts/coldspring-tx/"),
+            ("The Breezy EV lineup", "/breezy-ev/"),
+        ],
+    },
+}
+
+
+def page_guide(slug):
+    """Render a single pillar guide. Each guide is structured for AEO:
+    leading-sentence answers, table-of-contents anchor links, FAQPage
+    schema, and related-page links at the foot."""
+    g = GUIDES[slug]
+    toc = "\n".join(
+        f'<a href="#section-{i}">{title}</a>'
+        for i, (title, _) in enumerate(g["sections"])
+    )
+    body = "\n".join(
+        f'<section class="guide-section" id="section-{i}"><h2>{title}</h2>{content}</section>'
+        for i, (title, content) in enumerate(g["sections"])
+    )
+    faq_items = "\n".join(
+        f'<details class="faq"><summary>{q}</summary><div class="faq-body"><p>{a}</p></div></details>'
+        for q, a in g["faqs"]
+    )
+    related = "\n".join(
+        f'<a class="card" href="{href}"><div class="card-body"><h3>{label} →</h3></div></a>'
+        for label, href in g["related"]
+    )
+    sd = _json.dumps([
+        breadcrumb_schema([
+            ("Home", "/"),
+            ("Guides", "/guides/"),
+            (g["title"], f"/guides/{slug}/"),
+        ]),
+        {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+                {
+                    "@type": "Question",
+                    "name": _strip_tags(q),
+                    "acceptedAnswer": {"@type": "Answer", "text": _strip_tags(a)},
+                }
+                for q, a in g["faqs"]
+            ],
+        },
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": g["title"],
+            "description": g["summary"],
+            "image": "https://polkcountygolfcarts.com/assets/og/home.png",
+            "datePublished": "2026-06-01",
+            "dateModified": "2026-06-19",
+            "author": {"@type": "Organization", "name": BIZ["name"]},
+            "publisher": {"@id": ENTITY_ORG},
+            "mainEntityOfPage": f"https://polkcountygolfcarts.com/guides/{slug}/",
+        },
+    ])
+    return (
+        head(
+            g["title"],
+            g["summary"],
+            f"/guides/{slug}/",
+            og_slug="home",
+            noindex=True,
+            structured_data=sd,
+        )
+        + header(f"/guides/{slug}/")
+        + dedent(f"""\
+        <section class="hero" style="padding-bottom:3rem">
+          <div class="container" style="max-width: 880px;">
+            <span class="eyebrow">{g['kicker']} · {g['read_time']}</span>
+            <h1>{g['title']}</h1>
+            <p class="lede">{g['lede']}</p>
+          </div>
+        </section>
+
+        <article class="guide">
+          <div class="container" style="max-width: 880px;">
+            <nav class="guide-toc" aria-label="In this guide">
+              <b>In this guide</b>
+              {toc}
+            </nav>
+            {body}
+          </div>
+        </article>
+
+        <section class="alt">
+          <div class="container" style="max-width: 880px;">
+            <div class="section-head">
+              <span class="eyebrow">Common questions</span>
+              <h2>FAQ</h2>
+            </div>
+            <div class="faq-list">
+              {faq_items}
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="container">
+            <div class="section-head">
+              <span class="eyebrow">Related</span>
+              <h2>Keep reading.</h2>
+            </div>
+            <div class="cards">
+              {related}
+            </div>
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container center">
+            <h2>Questions we didn't answer?</h2>
+            <p class="lede-text">Call John. We answer the phone, we don't read scripts.</p>
+            <a class="btn btn-coral" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 {BIZ['phone_primary']}</a>
+          </div>
+        </section>
+        """)
+        + contact_strip()
+        + footer()
+    )
+
+
+def page_guides_index():
+    cards = "\n".join(
+        f'<a class="card{" alt" if i % 2 else ""}" href="/guides/{slug}/">'
+        f'<div class="card-body">'
+        f'<span class="eyebrow">{g["kicker"]} · {g["read_time"]}</span>'
+        f'<h3>{g["title"]}</h3>'
+        f'<p class="muted">{g["lede"][:140].rsplit(" ", 1)[0]}…</p>'
+        f'</div></a>'
+        for i, (slug, g) in enumerate(GUIDES.items())
+    )
+    sd = breadcrumb_schema([("Home", "/"), ("Guides", "/guides/")])
+    return (
+        head(
+            "Golf Cart Buyer's Guides & Local Tips",
+            "Pillar buyer's guides from Polk County Golf Carts — costs, comparisons, used-cart inspections, and Lake Livingston local advice from a real Texas dealer.",
+            "/guides/",
+            og_slug="home",
+            noindex=True,
+            structured_data=_json.dumps(sd),
+        )
+        + header("/guides/")
+        + dedent(f"""\
+        <section class="hero" style="padding-bottom:3rem">
+          <div class="container">
+            <span class="eyebrow">Guides</span>
+            <h1>Buyer's guides and local advice.</h1>
+            <p class="lede">Long-form answers to the questions customers ask us before they buy. Written by the shop, not a content mill.</p>
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container">
+            <div class="cards breezy-grid">
+              {cards}
+            </div>
+          </div>
+        </section>
+        """)
+        + contact_strip()
+        + footer()
+    )
+
+
 # ---------------- Hidden /golf-carts/<town>/ pages ---------------- #
 #
 # Geo landing pages, one per town in the service area. Hidden the same
@@ -2566,6 +2999,8 @@ PAGES = {
     "breezy-ev/financing/index.html":             page_breezy_financing,
     "breezy-ev/street-legal/index.html":          page_breezy_street_legal,
     "breezy-ev/lithium-vs-lead-acid/index.html":  page_breezy_lithium_vs_lead_acid,
+    # Hidden /guides/ pillar content (Phase 3) — same review-first flow.
+    "guides/index.html":                          page_guides_index,
     # Hidden tier-3 town pages — same hidden-while-reviewing pattern.
     "golf-carts/index.html":         page_town_index,
     # Public review landing page — meant to be linked from post-sale
@@ -2576,6 +3011,8 @@ for _slug in BREEZY_EV_MODELS:
     PAGES[f"breezy-ev/{_slug}/index.html"] = (lambda s=_slug: page_breezy_model(s))
 for _slug in TOWN_PAGES:
     PAGES[f"golf-carts/{_slug}/index.html"] = (lambda s=_slug: page_town(s))
+for _slug in GUIDES:
+    PAGES[f"guides/{_slug}/index.html"] = (lambda s=_slug: page_guide(s))
 
 
 def main():
@@ -2595,6 +3032,7 @@ def main():
             "Disallow: /rentals/\n"
             "Disallow: /breezy-ev/\n"
             "Disallow: /golf-carts/\n"
+            "Disallow: /guides/\n"
             "Sitemap: https://polkcountygolfcarts.com/sitemap.xml\n"
         )
     urls = ["/", "/carts/", "/services/", "/about-us/", "/contact/", "/privacy/", "/leave-a-review/"]

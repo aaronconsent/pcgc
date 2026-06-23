@@ -381,27 +381,34 @@ ul.checks li::before {
 .mt-0 { margin-top: 0; }
 .mb-0 { margin-bottom: 0; }
 .muted { color: var(--ink-soft); }
-/* Default BBB badge — for use on light backgrounds (about page card) */
-.bbb-badge {
-  display: inline-flex; align-items: center; gap: .5rem;
-  background: #fff; color: #003a70; padding: .4rem .9rem;
-  border-radius: 6px; font-weight: 700; font-size: .85rem;
-  border: 1px solid #003a70;
+/* Official BBB seal — image-based, served from BBB's own CDN per
+   their attribution requirements. Two placements:
+   - default (cream cards / About page): seal sits on a thin white
+     card so the blue art has a stable background regardless of the
+     parent block's color.
+   - .bbb-seal-foot: footer variant; the seal sits on a white pill
+     so it stays readable on the dark teal footer band. */
+.bbb-seal {
+  display: inline-block;
+  line-height: 0;            /* kills the bottom-of-image gap */
+  border-radius: 6px;
+  overflow: hidden;
   text-decoration: none;
+  transition: transform .15s ease;
 }
-.bbb-badge:hover { background: #f4f7fb; text-decoration: none; }
-/* Footer variant — transparent with light border, so it doesn't read as
-   a stark white card on the dark teal background. */
-.site-footer .bbb-badge {
-  background: transparent;
-  color: #fff;
-  border: 1.5px solid rgba(255,255,255,.45);
-  margin-top: .5rem;
+.bbb-seal:hover { transform: translateY(-1px); text-decoration: none; }
+.bbb-seal img {
+  display: block;
+  max-width: 100%;
+  height: auto;              /* respect aspect on small viewports */
 }
-.site-footer .bbb-badge:hover {
-  background: rgba(255,255,255,.08);
-  border-color: rgba(255,255,255,.85);
+.bbb-seal-foot {
+  background: #fff;
+  padding: 6px 8px;
+  margin-top: .65rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
 }
+@media (max-width: 480px) { .bbb-seal img { max-width: 240px; } }
 
 /* ===================================================================
    /breezy-ev/ product pages — lineup cards, spec grid, comparison

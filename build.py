@@ -118,6 +118,23 @@ def header(current_path):
         """)
 
 
+def bbb_seal(klass=""):
+    """Official BBB Accredited Business seal. Pulled from BBB's own
+    CDN per their attribution requirements (rel="nofollow" + target=
+    "_blank" + linked back to the PCGC BBB profile). Pass an optional
+    class to scope the wrapper (e.g. "bbb-seal-foot" for the dark
+    footer treatment)."""
+    return (
+        f'<a class="bbb-seal {klass}" '
+        f'href="{BIZ["bbb_url"]}/#sealclick" '
+        f'target="_blank" rel="nofollow">'
+        f'<img src="https://seal-austin.bbb.org/seals/blue-seal-280-80-bbb-1000223827.png" '
+        f'alt="Polk County Golf Carts BBB Business Review" '
+        f'width="280" height="80" loading="lazy" '
+        f'style="border:0;"></a>'
+    )
+
+
 def contact_strip():
     return dedent(f"""\
         <section class="contact-strip">
@@ -156,7 +173,7 @@ def footer():
                 <img class="foot-mark" src="/assets/logos/logo-white.svg" alt="{BIZ['name']}" width="120" height="92">
                 <h4 class="brand-text-foot">{BIZ['name']}</h4>
                 <p>{BIZ['tagline']} in Livingston, Texas. {BIZ['inventory_line']} Free pickup &amp; delivery within {BIZ['delivery_radius']} miles, extended service up to {BIZ['extended_radius']} miles for an additional charge.</p>
-                <a class="bbb-badge" href="{BIZ['bbb_url']}" target="_blank" rel="noopener">★ BBB Accredited</a>
+                {bbb_seal("bbb-seal-foot")}
               </div>
               <div>
                 <h4>Site</h4>
@@ -1111,7 +1128,7 @@ def page_about():
                   <li>Service for any make of cart</li>
                   <li>2-year warranty on new Breezy EV carts</li>
                 </ul>
-                <a class="bbb-badge" href="{BIZ['bbb_url']}" target="_blank" rel="noopener">★ Visit our BBB page</a>
+                {bbb_seal()}
               </div>
             </div>
           </div>
@@ -3029,7 +3046,13 @@ def main():
             "Allow: /\n"
             "Disallow: /admin/\n"
             "Disallow: /api/\n"
-            "Disallow: /rentals/\n"
+            # /rentals/ is left CRAWLABLE on purpose: the page itself
+            # carries <meta name="robots" content="noindex, nofollow">,
+            # and search engines need to be allowed to crawl the page
+            # to see that directive and drop the URL from the index.
+            # Blocking via robots.txt prevents the crawl, which is
+            # exactly what causes Google to index the URL anyway when
+            # it finds it via external links.
             "Disallow: /breezy-ev/\n"
             "Disallow: /golf-carts/\n"
             "Disallow: /guides/\n"

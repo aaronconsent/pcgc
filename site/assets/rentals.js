@@ -5,19 +5,21 @@
  * final booking to /api/booking (handled by src/worker.js). All
  * pricing math lives in computePrice(); change the rules there.
  *
- * Inventory is the real PCGC rental fleet: 5 × 4-seater @ $75/day +
- * 1 × 6-seater Limo @ $125/day. Free pickup & delivery within 25
- * miles of Livingston; extended delivery (25–100 mi) is an extra
- * charge quoted separately by PCGC (not auto-billed in checkout).
+ * Inventory: 4 × 4-seater carts @ $75/day + 1 × 6-seater Limo
+ * @ $125/day. Free pickup & delivery within 25 miles of Livingston;
+ * extended delivery (25–100 mi) is an extra charge quoted separately
+ * by PCGC (not auto-billed in checkout).
+ *
+ * The four 4-seaters re-use two source photos (a + b) — the carts
+ * are similar enough that not every one needs a unique shot.
  */
 
 const CARTS = [
-  { id: "yamaha-1", name: "Yamaha #1 — Charcoal",      seats: 4, price: 75,  img: "/assets/photos/rentals/cart-1-yamaha-dark.jpg",  desc: "Yamaha 4-seater with rear flip seat. Lakeside-ready." },
-  { id: "yamaha-2", name: "Yamaha #2 — Sandstone",     seats: 4, price: 75,  img: "/assets/photos/rentals/cart-2-yamaha-tan.jpg",   desc: "Yamaha 4-seater, soft tan, classic cruise comfort." },
-  { id: "club-car-3", name: "Club Car #3 — White",    seats: 4, price: 75,  img: "/assets/photos/rentals/cart-3-club-car-white.jpg", desc: "White Club Car 4-seater with rear flip seat. Off-road tires." },
-  { id: "yamaha-4", name: "Yamaha #4",                 seats: 4, price: 75,  img: "/assets/photos/rentals/cart-4-placeholder.jpg",  desc: "Yamaha 4-seater. Photo coming — call to view." },
-  { id: "yamaha-5", name: "Yamaha #5",                 seats: 4, price: 75,  img: "/assets/photos/rentals/cart-5-placeholder.jpg",  desc: "Yamaha 4-seater. Photo coming — call to view." },
-  { id: "limo-6",   name: "The Limo — 6-Seater",       seats: 6, price: 125, img: "/assets/photos/rentals/limo-6-seater.jpg",       desc: "Club Car Limo. Six seats, the whole crew fits." },
+  { id: "cart-1", name: "Cart 1", seats: 4, price: 75,  img: "/assets/photos/rentals/4-seater-a.jpg", desc: "4-seater golf cart with rear flip seat." },
+  { id: "cart-2", name: "Cart 2", seats: 4, price: 75,  img: "/assets/photos/rentals/4-seater-b.jpg", desc: "4-seater golf cart with rear flip seat." },
+  { id: "cart-3", name: "Cart 3", seats: 4, price: 75,  img: "/assets/photos/rentals/4-seater-a.jpg", desc: "4-seater golf cart with rear flip seat." },
+  { id: "cart-4", name: "Cart 4", seats: 4, price: 75,  img: "/assets/photos/rentals/4-seater-b.jpg", desc: "4-seater golf cart with rear flip seat." },
+  { id: "cart-5", name: "Cart 5 — The Limo", seats: 6, price: 125, img: "/assets/photos/rentals/limo.jpg", desc: "6-seater Limo. Three rows of seating for the whole crew." },
 ];
 
 // One copy of each cart exists in the fleet — a renter can pick up to
@@ -32,7 +34,7 @@ const TAX_RATE = 0.0825;
 // ---------- State ----------
 // Bumped to v2 because the schema changed (cart ids + prices). v1
 // sessions get a clean slate so they don't see stale selections.
-const STORAGE_KEY = "pcgc.rental.v2";
+const STORAGE_KEY = "pcgc.rental.v3";
 const state = loadState() || {
   step: 1,
   dates: { start: "", end: "" },

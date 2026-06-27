@@ -50,8 +50,8 @@ BIZ = {
 
 NAV = [
     ("Home", "/"),
-    ("Breezy EV Carts", "/carts/"),
-    ("Service & Custom", "/services/"),
+    ("Carts", "/carts/"),
+    ("Service", "/services/"),
     ("Financing", "/financing/"),
     ("About", "/about-us/"),
     ("Contact", "/contact/"),
@@ -222,9 +222,9 @@ PRICE_TEXT = "Prices start at $12,500 and up depending on the model chosen — c
 # supplied this and it's specific to PCGC's dealer code — don't change
 # without confirming with John.
 LENDMARK_APPLY_URL = "https://securedlr.lendmarkfinancial.com/Kiosk/Home/Default/d58459a1"
-# Dealer Direct doesn't have a kiosk URL yet — until John provides one,
-# the second-partner CTA routes to /contact/ so the lead still flows in.
-DEALER_DIRECT_APPLY_URL = "/contact/?topic=financing&lender=dealer-direct"
+# Owner-supplied Dealer Direct guest application URL (apptraker.com),
+# scoped to PCGC's dealer code 11194.
+DEALER_DIRECT_APPLY_URL = "https://dealerdirect.apptraker.com/my/guest?dealer=11194"
 
 import json as _json
 
@@ -1429,7 +1429,7 @@ def page_financing():
                   <li>No prepayment penalty</li>
                 </ul>
                 <div style="margin-top:auto; padding-top:1rem;">
-                  <a class="btn btn-outline" href="{apply_dealer}" data-cta="finance-apply-dealer-direct" style="width:100%; text-align:center;">Ask about Dealer Direct &rarr;</a>
+                  <a class="btn btn-outline" href="{apply_dealer}" target="_blank" rel="noopener" data-cta="finance-apply-dealer-direct" style="width:100%; text-align:center;">Apply with Dealer Direct &rarr;</a>
                 </div>
               </div>
             </div>

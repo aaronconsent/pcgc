@@ -13,7 +13,7 @@
 const CARTS = [
   { id: "yamaha-1", name: "Yamaha #1 — Charcoal",      seats: 4, price: 75,  img: "/assets/photos/rentals/cart-1-yamaha-dark.jpg",  desc: "Yamaha 4-seater with rear flip seat. Lakeside-ready." },
   { id: "yamaha-2", name: "Yamaha #2 — Sandstone",     seats: 4, price: 75,  img: "/assets/photos/rentals/cart-2-yamaha-tan.jpg",   desc: "Yamaha 4-seater, soft tan, classic cruise comfort." },
-  { id: "yamaha-3", name: "Yamaha #3",                 seats: 4, price: 75,  img: "/assets/photos/rentals/cart-3-placeholder.jpg",  desc: "Yamaha 4-seater. Photo coming — call to view." },
+  { id: "club-car-3", name: "Club Car #3 — White",    seats: 4, price: 75,  img: "/assets/photos/rentals/cart-3-club-car-white.jpg", desc: "White Club Car 4-seater with rear flip seat. Off-road tires." },
   { id: "yamaha-4", name: "Yamaha #4",                 seats: 4, price: 75,  img: "/assets/photos/rentals/cart-4-placeholder.jpg",  desc: "Yamaha 4-seater. Photo coming — call to view." },
   { id: "yamaha-5", name: "Yamaha #5",                 seats: 4, price: 75,  img: "/assets/photos/rentals/cart-5-placeholder.jpg",  desc: "Yamaha 4-seater. Photo coming — call to view." },
   { id: "limo-6",   name: "The Limo — 6-Seater",       seats: 6, price: 125, img: "/assets/photos/rentals/limo-6-seater.jpg",       desc: "Club Car Limo. Six seats, the whole crew fits." },

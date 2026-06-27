@@ -311,7 +311,6 @@ function renderPaymentSummary() {
   }
   lines.push(`<div class="row"><span>Tax (${(TAX_RATE * 100).toFixed(2)}%)</span><span>${fmtMoney(p.tax)}</span></div>`);
   lines.push(`<div class="row total"><span>Total today</span><span>${fmtMoney(p.grand)}</span></div>`);
-  lines.push(`<div class="row muted"><span>+ $200 refundable damage deposit (held at pickup)</span><span></span></div>`);
   out.innerHTML = lines.join("");
   $("#pay-amount").textContent = fmtMoney(p.grand);
 }

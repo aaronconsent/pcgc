@@ -52,6 +52,7 @@ NAV = [
     ("Home", "/"),
     ("Breezy EV Carts", "/carts/"),
     ("Service & Custom", "/services/"),
+    ("Financing", "/financing/"),
     ("About", "/about-us/"),
     ("Contact", "/contact/"),
 ]
@@ -216,6 +217,14 @@ def footer():
 # future change is a single-line edit.
 PRICE_FROM = 12500
 PRICE_TEXT = "Prices start at $12,500 and up depending on the model chosen — call for current pricing."
+
+# Live kiosk URL for the Lendmark Financial pre-qualification flow. Owner
+# supplied this and it's specific to PCGC's dealer code — don't change
+# without confirming with John.
+LENDMARK_APPLY_URL = "https://securedlr.lendmarkfinancial.com/Kiosk/Home/Default/d58459a1"
+# Dealer Direct doesn't have a kiosk URL yet — until John provides one,
+# the second-partner CTA routes to /contact/ so the lead still flows in.
+DEALER_DIRECT_APPLY_URL = "/contact/?topic=financing&lender=dealer-direct"
 
 import json as _json
 
@@ -1298,6 +1307,215 @@ def page_privacy():
 
             <h2>Contact us</h2>
             <p>Questions about this policy? Email <a href="mailto:{BIZ['email']}">{BIZ['email']}</a> or call <a href="tel:{BIZ['phone_primary'].replace('-','')}">{BIZ['phone_primary']}</a>.</p>
+          </div>
+        </section>
+        """)
+        + contact_strip()
+        + footer()
+    )
+
+
+def page_financing():
+    """Top-level /financing/ landing — public, indexed, in the main
+    nav. Designed for both usability (clear "Apply Now" CTA at the top,
+    no scroll-hunting) and SEO/AEO ("golf cart financing Texas", "0
+    down golf cart financing", "golf cart financing bad credit", etc.).
+
+    The /breezy-ev/financing/ deep page stays as the Breezy-specific
+    drill-down. This page links into it for buyers who already know
+    they want a Breezy."""
+    apply_lendmark = LENDMARK_APPLY_URL
+    apply_dealer = DEALER_DIRECT_APPLY_URL
+    faqs = [
+        ("How do I apply for golf cart financing?",
+         f"Click <b>Apply Now</b> at the top of this page — it opens the Lendmark Financial pre-qualification form. It takes about five minutes, runs a <b>soft credit pull</b> (no impact to your score), and most applicants get a decision the same business day. Prefer to apply in person? Call <a href='tel:{BIZ['phone_primary'].replace('-','')}'>{BIZ['phone_primary']}</a> or stop by 1732 FM 3277 in Livingston."),
+        ("Will applying hurt my credit score?",
+         "No. The initial application runs a <b>soft pull</b>, which doesn't show on your credit report and doesn't affect your score. A hard pull only happens after you've reviewed an offer and decided to move forward."),
+        ("What credit score do I need to finance a golf cart?",
+         "There's no single cutoff. We've placed loans across a wide range of credit profiles. Lendmark in particular works with <b>customers who have less-than-perfect credit</b>, including scores in the 500s and low 600s. Stronger credit usually means a lower APR and a longer term, but we won't know until we look at the application."),
+        ("Can I finance a golf cart with bad credit?",
+         "Often, yes. Lendmark Financial's program is built specifically for credit profiles that conventional banks turn down. We'll shop your application and tell you straight up what you'll qualify for. If we can't get you approved, we'll tell you that too instead of stringing you along."),
+        ("How much down payment do I need?",
+         "<b>10–20% is typical</b>, but it varies by lender, credit profile, and the specific cart. Cash, trade-in, or a combination — all work. We'll quote the monthly with and without a down payment so you can compare."),
+        ("What's the term length on a golf cart loan?",
+         "<b>24 to 84 months</b> depending on the lender, the cart, and your credit. Longer terms mean a lower monthly payment but more total interest. We help you find the right balance for your situation."),
+        ("Is there a prepayment penalty?",
+         "No. Both Lendmark Financial and Dealer Direct allow <b>early payoff with no prepayment penalty</b>. Pay it off whenever you want and you only owe the interest accrued to that date."),
+        ("What documents do I need to apply?",
+         "Lendmark's online application asks for the basics — driver's license, social security number, employer info, and contact details. If you'd like the strongest application, have a recent pay stub or two months of bank statements handy. For in-person applications, bring those plus the driver's license."),
+        ("Do you finance used golf carts?",
+         "Yes. Both lenders cover new <b>and</b> used carts, including refurbished units we've serviced in our shop. Used-cart APRs are usually a touch higher than new, but the lower price often makes the monthly payment <b>lower than financing a brand-new cart</b>."),
+        ("How quickly can I take delivery after I'm approved?",
+         "Often <b>same week</b>. Once the loan funds (usually one business day after you accept the offer), we coordinate pickup at our Livingston shop or free delivery within 25 miles. Extended delivery up to 100 miles is also available."),
+    ]
+    faq_sd = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": q,
+                "acceptedAnswer": {"@type": "Answer", "text": a},
+            } for q, a in faqs
+        ],
+    }
+    breadcrumb_sd = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://polkcountygolfcarts.com/"},
+            {"@type": "ListItem", "position": 2, "name": "Financing", "item": "https://polkcountygolfcarts.com/financing/"},
+        ],
+    }
+    return (
+        head(
+            "Golf Cart Financing in Texas — Apply Now · Polk County Golf Carts",
+            "Finance a golf cart in Texas through Polk County Golf Carts. Soft credit pull, same-day decisions, terms 24-84 months. Apply online with Lendmark Financial or talk to us about Dealer Direct.",
+            "/financing/",
+            og_slug="financing",
+            # JSON-LD supports an array of top-level entities — encode
+            # the FAQPage + BreadcrumbList together. head() injects the
+            # string verbatim into a single <script> tag.
+            structured_data=_json.dumps([faq_sd, breadcrumb_sd]),
+        )
+        + header("/financing/")
+        + dedent(f"""\
+        <section class="hero" style="padding-bottom:2.5rem">
+          <div class="container hero-split">
+            <div>
+              <span class="eyebrow">Pay over time</span>
+              <h1>Golf cart financing, made simple.</h1>
+              <p class="lede">Soft credit pull, same-day decisions, terms 24&ndash;84 months, and a shop that <b>walks you through the application</b> instead of pointing you at a form. {PRICE_TEXT}</p>
+              <div class="hero-ctas">
+                <a class="btn btn-coral" href="{apply_lendmark}" target="_blank" rel="noopener" data-cta="finance-apply-hero">Apply Now &rarr;</a>
+                <a class="btn btn-outline" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+              </div>
+              <p class="muted" style="margin-top:1rem; font-size:.92rem;">Application takes ~5 minutes &middot; Soft pull, no credit score impact &middot; Most decisions same business day</p>
+            </div>
+            <img src="/assets/photos/breezy-ev-lake-grass.jpg" alt="Breezy EV golf cart by the lake" width="800" height="600" fetchpriority="high">
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container">
+            <div class="section-head">
+              <span class="eyebrow">Our partners</span>
+              <h2>Two lenders. We shop both for you.</h2>
+              <p class="lede-text">We don't make money on financing &mdash; we work with two lenders because their programs fit different customers, and we want to put you with the one that gives you the best terms.</p>
+            </div>
+            <div class="cards">
+              <div class="card" style="display:flex; flex-direction:column;">
+                <span class="eyebrow">Apply online</span>
+                <h3>Lendmark Financial</h3>
+                <p>National lender with a golf-cart-specific program. Works across the credit spectrum &mdash; often the right fit for customers with less-than-perfect credit, or for buyers who want a longer term to lower the monthly payment.</p>
+                <ul class="checks">
+                  <li>Soft pull pre-qualification</li>
+                  <li>Same-day decision in most cases</li>
+                  <li>Terms 24&ndash;84 months</li>
+                  <li>No prepayment penalty</li>
+                </ul>
+                <div style="margin-top:auto; padding-top:1rem;">
+                  <a class="btn btn-coral" href="{apply_lendmark}" target="_blank" rel="noopener" data-cta="finance-apply-lendmark" style="width:100%; text-align:center;">Apply with Lendmark &rarr;</a>
+                </div>
+              </div>
+              <div class="card alt" style="display:flex; flex-direction:column;">
+                <span class="eyebrow">Talk to us</span>
+                <h3>Dealer Direct</h3>
+                <p>Manufacturer-backed program with competitive rates on new Breezy EV carts. Often the better fit for customers with <b>stronger credit who want the lowest APR</b>, especially on the new Breeze 4, 4L, 6L, and Terrain 6.</p>
+                <ul class="checks">
+                  <li>Soft pull pre-qualification</li>
+                  <li>Manufacturer-backed rates on new carts</li>
+                  <li>Terms 24&ndash;72 months</li>
+                  <li>No prepayment penalty</li>
+                </ul>
+                <div style="margin-top:auto; padding-top:1rem;">
+                  <a class="btn btn-outline" href="{apply_dealer}" data-cta="finance-apply-dealer-direct" style="width:100%; text-align:center;">Ask about Dealer Direct &rarr;</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="container">
+            <div class="section-head">
+              <span class="eyebrow">How it works</span>
+              <h2>Four steps, one afternoon.</h2>
+            </div>
+            <div class="cards">
+              <div class="card">
+                <div class="icon">1</div>
+                <h3>Apply online or by phone</h3>
+                <p>Click <b>Apply Now</b> for the Lendmark form (about five minutes), or call us and we'll walk through it together. Driver's license, employer info, and contact details &mdash; that's it.</p>
+              </div>
+              <div class="card">
+                <div class="icon">2</div>
+                <h3>Get a soft-pull decision</h3>
+                <p>Most applicants hear back the <b>same business day</b>. Soft pull only, so there's no impact to your credit score while you decide.</p>
+              </div>
+              <div class="card">
+                <div class="icon">3</div>
+                <h3>Pick your cart</h3>
+                <p>New Breezy EV, refurbished, used &mdash; whatever fits your budget. We'll quote the monthly with and without a down payment so you can compare.</p>
+              </div>
+              <div class="card">
+                <div class="icon">4</div>
+                <h3>Drive it home</h3>
+                <p>Loan funds typically next business day. Pick up at our Livingston shop, or we'll deliver it free within 25 miles.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="alt">
+          <div class="container" style="max-width:880px">
+            <div class="section-head">
+              <span class="eyebrow">Real numbers</span>
+              <h2>What does the monthly payment look like?</h2>
+              <p class="lede-text">Rough estimates assuming <b>10% down</b> and average credit. Actual rate depends on your application &mdash; this is just to give you a feel.</p>
+            </div>
+            <div class="finance-table-wrap">
+              <table class="compare-table" style="width:100%; max-width:760px; margin:0 auto;">
+                <thead>
+                  <tr>
+                    <th>Cart price</th>
+                    <th>36 months</th>
+                    <th>60 months</th>
+                    <th>84 months</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td><b>$10,000</b></td><td>~$305 / mo</td><td>~$200 / mo</td><td>~$155 / mo</td></tr>
+                  <tr><td><b>$13,000</b></td><td>~$395 / mo</td><td>~$260 / mo</td><td>~$200 / mo</td></tr>
+                  <tr><td><b>$16,000</b></td><td>~$485 / mo</td><td>~$320 / mo</td><td>~$245 / mo</td></tr>
+                  <tr><td><b>$20,000</b></td><td>~$605 / mo</td><td>~$400 / mo</td><td>~$305 / mo</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="muted" style="text-align:center; margin-top:1.25rem; font-size:.9rem;">Estimates based on 12% APR and 10% down. Your actual rate, term, and monthly will be quoted after your application is reviewed.</p>
+          </div>
+        </section>
+
+        <section>
+          <div class="container" style="max-width:880px">
+            <div class="section-head">
+              <span class="eyebrow">Common questions</span>
+              <h2>Golf cart financing, FAQ.</h2>
+            </div>
+            <div class="faq">
+              {''.join(f'<details><summary>{q}</summary><div class="faq-body"><p>{a}</p></div></details>' for q, a in faqs)}
+            </div>
+          </div>
+        </section>
+
+        <section class="alt cta-strip">
+          <div class="container center" style="max-width:760px">
+            <h2>Ready to put it in writing?</h2>
+            <p class="lede-text">Apply online in five minutes, or call us and we'll walk through it together. Either way, you'll know what you qualify for the same business day.</p>
+            <div class="hero-ctas center">
+              <a class="btn btn-coral" href="{apply_lendmark}" target="_blank" rel="noopener" data-cta="finance-apply-bottom">Apply with Lendmark &rarr;</a>
+              <a class="btn btn-outline" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+            </div>
           </div>
         </section>
         """)
@@ -3008,6 +3226,7 @@ PAGES = {
     "about-us/index.html": page_about,
     "404.html":           page_404,
     "contact/index.html": page_contact,
+    "financing/index.html": page_financing,
     "privacy/index.html": page_privacy,
     # Hidden Breezy EV product tree (noindex + robots Disallow + no
     # sitemap + no nav link). Direct URL only until client signs off.
@@ -3058,7 +3277,7 @@ def main():
             "Disallow: /guides/\n"
             "Sitemap: https://polkcountygolfcarts.com/sitemap.xml\n"
         )
-    urls = ["/", "/carts/", "/services/", "/about-us/", "/contact/", "/privacy/", "/leave-a-review/"]
+    urls = ["/", "/carts/", "/services/", "/financing/", "/about-us/", "/contact/", "/privacy/", "/leave-a-review/"]
     sm = ['<?xml version="1.0" encoding="UTF-8"?>',
           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     for u in urls:

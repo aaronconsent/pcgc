@@ -43,6 +43,7 @@ CARDS = [
     ("contact",   "shop-exterior.jpg",          "Let's talk carts.",                "1732 FM 3277 · Livingston, TX · 936-223-1182"),
     ("privacy",   "breezy-ev-lakeside.jpg",     "Polk County Golf Carts",           "Privacy Policy"),
     ("rentals",   "rental-fleet-resort.jpg",    "Rent a golf cart in East Texas.",  "Up to 8 carts · free delivery within 25 mi"),
+    ("financing", "breezy-ev-lake-grass.jpg",   "Finance your golf cart.",          "Two lenders · soft pull · same-day decision"),
 ]
 
 

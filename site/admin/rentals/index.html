@@ -88,7 +88,7 @@
     out.textContent = "";
     const fmtMoney = n => "$" + (Number(n) || 0).toFixed(2);
     const fmtDate = iso => iso ? new Date(iso + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
-    const deliveryLabel = { pickup: "Pickup at shop", local: "Free delivery (≤25 mi)", extended: "Extended delivery (25–75 mi)" };
+    const deliveryLabel = { pickup: "Pickup at shop", local: "Free delivery (≤25 mi)", extended: "Extended delivery (25–100 mi, fee quoted separately)" };
     for (const b of entries) {
       const wrap = document.createElement("article");
       wrap.className = "bk-entry";
@@ -128,8 +128,7 @@
       for (const it of (b.items || [])) {
         rows.push('<div class="row"><span>' + it.name + ' × ' + it.qty + '</span><span>' + fmtMoney(it.lineTotal) + '</span></div>');
       }
-      if (p.groupDiscount) rows.push('<div class="row"><span>Group discount</span><span>−' + fmtMoney(p.groupDiscount) + '</span></div>');
-      if (p.deliveryFee)   rows.push('<div class="row"><span>Extended delivery</span><span>' + fmtMoney(p.deliveryFee) + '</span></div>');
+      if (b.delivery === "extended") rows.push('<div class="row"><span>Extended delivery</span><span>Quoted separately</span></div>');
       if (p.tax)           rows.push('<div class="row"><span>Tax</span><span>' + fmtMoney(p.tax) + '</span></div>');
       rows.push('<div class="row total"><span>Paid</span><span>' + fmtMoney(p.total) + '</span></div>');
       items.innerHTML = rows.join("");

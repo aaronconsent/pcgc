@@ -510,6 +510,25 @@ function renderConfirmation() {
   lines.push(`<div class="row"><span>${deliveryLabel}</span><span>${deliveryDisplay}</span></div>`);
   lines.push(`<div class="row total"><span>Total paid</span><span>${fmtMoney(b.pricing.total)}</span></div>`);
   out.innerHTML = lines.join("");
+
+  // Per-delivery requirements list. Pickup customers need driver's
+  // license, insurance, license plate photo + email for DocuSign.
+  // Delivery customers only need the driver's license + email.
+  const isPickup = b.delivery === "pickup";
+  $("#next-steps-title").textContent = isPickup
+    ? "Before pickup — what we'll need from you"
+    : "Before delivery — what we'll need from you";
+  const requirements = isPickup
+    ? [
+        "A photo or scan of your driver's license",
+        "A photo or scan of your auto insurance",
+        "A photo of your vehicle's license plate (the vehicle we'll be loading the cart onto)",
+      ]
+    : [
+        "A photo or scan of the driver's license of whoever will be driving the cart",
+      ];
+  $("#requirements-list").innerHTML = requirements.map(r => `<li>${r}</li>`).join("");
+  $("#docusign-email").textContent = b.contact.email || "your email";
 }
 
 // ---------- Boot ----------

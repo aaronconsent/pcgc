@@ -218,8 +218,17 @@
       <h1 id="s5-title">You're booked!</h1>
       <p class="lede-text">Confirmation code: <code id="booking-id">PCGC-——</code></p>
       <div class="rental-summary" id="confirm-summary"></div>
-      <p>A receipt is on its way to <span id="confirm-email">your email</span>. We'll text you at <span id="confirm-phone">your phone</span> the day before pickup.</p>
-      <div class="rental-cta-row center">
+      <p>We'll be in touch at <span id="confirm-email">your email</span> and <span id="confirm-phone">your phone</span>.</p>
+
+      <!-- Next-steps requirements card, populated by renderConfirmation()
+           based on whether the customer picked pickup or delivery. -->
+      <div class="rental-card rental-next-steps" id="next-steps" style="text-align:left; margin-top: 1.5rem; background: #fff9f4; border-color: var(--coral-soft, #f3c3bc);">
+        <h2 id="next-steps-title" style="margin-top:0; color: var(--teal-dk);">What we'll need from you</h2>
+        <ul id="requirements-list" style="margin: .5rem 0 0; padding-left: 1.2rem;"></ul>
+        <p style="margin-top: 1rem; font-size: .92rem; color: var(--ink-soft);">We'll also email a rental agreement through DocuSign to <b id="docusign-email">your email</b> for you to sign before pickup.</p>
+      </div>
+
+      <div class="rental-cta-row center" style="margin-top: 1.5rem;">
         <a class="btn btn-coral" href="/rentals/" onclick="sessionStorage.clear()">Book another</a>
         <a class="btn btn-ghost" href="/">Back to PCGC</a>
       </div>
@@ -231,6 +240,6 @@
   Polk County Golf Carts · 1732 FM 3277, Livingston, TX · <a href="tel:9362231182">936-223-1182</a>
 </footer>
 
-<script src="/assets/rentals.js?v=42d291a6"></script>
+<script src="/assets/rentals.js?v=4338af58"></script>
 </body>
 </html>

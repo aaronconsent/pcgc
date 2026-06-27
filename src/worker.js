@@ -373,8 +373,10 @@ async function updateBookingStatus(request, env, url) {
 }
 
 // Customer-facing thank-you email sent when status transitions to
-// "returned". Asks for a Google review and links back to /leave-a-review/
-// (which deep-links into the PCGC GBP review form).
+// "returned". Asks for a Google review with a button that links
+// directly to the PCGC review form (the owner-supplied share.google
+// link bypasses the in-between /leave-a-review/ landing — one less
+// click, higher conversion).
 async function sendThankYouEmail(record, env) {
   const customer = record.contact || {};
   const to = customer.email;
@@ -382,7 +384,7 @@ async function sendThankYouEmail(record, env) {
   const from = env.BOOKING_FROM_EMAIL || "bookings@polkcountygolfcarts.com";
 
   const subject = `Thanks for renting with Polk County Golf Carts!`;
-  const reviewUrl = "https://polkcountygolfcarts.com/leave-a-review/";
+  const reviewUrl = "https://share.google/RjxLOjukDYZrEakMq";
   const firstName = (customer.name || "").split(/\s+/)[0] || "there";
 
   const html = `<!doctype html><html><body style="font-family:system-ui,Arial,sans-serif; max-width:560px; margin:0 auto; padding:1rem; color:#222;">

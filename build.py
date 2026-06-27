@@ -3071,10 +3071,10 @@ def page_reviews():
     buttons + a soft escape hatch for "tell us first if something's
     wrong" feedback. NOT hidden — this one's meant to be linked from
     follow-up messages."""
-    # Direct-to-review deep link for the PCGC Google Business Profile.
-    # `placeid=ChIJdwtETV1LvG4RYshRu-lxOnI` lands on the review form
-    # immediately — no extra tap to find the business first.
-    google_review_url = "https://search.google.com/local/writereview?placeid=ChIJdwtETV1LvG4RYshRu-lxOnI"
+    # Owner-supplied Google share link — resolves directly to the PCGC
+    # review form. Shorter + more reliable than the placeid query-string
+    # form (which sometimes shows an extra "find this business" step).
+    google_review_url = "https://share.google/RjxLOjukDYZrEakMq"
     return (
         head(
             "Leave a Review · Polk County Golf Carts",

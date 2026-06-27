@@ -1429,7 +1429,7 @@ def page_financing():
                   <li>No prepayment penalty</li>
                 </ul>
                 <div style="margin-top:auto; padding-top:1rem;">
-                  <a class="btn btn-outline" href="{apply_dealer}" target="_blank" rel="noopener" data-cta="finance-apply-dealer-direct" style="width:100%; text-align:center;">Apply with Dealer Direct &rarr;</a>
+                  <a class="btn btn-ghost" href="{apply_dealer}" target="_blank" rel="noopener" data-cta="finance-apply-dealer-direct" style="width:100%; text-align:center;">Apply with Dealer Direct &rarr;</a>
                 </div>
               </div>
             </div>
@@ -1514,7 +1514,7 @@ def page_financing():
             <p class="lede-text">Apply online in five minutes, or call us and we'll walk through it together. Either way, you'll know what you qualify for the same business day.</p>
             <div class="hero-ctas center">
               <a class="btn btn-coral" href="{apply_lendmark}" target="_blank" rel="noopener" data-cta="finance-apply-bottom">Apply with Lendmark &rarr;</a>
-              <a class="btn btn-outline" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
+              <a class="btn btn-ghost" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
             </div>
           </div>
         </section>

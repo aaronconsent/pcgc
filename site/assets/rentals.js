@@ -7,7 +7,8 @@
  *
  * Inventory is the real PCGC rental fleet: 5 × 4-seater @ $75/day +
  * 1 × 6-seater Limo @ $125/day. Free pickup & delivery within 25
- * miles of Livingston; extended delivery (25–75 mi) flat $75.
+ * miles of Livingston; extended delivery (25–100 mi) is an extra
+ * charge quoted separately by PCGC (not auto-billed in checkout).
  */
 
 const CARTS = [
@@ -23,7 +24,9 @@ const CARTS = [
 // 1 of each. (Total fleet = 6.)
 const PER_CART_MAX_QTY = 1;
 const MAX_CARTS = CARTS.length;
-const DELIVERY_EXTENDED_FEE = 75;
+// Extended delivery (25-100 mi) is billed separately by PCGC — we don't
+// auto-charge a number that contradicts the "extra charge" label.
+const DELIVERY_EXTENDED_FEE = 0;
 const TAX_RATE = 0.0825;
 
 // ---------- State ----------
@@ -306,8 +309,8 @@ function renderPaymentSummary() {
     lines.push(`<div class="row"><span>${cart.name} × ${qty} · ${p.days} day${p.days === 1 ? "" : "s"}</span><span>${fmtMoney(lineTotal)}</span></div>`);
   }
   lines.push(`<div class="row"><span>Subtotal</span><span>${fmtMoney(p.subtotal)}</span></div>`);
-  if (p.deliveryFee > 0) {
-    lines.push(`<div class="row"><span>Extended delivery (25–75 mi)</span><span>${fmtMoney(p.deliveryFee)}</span></div>`);
+  if (state.delivery === "extended") {
+    lines.push(`<div class="row muted"><span>Extended delivery (25–100 mi)</span><span>Quoted separately</span></div>`);
   }
   lines.push(`<div class="row"><span>Tax (${(TAX_RATE * 100).toFixed(2)}%)</span><span>${fmtMoney(p.tax)}</span></div>`);
   lines.push(`<div class="row total"><span>Total today</span><span>${fmtMoney(p.grand)}</span></div>`);
@@ -417,9 +420,15 @@ function renderConfirmation() {
   const deliveryLabel = {
     pickup: "Pickup at shop",
     local: "Free delivery (within 25 mi)",
-    extended: "Extended delivery (25–75 mi)",
+    extended: "Extended delivery (25–100 mi)",
   }[b.delivery] || b.delivery;
-  lines.push(`<div class="row"><span>${deliveryLabel}</span><span>${b.pricing.deliveryFee ? fmtMoney(b.pricing.deliveryFee) : "Free"}</span></div>`);
+  // For "extended" delivery the fee is quoted separately by PCGC; show
+  // "Quoted separately" instead of $0 so the confirmation matches the
+  // copy on step 3.
+  const deliveryDisplay = b.delivery === "extended"
+    ? "Quoted separately"
+    : (b.pricing.deliveryFee ? fmtMoney(b.pricing.deliveryFee) : "Free");
+  lines.push(`<div class="row"><span>${deliveryLabel}</span><span>${deliveryDisplay}</span></div>`);
   lines.push(`<div class="row total"><span>Total paid</span><span>${fmtMoney(b.pricing.total)}</span></div>`);
   out.innerHTML = lines.join("");
 }

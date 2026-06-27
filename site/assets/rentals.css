@@ -146,6 +146,7 @@
   margin-bottom: 6rem; /* leave room for sticky total bar on mobile */
 }
 .cart-tile {
+  position: relative;
   background: var(--bg-alt);
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -156,6 +157,27 @@
 }
 .cart-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
 .cart-tile.selected { border-color: var(--coral); box-shadow: 0 8px 28px rgba(232,90,79,.18); }
+
+/* Booked-for-these-dates state: tile is visible (so the customer
+   still sees the inventory) but grayed out, non-interactive, and
+   wears an overlay badge. */
+.cart-tile.booked {
+  opacity: .58;
+  filter: grayscale(.9);
+  pointer-events: none;
+}
+.cart-tile.booked:hover { transform: none; box-shadow: var(--shadow-sm); }
+.cart-booked-overlay {
+  position: absolute;
+  top: .65rem; left: .65rem;
+  background: rgba(20,50,58,.92);
+  color: #fff;
+  font: 700 .72rem inherit;
+  letter-spacing: .04em; text-transform: uppercase;
+  padding: .35rem .6rem;
+  border-radius: 999px;
+  z-index: 2;
+}
 .cart-tile img {
   width: 100%; aspect-ratio: 4/3; object-fit: cover;
   display: block;

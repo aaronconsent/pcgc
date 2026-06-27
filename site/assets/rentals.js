@@ -34,11 +34,13 @@ const TAX_RATE = 0.0825;
 // ---------- State ----------
 // Bumped to v2 because the schema changed (cart ids + prices). v1
 // sessions get a clean slate so they don't see stale selections.
-const STORAGE_KEY = "pcgc.rental.v3";
+const STORAGE_KEY = "pcgc.rental.v4";
 const state = loadState() || {
   step: 1,
   dates: { start: "", end: "" },
   selection: {},          // { cartId: qty }
+  bookedIds: [],          // cart ids unavailable for the selected dates
+  availabilityOk: true,   // false if /api/availability errored
   delivery: "pickup",
   contact: { name: "", email: "", phone: "", guests: 2, address: "", notes: "" },
 };
@@ -106,22 +108,49 @@ function goTo(step) {
   });
   window.scrollTo({ top: 0, behavior: "smooth" });
 
-  if (step === 1) renderCartGrid();
-  if (step === 2) syncDatesStep();
+  if (step === 1) syncDatesStep();
+  if (step === 2) renderCartGrid();
   if (step === 4) renderPaymentSummary();
   if (step === 5) renderConfirmation();
 }
 
-// ---------- Step 1: Carts (the new landing) ----------
+// ---------- Step 2: Carts (filtered by availability) ----------
 function renderCartGrid() {
   const grid = $("#cart-grid");
+  const allBooked = $("#all-booked");
+  const availLine = $("#cart-availability-line");
+  const warn = $("#availability-warning");
   grid.innerHTML = "";
+
+  const booked = new Set(state.bookedIds || []);
+  const availableCount = CARTS.filter(c => !booked.has(c.id)).length;
+
+  // Empty state when literally nothing is left for those dates.
+  if (availableCount === 0) {
+    grid.hidden = true;
+    allBooked.hidden = false;
+    $("#rental-total").hidden = true;
+  } else {
+    grid.hidden = false;
+    allBooked.hidden = true;
+  }
+
+  // Availability headline with the actual count.
+  if (state.dates.start && state.dates.end) {
+    const start = fmtDate(state.dates.start);
+    const end = fmtDate(state.dates.end);
+    availLine.innerHTML = `<b>${availableCount} of ${CARTS.length} carts</b> available ${start} → ${end}. 4-seaters $75/day, Limo $125/day.`;
+  }
+  warn.hidden = state.availabilityOk !== false;
+
   for (const cart of CARTS) {
     const qty = state.selection[cart.id] | 0;
+    const isBooked = booked.has(cart.id);
     const tile = document.createElement("article");
-    tile.className = "cart-tile" + (qty > 0 ? " selected" : "");
+    tile.className = "cart-tile" + (qty > 0 ? " selected" : "") + (isBooked ? " booked" : "");
     tile.innerHTML = `
       <img src="${cart.img}" alt="${cart.name}" loading="lazy">
+      ${isBooked ? '<div class="cart-booked-overlay">Booked for these dates</div>' : ''}
       <div class="cart-tile-body">
         <h3>${cart.name}</h3>
         <div class="badges">
@@ -131,9 +160,9 @@ function renderCartGrid() {
         <div class="footer">
           <span class="price">${fmtMoneyShort(cart.price)}<small> / day</small></span>
           <div class="stepper" data-id="${cart.id}">
-            <button type="button" data-act="dec" aria-label="Remove" ${qty === 0 ? "disabled" : ""}>−</button>
+            <button type="button" data-act="dec" aria-label="Remove" ${qty === 0 || isBooked ? "disabled" : ""}>−</button>
             <b>${qty}</b>
-            <button type="button" data-act="inc" aria-label="Add" ${qty >= PER_CART_MAX_QTY ? "disabled" : ""}>+</button>
+            <button type="button" data-act="inc" aria-label="Add" ${qty >= PER_CART_MAX_QTY || isBooked ? "disabled" : ""}>+</button>
           </div>
         </div>
       </div>
@@ -146,10 +175,13 @@ function renderCartGrid() {
 
 function onStepperClick(ev) {
   const btn = ev.target.closest("button[data-act]");
-  if (!btn) return;
+  if (!btn || btn.disabled) return;
   const stepperEl = btn.closest(".stepper");
   if (!stepperEl) return;
   const id = stepperEl.dataset.id;
+  // Booked carts can't be added (also protected by disabled, but
+  // belt-and-suspenders against rapid clicks during re-renders).
+  if ((state.bookedIds || []).includes(id)) return;
   const current = state.selection[id] | 0;
   let next = current;
   if (btn.dataset.act === "inc") {
@@ -169,13 +201,33 @@ function updateTotalBar() {
   const total = totalCarts();
   if (total === 0) { bar.hidden = true; return; }
   bar.hidden = false;
+  const days = daysBetween(state.dates.start, state.dates.end);
   const perDay = perDayCarts();
   $("#total-count").textContent = total;
   $("#total-count-s").textContent = total === 1 ? "" : "s";
-  // Step 1 shows per-day total ("$75 / day") until dates are picked
-  // (which happens in step 2). Final total is shown in step 4 summary.
-  $("#total-amount").textContent = fmtMoneyShort(perDay) + " / day";
-  $("#to-step-2").disabled = total === 0;
+  // We have dates by the time we hit step 2 — show the trip total.
+  if (days > 0) {
+    $("#total-amount").textContent = `${fmtMoney(perDay * days)} (${days} day${days === 1 ? "" : "s"})`;
+  } else {
+    $("#total-amount").textContent = `${fmtMoneyShort(perDay)} / day`;
+  }
+  $("#to-step-3").disabled = total === 0;
+}
+
+// Fetch which cart IDs are booked for the selected dates. Fail-open:
+// any error → empty array + availabilityOk:false so the UI shows a
+// "couldn't verify" notice but doesn't block bookings.
+async function fetchAvailability() {
+  if (!state.dates.start || !state.dates.end) return { booked: [], ok: true };
+  try {
+    const url = `/api/availability?start=${state.dates.start}&end=${state.dates.end}`;
+    const res = await fetch(url);
+    if (!res.ok) return { booked: [], ok: false };
+    const data = await res.json();
+    return { booked: data.booked || [], ok: true };
+  } catch (e) {
+    return { booked: [], ok: false };
+  }
 }
 
 function fmtDate(iso) {
@@ -184,7 +236,7 @@ function fmtDate(iso) {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-// ---------- Step 2: Dates ----------
+// ---------- Step 1: Dates ----------
 function syncDatesStep() {
   const start = $("#date-start");
   const end = $("#date-end");
@@ -214,7 +266,7 @@ function updateDurationLine() {
   saveState();
 }
 
-function initStep2() {
+function initStep1() {
   const start = $("#date-start");
   const end = $("#date-end");
   const today = new Date().toISOString().slice(0, 10);
@@ -225,7 +277,7 @@ function initStep2() {
   });
   end.addEventListener("input", updateDurationLine);
 
-  $("#to-step-3").addEventListener("click", () => {
+  $("#to-step-2").addEventListener("click", async () => {
     const errEl = $("#date-error");
     errEl.hidden = true;
     if (!state.dates.start || !state.dates.end) {
@@ -238,6 +290,31 @@ function initStep2() {
       errEl.hidden = false;
       return;
     }
+    // Block the button while we check availability so a double-click
+    // doesn't double-fetch and double-advance.
+    const btn = $("#to-step-2");
+    const prev = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Checking availability…";
+    const { booked, ok } = await fetchAvailability();
+    state.bookedIds = booked;
+    state.availabilityOk = ok;
+    // Drop any selected cart that is now booked (handles the case
+    // where the user came back, changed dates, and a cart they had
+    // selected is no longer available for the new range).
+    for (const id of booked) delete state.selection[id];
+    saveState();
+    btn.disabled = false;
+    btn.textContent = prev;
+    goTo(2);
+  });
+}
+
+// Step 2 has its own "Continue → step 3" button inside the floating
+// total bar. Wire it once at boot so the carts step can advance.
+function initStep2Continue() {
+  $("#to-step-3").addEventListener("click", () => {
+    if (totalCarts() === 0) return;
     goTo(3);
   });
 }
@@ -437,16 +514,13 @@ function renderConfirmation() {
 
 // ---------- Boot ----------
 document.addEventListener("DOMContentLoaded", () => {
-  initStep2();
+  initStep1();         // dates (was initStep2)
+  initStep2Continue(); // carts → details
   initStep3();
   initStep4();
   $("#back-to-1").addEventListener("click", () => goTo(1));
   $("#back-to-2").addEventListener("click", () => goTo(2));
   $("#back-to-3").addEventListener("click", () => goTo(3));
-  $("#to-step-2").addEventListener("click", () => {
-    if (totalCarts() === 0) return;
-    goTo(2);
-  });
   // Restore previous step if user reloads mid-flow.
   goTo(state.step || 1);
 });

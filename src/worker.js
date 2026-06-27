@@ -25,6 +25,9 @@ export default {
     if (url.pathname === "/api/booking" && request.method === "GET") {
       return listBookings(request, env);
     }
+    if (url.pathname === "/api/availability" && request.method === "GET") {
+      return checkAvailability(request, env, url);
+    }
 
     // Legacy URLs from the original site — 301 to the new locations
     // so search engines (and bookmarks) move with us.
@@ -81,6 +84,47 @@ async function listBookings(request, env) {
     })
   );
   return json({ entries: entries.filter(Boolean) });
+}
+
+// Public — used by the /rentals/ wizard to show booked carts as
+// disabled tiles. No auth: this only reveals cart IDs and date ranges,
+// never customer details. Two ranges overlap when start1 < end2 AND
+// end1 > start2 (strict inequality so a return on Day X and a pickup
+// on the same Day X don't conflict).
+async function checkAvailability(request, env, url) {
+  if (!env.FEEDBACK_KV) return json({ booked: [] }); // fail-open
+  const start = url.searchParams.get("start");
+  const end = url.searchParams.get("end");
+  if (!start || !end) return json({ error: "start and end required" }, 400);
+
+  const booked = new Set();
+  let cursor;
+  try {
+    do {
+      const page = await env.FEEDBACK_KV.list({ prefix: "booking:", cursor });
+      for (const k of page.keys) {
+        const raw = await env.FEEDBACK_KV.get(k.name);
+        if (!raw) continue;
+        let rec;
+        try { rec = JSON.parse(raw); } catch { continue; }
+        const bs = rec.dates?.start;
+        const be = rec.dates?.end;
+        if (bs && be && bs < end && be > start) {
+          for (const item of rec.items || []) {
+            if (item.id) booked.add(item.id);
+          }
+        }
+      }
+      cursor = page.list_complete ? undefined : page.cursor;
+    } while (cursor);
+  } catch (e) {
+    // Anything goes wrong with KV → fail-open: return empty booked
+    // list so the frontend shows all carts as available with a
+    // "couldn't verify" notice.
+    return json({ booked: [], error: String(e?.message || "unknown") });
+  }
+
+  return json({ booked: [...booked] });
 }
 
 // Returns a Response if auth fails, or null if it passes.

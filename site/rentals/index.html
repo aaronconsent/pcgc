@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.cdnfonts.com">
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/grobold">
   <link rel="stylesheet" href="/assets/site.css">
-  <link rel="stylesheet" href="/assets/rentals.css">
+  <link rel="stylesheet" href="/assets/rentals.css?v=92fb6ee3">
   <meta property="og:title" content="Rent a Golf Cart · Polk County Golf Carts">
   <meta property="og:description" content="Book a golf cart rental in East Texas — up to 8 carts per booking, free delivery within 25 miles of Livingston, extended service up to 75 miles.">
   <meta property="og:image" content="https://polkcountygolfcarts.com/assets/og/rentals.png">
@@ -39,40 +39,20 @@
 <!-- Progress dots, fixed top under header -->
 <nav class="rental-progress" aria-label="Booking progress">
   <ol>
-    <li data-step="1" class="active"><span>1</span>Carts</li>
-    <li data-step="2"><span>2</span>Dates</li>
+    <li data-step="1" class="active"><span>1</span>Dates</li>
+    <li data-step="2"><span>2</span>Carts</li>
     <li data-step="3"><span>3</span>Details</li>
     <li data-step="4"><span>4</span>Pay</li>
   </ol>
 </nav>
 
 <main class="rental">
-  <!-- ============ STEP 1 · CARTS (the landing) ============ -->
+  <!-- ============ STEP 1 · DATES ============ -->
   <section class="rental-step" data-step="1" aria-labelledby="s1-title">
-    <div class="rental-step-head">
-      <span class="eyebrow">Step 1 of 4</span>
-      <h1 id="s1-title">Pick your cart.</h1>
-      <p class="lede-text">Five carts in our rental fleet — four 4-seater carts at $75/day and a 6-seater Limo at $125/day. <b>Free pickup &amp; delivery within 25 miles of Livingston.</b></p>
-    </div>
-    <div class="cart-grid" id="cart-grid"></div>
-    <!-- Sticky total bar (mobile) / fixed at bottom on desktop -->
-    <aside class="rental-total" id="rental-total" hidden>
-      <div class="rental-total-line">
-        <span><b id="total-count">0</b> cart<span id="total-count-s">s</span> selected</span>
-        <span><b id="total-amount">$0</b></span>
-      </div>
-      <button class="btn btn-coral" id="to-step-2" type="button" disabled>Continue →</button>
-    </aside>
-    <p class="rental-fineprint">Cancellation policy: 50% refund if you cancel more than 72 hours before pickup. Within 72 hours of pickup, non-refundable.</p>
-  </section>
-
-  <!-- ============ STEP 2 · DATES ============ -->
-  <section class="rental-step" data-step="2" hidden aria-labelledby="s2-title">
     <div class="rental-card">
-      <button class="rental-back" id="back-to-1" type="button">← Carts</button>
-      <span class="eyebrow">Step 2 of 4</span>
-      <h1 id="s2-title">When do you need it?</h1>
-      <p class="lede-text">Pick up and return dates — we'll calculate the total based on your selection.</p>
+      <span class="eyebrow">Step 1 of 4</span>
+      <h1 id="s1-title">When do you need it?</h1>
+      <p class="lede-text">Pick your dates first — we'll show you which carts are available for those days.</p>
       <div class="rental-grid-2">
         <label class="rental-field">
           <span>Pickup</span>
@@ -86,15 +66,40 @@
       <p class="rental-meta" id="duration-out" aria-live="polite"></p>
       <p class="rental-error" id="date-error" hidden></p>
       <div class="rental-cta-row">
-        <button class="btn btn-coral" id="to-step-3" type="button">Continue →</button>
+        <button class="btn btn-coral" id="to-step-2" type="button">Continue →</button>
       </div>
     </div>
+    <p class="rental-fineprint">Cancellation policy: 50% refund if you cancel more than 72 hours before pickup. Within 72 hours of pickup, non-refundable.</p>
+  </section>
+
+  <!-- ============ STEP 2 · CARTS (filtered by availability) ============ -->
+  <section class="rental-step" data-step="2" hidden aria-labelledby="s2-title">
+    <div class="rental-step-head">
+      <button class="rental-back" id="back-to-1" type="button">← Dates</button>
+      <span class="eyebrow">Step 2 of 4</span>
+      <h1 id="s2-title">Pick your cart.</h1>
+      <p class="lede-text" id="cart-availability-line">Five carts in our rental fleet — four 4-seater carts at $75/day and a 6-seater Limo at $125/day.</p>
+      <p class="rental-meta" id="availability-warning" hidden style="color:#8a4a00;">Couldn't verify availability against existing bookings — give us a call to confirm before pickup.</p>
+    </div>
+    <div class="cart-grid" id="cart-grid"></div>
+    <div class="rental-card center" id="all-booked" hidden style="margin-top:1rem;">
+      <h2>All carts are booked for those dates.</h2>
+      <p class="lede-text">Pick different dates and we'll re-check availability.</p>
+      <button class="btn btn-coral" type="button" onclick="document.getElementById('back-to-1').click()">← Try different dates</button>
+    </div>
+    <aside class="rental-total" id="rental-total" hidden>
+      <div class="rental-total-line">
+        <span><b id="total-count">0</b> cart<span id="total-count-s">s</span> selected</span>
+        <span><b id="total-amount">$0</b></span>
+      </div>
+      <button class="btn btn-coral" id="to-step-3" type="button" disabled>Continue →</button>
+    </aside>
   </section>
 
   <!-- ============ STEP 3 · DETAILS ============ -->
   <section class="rental-step" data-step="3" hidden aria-labelledby="s3-title">
     <div class="rental-card">
-      <button class="rental-back" id="back-to-2" type="button">← Dates</button>
+      <button class="rental-back" id="back-to-2" type="button">← Carts</button>
       <span class="eyebrow">Step 3 of 4</span>
       <h1 id="s3-title">Where and who?</h1>
 
@@ -226,6 +231,6 @@
   Polk County Golf Carts · 1732 FM 3277, Livingston, TX · <a href="tel:9362231182">936-223-1182</a>
 </footer>
 
-<script src="/assets/rentals.js"></script>
+<script src="/assets/rentals.js?v=42d291a6"></script>
 </body>
 </html>

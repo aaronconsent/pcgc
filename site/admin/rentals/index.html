@@ -58,84 +58,179 @@
     </div>
   </header>
   <main class="bk-page">
-    <h1>Rental bookings</h1>
-    <p class="sub">Submissions through the hidden <a href="/rentals/">/rentals/</a> flow, newest first.</p>
-    <div id="bk-out" class="bk-status">Loading…</div>
+    <!-- Login view: shown by default. The page hits /api/booking on load;
+         if the API returns 401 we drop the user here. -->
+    <section id="login-view" hidden>
+      <h1>PCGC Admin</h1>
+      <p class="sub">Sign in to see rental bookings.</p>
+      <form id="login-form" style="max-width:340px; margin:0 auto; display:flex; flex-direction:column; gap:.75rem;">
+        <label style="display:flex; flex-direction:column; gap:.35rem;">
+          <span style="font-weight:600;">Password</span>
+          <input type="password" id="login-password" required autocomplete="current-password" style="padding:.7rem .85rem; border:1px solid var(--line); border-radius:8px; font:inherit;">
+        </label>
+        <button type="submit" class="btn btn-coral" id="login-submit" style="margin-top:.35rem;">Sign in</button>
+        <p id="login-error" style="color:#c2261a; margin:0; font-size:.92rem;" hidden></p>
+      </form>
+    </section>
+
+    <!-- Bookings view: shown after successful auth. -->
+    <section id="bookings-view" hidden>
+      <header style="display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+        <div>
+          <h1 style="margin-bottom:.25rem;">Rental bookings</h1>
+          <p class="sub" style="margin:0;">Submissions through the <a href="/rentals/">/rentals/</a> flow, newest first.</p>
+        </div>
+        <button type="button" id="logout-btn" class="btn btn-ghost" style="font-size:.92rem;">Sign out</button>
+      </header>
+      <div id="bk-out" class="bk-status" style="margin-top:1.5rem;">Loading…</div>
+    </section>
   </main>
   <script>
-  (async () => {
+  (() => {
+    const loginView = document.getElementById("login-view");
+    const bookingsView = document.getElementById("bookings-view");
     const out = document.getElementById("bk-out");
-    let data;
-    try {
-      const res = await fetch("/api/booking");
-      if (res.status === 401) { out.textContent = "Authentication failed. Reload to try again."; return; }
+    const loginForm = document.getElementById("login-form");
+    const loginPassword = document.getElementById("login-password");
+    const loginSubmit = document.getElementById("login-submit");
+    const loginError = document.getElementById("login-error");
+    const logoutBtn = document.getElementById("logout-btn");
+
+    function showLogin(msg) {
+      bookingsView.hidden = true;
+      loginView.hidden = false;
+      if (msg) { loginError.textContent = msg; loginError.hidden = false; }
+      else { loginError.hidden = true; }
+      loginPassword.focus();
+    }
+    function showBookings() {
+      loginView.hidden = true;
+      bookingsView.hidden = false;
+    }
+
+    async function fetchAndRender() {
+      out.textContent = "Loading…";
+      out.className = "bk-status";
+      let res;
+      try {
+        res = await fetch("/api/booking", { credentials: "same-origin" });
+      } catch (e) {
+        out.textContent = "Network error: " + e.message;
+        return;
+      }
+      if (res.status === 401) { showLogin(); return; }
       if (!res.ok) {
         const t = await res.text();
         out.textContent = "Error " + res.status + ": " + t;
         return;
       }
-      data = await res.json();
-    } catch (e) {
-      out.textContent = "Network error: " + e.message;
-      return;
+      showBookings();
+      const data = await res.json();
+      renderEntries((data && data.entries) || []);
     }
-    const entries = (data && data.entries) || [];
-    if (!entries.length) {
-      out.outerHTML = '<div class="bk-empty"><h2>No bookings yet</h2><p>Customer rentals from /rentals/ will appear here.</p></div>';
-      return;
-    }
-    out.className = "";
-    out.textContent = "";
-    const fmtMoney = n => "$" + (Number(n) || 0).toFixed(2);
-    const fmtDate = iso => iso ? new Date(iso + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
-    const deliveryLabel = { pickup: "Pickup at shop", local: "Free delivery (≤25 mi)", extended: "Extended delivery (25–100 mi, fee quoted separately)" };
-    for (const b of entries) {
-      const wrap = document.createElement("article");
-      wrap.className = "bk-entry";
-      const head = document.createElement("header");
-      head.innerHTML = `<span class="id"></span><span class="ts"></span>`;
-      head.querySelector(".id").textContent = b.id || "—";
-      head.querySelector(".ts").textContent = new Date(b.ts).toLocaleString();
-      wrap.appendChild(head);
 
-      const grid = document.createElement("div");
-      grid.className = "grid";
-      const c = b.contact || {};
-      grid.innerHTML = `
-        <div class="field"><b>Customer</b><span></span></div>
-        <div class="field"><b>Trip</b><span></span></div>
-        <div class="field"><b>Contact</b><span></span></div>
-        <div class="field"><b>Delivery</b><span></span></div>
-      `;
-      const cells = grid.querySelectorAll(".field span");
-      cells[0].textContent = (c.name || "—") + " · " + (c.guests || 1) + " guests";
-      cells[1].textContent = fmtDate(b.dates?.start) + " → " + fmtDate(b.dates?.end) + " (" + (b.dates?.days || 0) + " day" + ((b.dates?.days || 0) === 1 ? "" : "s") + ")";
-      cells[2].textContent = (c.phone || "—") + " · " + (c.email || "—");
-      cells[3].textContent = (deliveryLabel[b.delivery] || b.delivery || "—") + (c.address ? " · " + c.address : "");
-      wrap.appendChild(grid);
-
-      if (c.notes) {
-        const notes = document.createElement("p");
-        notes.style.cssText = "margin: .35rem 0; font-style: italic; color: var(--ink-soft);";
-        notes.textContent = "Notes: " + c.notes;
-        wrap.appendChild(notes);
+    function renderEntries(entries) {
+      // Clear any prior render — re-renders happen after login.
+      [...document.querySelectorAll(".bk-entry")].forEach(el => el.remove());
+      out.className = "";
+      if (!entries.length) {
+        out.innerHTML = '<div class="bk-empty"><h2>No bookings yet</h2><p>Customer rentals from /rentals/ will appear here.</p></div>';
+        return;
       }
+      out.textContent = "";
+      const fmtMoney = n => "$" + (Number(n) || 0).toFixed(2);
+      const fmtDate = iso => iso ? new Date(iso + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
+      const deliveryLabel = { pickup: "Pickup at shop", local: "Free delivery (≤25 mi)", extended: "Extended delivery (25–100 mi, fee quoted separately)" };
+      for (const b of entries) {
+        const wrap = document.createElement("article");
+        wrap.className = "bk-entry";
+        const head = document.createElement("header");
+        head.innerHTML = `<span class="id"></span><span class="ts"></span>`;
+        head.querySelector(".id").textContent = b.id || "—";
+        head.querySelector(".ts").textContent = new Date(b.ts).toLocaleString();
+        wrap.appendChild(head);
 
-      const items = document.createElement("div");
-      items.className = "bk-items";
-      const p = b.pricing || {};
-      const rows = [];
-      for (const it of (b.items || [])) {
-        rows.push('<div class="row"><span>' + it.name + ' × ' + it.qty + '</span><span>' + fmtMoney(it.lineTotal) + '</span></div>');
+        const grid = document.createElement("div");
+        grid.className = "grid";
+        const c = b.contact || {};
+        grid.innerHTML = `
+          <div class="field"><b>Customer</b><span></span></div>
+          <div class="field"><b>Trip</b><span></span></div>
+          <div class="field"><b>Contact</b><span></span></div>
+          <div class="field"><b>Delivery</b><span></span></div>
+        `;
+        const cells = grid.querySelectorAll(".field span");
+        cells[0].textContent = (c.name || "—") + " · " + (c.guests || 1) + " guests";
+        cells[1].textContent = fmtDate(b.dates?.start) + " → " + fmtDate(b.dates?.end) + " (" + (b.dates?.days || 0) + " day" + ((b.dates?.days || 0) === 1 ? "" : "s") + ")";
+        cells[2].textContent = (c.phone || "—") + " · " + (c.email || "—");
+        cells[3].textContent = (deliveryLabel[b.delivery] || b.delivery || "—") + (c.address ? " · " + c.address : "");
+        wrap.appendChild(grid);
+
+        if (c.notes) {
+          const notes = document.createElement("p");
+          notes.style.cssText = "margin: .35rem 0; font-style: italic; color: var(--ink-soft);";
+          notes.textContent = "Notes: " + c.notes;
+          wrap.appendChild(notes);
+        }
+
+        const items = document.createElement("div");
+        items.className = "bk-items";
+        const p = b.pricing || {};
+        const rows = [];
+        for (const it of (b.items || [])) {
+          rows.push('<div class="row"><span>' + it.name + ' × ' + it.qty + '</span><span>' + fmtMoney(it.lineTotal) + '</span></div>');
+        }
+        if (b.delivery === "extended") rows.push('<div class="row"><span>Extended delivery</span><span>Quoted separately</span></div>');
+        if (p.tax)           rows.push('<div class="row"><span>Tax</span><span>' + fmtMoney(p.tax) + '</span></div>');
+        rows.push('<div class="row total"><span>Paid</span><span>' + fmtMoney(p.total) + '</span></div>');
+        items.innerHTML = rows.join("");
+        wrap.appendChild(items);
+
+        document.querySelector("#bookings-view").appendChild(wrap);
       }
-      if (b.delivery === "extended") rows.push('<div class="row"><span>Extended delivery</span><span>Quoted separately</span></div>');
-      if (p.tax)           rows.push('<div class="row"><span>Tax</span><span>' + fmtMoney(p.tax) + '</span></div>');
-      rows.push('<div class="row total"><span>Paid</span><span>' + fmtMoney(p.total) + '</span></div>');
-      items.innerHTML = rows.join("");
-      wrap.appendChild(items);
-
-      document.querySelector(".bk-page").appendChild(wrap);
     }
+
+    loginForm.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const password = loginPassword.value;
+      if (!password) return;
+      loginSubmit.disabled = true;
+      const prev = loginSubmit.textContent;
+      loginSubmit.textContent = "Signing in…";
+      loginError.hidden = true;
+      try {
+        const res = await fetch("/api/admin/login", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ password }),
+        });
+        if (!res.ok) {
+          showLogin(res.status === 401 ? "Wrong password." : `Login failed (${res.status}).`);
+          return;
+        }
+        loginPassword.value = "";
+        await fetchAndRender();
+      } catch (e) {
+        showLogin("Network error: " + e.message);
+      } finally {
+        loginSubmit.disabled = false;
+        loginSubmit.textContent = prev;
+      }
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      logoutBtn.disabled = true;
+      try {
+        await fetch("/api/admin/logout", { method: "POST", credentials: "same-origin" });
+      } catch (_) { /* ignore — cookie may already be gone */ }
+      showLogin();
+      logoutBtn.disabled = false;
+    });
+
+    // Initial probe — if the cookie's already valid we go straight
+    // to the bookings list; otherwise we land on the login form.
+    fetchAndRender();
   })();
   </script>
 </body>

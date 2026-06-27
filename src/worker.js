@@ -14,6 +14,10 @@
  */
 
 const KV_LIST_LIMIT = 200;
+// 8 hours. Long enough that the owner isn't logging in repeatedly,
+// short enough that an unlocked laptop doesn't stay open all week.
+const ADMIN_SESSION_TTL_SEC = 60 * 60 * 8;
+const ADMIN_COOKIE = "pcgc_admin";
 
 export default {
   async fetch(request, env, ctx) {
@@ -27,6 +31,12 @@ export default {
     }
     if (url.pathname === "/api/availability" && request.method === "GET") {
       return checkAvailability(request, env, url);
+    }
+    if (url.pathname === "/api/admin/login" && request.method === "POST") {
+      return adminLogin(request, env);
+    }
+    if (url.pathname === "/api/admin/logout" && request.method === "POST") {
+      return adminLogout();
     }
 
     // Legacy URLs from the original site — 301 to the new locations
@@ -231,7 +241,7 @@ function renderBookingText(r) {
 
 async function listBookings(request, env) {
   if (!env.FEEDBACK_KV) return json({ error: "kv not configured" }, 503);
-  const auth = checkAdminAuth(request, env);
+  const auth = await checkAdminAuth(request, env);
   if (auth) return auth;
   const result = await env.FEEDBACK_KV.list({ prefix: "booking:", limit: KV_LIST_LIMIT });
   const keys = result.keys.slice().reverse();
@@ -286,32 +296,115 @@ async function checkAvailability(request, env, url) {
   return json({ booked: [...booked] });
 }
 
-// Returns a Response if auth fails, or null if it passes.
-function checkAdminAuth(request, env) {
+// Returns a Response if auth fails, or null if it passes. Accepts EITHER
+// a valid pcgc_admin session cookie (used by the /admin/rentals/ UI) OR
+// HTTP Basic credentials (kept as a programmatic backdoor for curl /
+// scripts). We deliberately do NOT send a WWW-Authenticate header on
+// failure — that's the trigger for the browser's native auth dialog,
+// which is what the owner asked us to remove.
+async function checkAdminAuth(request, env) {
   if (!env.FEEDBACK_ADMIN_PASS) {
     return json({ error: "admin password not configured" }, 503);
   }
+  // 1) Cookie session — primary path used by the admin UI.
+  const token = getCookie(request, ADMIN_COOKIE);
+  if (token && await verifyAdminToken(token, env)) return null;
+
+  // 2) HTTP Basic — fallback so curl / scripts still work.
   const expectedUser = env.FEEDBACK_ADMIN_USER || "admin";
   const header = request.headers.get("authorization") || "";
   if (header.startsWith("Basic ")) {
     let decoded = "";
-    try {
-      decoded = atob(header.slice(6));
-    } catch {
-      decoded = "";
-    }
+    try { decoded = atob(header.slice(6)); } catch { decoded = ""; }
     const [user, pass] = decoded.split(":", 2);
-    if (user === expectedUser && pass === env.FEEDBACK_ADMIN_PASS) {
-      return null;
-    }
+    if (user === expectedUser && pass === env.FEEDBACK_ADMIN_PASS) return null;
   }
-  return new Response("Unauthorized", {
-    status: 401,
+
+  return json({ error: "unauthorized" }, 401);
+}
+
+async function adminLogin(request, env) {
+  if (!env.FEEDBACK_ADMIN_PASS) {
+    return json({ error: "admin password not configured" }, 503);
+  }
+  let body;
+  try { body = await request.json(); } catch { return json({ error: "invalid body" }, 400); }
+  const submitted = body?.password ?? "";
+  // Constant-time compare so password length / prefix doesn't leak
+  // through timing. Both strings are encoded to bytes first.
+  if (!constantTimeEqual(submitted, env.FEEDBACK_ADMIN_PASS)) {
+    return json({ error: "wrong password" }, 401);
+  }
+  const token = await mintAdminToken(env);
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
     headers: {
-      "WWW-Authenticate": 'Basic realm="PCGC admin"',
-      "content-type": "text/plain",
+      "content-type": "application/json",
+      "set-cookie": `${ADMIN_COOKIE}=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${ADMIN_SESSION_TTL_SEC}`,
     },
   });
+}
+
+function adminLogout() {
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: {
+      "content-type": "application/json",
+      "set-cookie": `${ADMIN_COOKIE}=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`,
+    },
+  });
+}
+
+// Token format: "<exp_seconds>.<hex_hmac>" where the HMAC is computed
+// over the literal string `admin.<exp_seconds>` with the admin password
+// as the key. Rotating FEEDBACK_ADMIN_PASS therefore invalidates every
+// existing session — which is exactly what you want after a leak.
+async function mintAdminToken(env) {
+  const exp = Math.floor(Date.now() / 1000) + ADMIN_SESSION_TTL_SEC;
+  const sig = await hmacHex(env.FEEDBACK_ADMIN_PASS, `admin.${exp}`);
+  return `${exp}.${sig}`;
+}
+
+async function verifyAdminToken(token, env) {
+  const dot = token.indexOf(".");
+  if (dot < 0) return false;
+  const exp = Number(token.slice(0, dot));
+  const sig = token.slice(dot + 1);
+  if (!Number.isFinite(exp) || exp <= Math.floor(Date.now() / 1000)) return false;
+  const expected = await hmacHex(env.FEEDBACK_ADMIN_PASS, `admin.${exp}`);
+  return constantTimeEqual(sig, expected);
+}
+
+async function hmacHex(secret, message) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function constantTimeEqual(a, b) {
+  const A = new TextEncoder().encode(a);
+  const B = new TextEncoder().encode(b);
+  if (A.length !== B.length) return false;
+  let diff = 0;
+  for (let i = 0; i < A.length; i++) diff |= A[i] ^ B[i];
+  return diff === 0;
+}
+
+function getCookie(request, name) {
+  const raw = request.headers.get("cookie") || "";
+  for (const part of raw.split(";")) {
+    const eq = part.indexOf("=");
+    if (eq < 0) continue;
+    const k = part.slice(0, eq).trim();
+    if (k === name) return part.slice(eq + 1).trim();
+  }
+  return null;
 }
 
 function json(body, status = 200) {

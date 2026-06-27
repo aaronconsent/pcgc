@@ -1387,16 +1387,16 @@ def page_financing():
               <h1>Golf cart financing, made simple.</h1>
               <p class="lede">Soft credit pull, same-day decisions, terms 24&ndash;84 months, and a shop that <b>walks you through the application</b> instead of pointing you at a form. {PRICE_TEXT}</p>
               <div class="hero-ctas">
-                <a class="btn btn-coral" href="{apply_lendmark}" target="_blank" rel="noopener" data-cta="finance-apply-hero">Apply Now &rarr;</a>
+                <a class="btn btn-coral" href="#partners" data-cta="finance-apply-hero">Apply Now &rarr;</a>
                 <a class="btn btn-outline" href="tel:{BIZ['phone_primary'].replace('-','')}">📞 Call {BIZ['phone_primary']}</a>
               </div>
-              <p class="muted" style="margin-top:1rem; font-size:.92rem;">Application takes ~5 minutes &middot; Soft pull, no credit score impact &middot; Most decisions same business day</p>
+              <p style="margin-top:1rem; font-size:.92rem; color:#fff; opacity:.85;">Application takes ~5 minutes &middot; Soft pull, no credit score impact &middot; Most decisions same business day</p>
             </div>
             <img src="/assets/photos/breezy-ev-lake-grass.jpg" alt="Breezy EV golf cart by the lake" width="800" height="600" fetchpriority="high">
           </div>
         </section>
 
-        <section class="alt">
+        <section class="alt" id="partners" style="scroll-margin-top:5rem;">
           <div class="container">
             <div class="section-head">
               <span class="eyebrow">Our partners</span>

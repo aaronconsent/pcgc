@@ -1,29 +1,35 @@
 /* Polk County Golf Carts — rental flow controller.
  *
- * Single-page, four-step wizard backed by sessionStorage. Posts the
+ * Single-page, four-step wizard backed by sessionStorage. Carts FIRST
+ * (AirBnB-style browse), then dates, contact, payment. Posts the
  * final booking to /api/booking (handled by src/worker.js). All
  * pricing math lives in computePrice(); change the rules there.
+ *
+ * Inventory is the real PCGC rental fleet: 5 × 4-seater @ $75/day +
+ * 1 × 6-seater Limo @ $125/day. Free pickup & delivery within 25
+ * miles of Livingston; extended delivery (25–75 mi) flat $75.
  */
 
 const CARTS = [
-  { id: "lake-teal",    name: "Breezy EV — Lake Life Teal",  seats: 6, price: 129, img: "/assets/photos/breezy-ev-lake-grass.jpg", desc: "Lifted, off-road tires, quilted leather" },
-  { id: "lakeside",     name: "Breezy EV — Lakeside",        seats: 4, price: 89,  img: "/assets/photos/breezy-ev-lakeside.jpg",   desc: "Clean teal cruiser, perfect for the lake" },
-  { id: "tempo-blue",   name: "Tempo — Electric Blue",       seats: 4, price: 109, img: "/assets/photos/cart-blue-tempo.jpg",     desc: "Chrome wheels, grey upholstery" },
-  { id: "red-lifted",   name: "Red Lifted Off-Road",         seats: 4, price: 149, img: "/assets/photos/cart-red-lifted.jpg",     desc: "Aggressive tires, full lift kit" },
-  { id: "tempo-chrome", name: "Tempo — Chrome",              seats: 4, price: 109, img: "/assets/photos/cart-white-chrome.jpg",   desc: "White with chrome accents" },
-  { id: "family-six",   name: "Six-Seater — Family",         seats: 6, price: 139, img: "/assets/photos/customer-white-cart.jpg", desc: "White, rear-flip seat, room for the family" },
-  { id: "yamaha-white", name: "Yamaha — Showroom White",     seats: 2, price: 79,  img: "/assets/photos/showroom-lake-life.jpg", desc: "Classic two-seater, great for couples" },
-  { id: "texas-flag",   name: "Texas Flag Yamaha",           seats: 4, price: 119, img: "/assets/photos/texas-cart-alamo.jpg",    desc: "Patriotic Texas wrap, head-turner" },
+  { id: "yamaha-1", name: "Yamaha #1 — Charcoal",      seats: 4, price: 75,  img: "/assets/photos/rentals/cart-1-yamaha-dark.jpg",  desc: "Yamaha 4-seater with rear flip seat. Lakeside-ready." },
+  { id: "yamaha-2", name: "Yamaha #2 — Sandstone",     seats: 4, price: 75,  img: "/assets/photos/rentals/cart-2-yamaha-tan.jpg",   desc: "Yamaha 4-seater, soft tan, classic cruise comfort." },
+  { id: "yamaha-3", name: "Yamaha #3",                 seats: 4, price: 75,  img: "/assets/photos/rentals/cart-3-placeholder.jpg",  desc: "Yamaha 4-seater. Photo coming — call to view." },
+  { id: "yamaha-4", name: "Yamaha #4",                 seats: 4, price: 75,  img: "/assets/photos/rentals/cart-4-placeholder.jpg",  desc: "Yamaha 4-seater. Photo coming — call to view." },
+  { id: "yamaha-5", name: "Yamaha #5",                 seats: 4, price: 75,  img: "/assets/photos/rentals/cart-5-placeholder.jpg",  desc: "Yamaha 4-seater. Photo coming — call to view." },
+  { id: "limo-6",   name: "The Limo — 6-Seater",       seats: 6, price: 125, img: "/assets/photos/rentals/limo-6-seater.jpg",       desc: "Club Car Limo. Six seats, the whole crew fits." },
 ];
 
-const MAX_CARTS = 8;
-const GROUP_DISCOUNT_THRESHOLD = 4;
-const GROUP_DISCOUNT_RATE = 0.10;
+// One copy of each cart exists in the fleet — a renter can pick up to
+// 1 of each. (Total fleet = 6.)
+const PER_CART_MAX_QTY = 1;
+const MAX_CARTS = CARTS.length;
 const DELIVERY_EXTENDED_FEE = 75;
 const TAX_RATE = 0.0825;
 
 // ---------- State ----------
-const STORAGE_KEY = "pcgc.rental.v1";
+// Bumped to v2 because the schema changed (cart ids + prices). v1
+// sessions get a clean slate so they don't see stale selections.
+const STORAGE_KEY = "pcgc.rental.v2";
 const state = loadState() || {
   step: 1,
   dates: { start: "", end: "" },
@@ -43,34 +49,42 @@ function loadState() {
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 
-function fmt(n) { return "$" + n.toFixed(2).replace(/\.00$/, ""); }
 function fmtMoney(n) { return "$" + n.toFixed(2); }
+function fmtMoneyShort(n) {
+  // Drop trailing .00 for clean per-day display ($75 not $75.00)
+  return "$" + n.toFixed(2).replace(/\.00$/, "");
+}
 
 function daysBetween(a, b) {
+  if (!a || !b) return 0;
   const start = new Date(a + "T00:00:00");
   const end = new Date(b + "T00:00:00");
-  const ms = end - start;
-  return Math.max(0, Math.round(ms / 86400000));
+  return Math.max(0, Math.round((end - start) / 86400000));
 }
 
 function totalCarts() {
   return Object.values(state.selection).reduce((s, n) => s + (n | 0), 0);
 }
 
-function computePrice() {
-  const days = Math.max(1, daysBetween(state.dates.start, state.dates.end));
-  let subtotal = 0;
+function perDayCarts() {
+  // Sum of (per-day price × qty) — independent of trip length.
+  let sum = 0;
   for (const cart of CARTS) {
     const qty = state.selection[cart.id] | 0;
-    if (qty > 0) subtotal += cart.price * qty * days;
+    if (qty > 0) sum += cart.price * qty;
   }
-  const total = totalCarts();
-  const groupDiscount = total >= GROUP_DISCOUNT_THRESHOLD ? subtotal * GROUP_DISCOUNT_RATE : 0;
+  return sum;
+}
+
+function computePrice() {
+  const days = daysBetween(state.dates.start, state.dates.end);
+  const perDay = perDayCarts();
+  const subtotal = perDay * Math.max(0, days);
   const deliveryFee = state.delivery === "extended" ? DELIVERY_EXTENDED_FEE : 0;
-  const afterDiscount = subtotal - groupDiscount + deliveryFee;
-  const tax = afterDiscount * TAX_RATE;
-  const grand = afterDiscount + tax;
-  return { days, subtotal, groupDiscount, deliveryFee, tax, grand, total };
+  const afterDelivery = subtotal + deliveryFee;
+  const tax = afterDelivery * TAX_RATE;
+  const grand = afterDelivery + tax;
+  return { days, perDay, subtotal, deliveryFee, tax, grand, total: totalCarts() };
 }
 
 // ---------- Step navigation ----------
@@ -87,66 +101,15 @@ function goTo(step) {
   });
   window.scrollTo({ top: 0, behavior: "smooth" });
 
-  if (step === 2) renderCartGrid();
+  if (step === 1) renderCartGrid();
+  if (step === 2) syncDatesStep();
   if (step === 4) renderPaymentSummary();
   if (step === 5) renderConfirmation();
 }
 
-// ---------- Step 1: Dates ----------
-function initStep1() {
-  const start = $("#date-start");
-  const end = $("#date-end");
-  const today = new Date().toISOString().slice(0, 10);
-  start.min = today;
-  end.min = today;
-  if (state.dates.start) start.value = state.dates.start;
-  if (state.dates.end) end.value = state.dates.end;
-
-  function update() {
-    state.dates.start = start.value;
-    state.dates.end = end.value;
-    const d = daysBetween(state.dates.start, state.dates.end);
-    if (state.dates.start && state.dates.end) {
-      $("#duration-out").textContent = d > 0
-        ? `${d} day${d === 1 ? "" : "s"} of cart life ahead.`
-        : "Return date must be after pickup date.";
-    } else {
-      $("#duration-out").textContent = "";
-    }
-    saveState();
-  }
-
-  start.addEventListener("input", () => {
-    end.min = start.value || today;
-    if (end.value && end.value < start.value) end.value = "";
-    update();
-  });
-  end.addEventListener("input", update);
-  update();
-
-  $("#to-step-2").addEventListener("click", () => {
-    const errEl = $("#date-error");
-    errEl.hidden = true;
-    if (!state.dates.start || !state.dates.end) {
-      errEl.textContent = "Pick both a pickup date and a return date.";
-      errEl.hidden = false;
-      return;
-    }
-    if (daysBetween(state.dates.start, state.dates.end) < 1) {
-      errEl.textContent = "Return date must be at least one day after pickup.";
-      errEl.hidden = false;
-      return;
-    }
-    goTo(2);
-  });
-}
-
-// ---------- Step 2: Carts ----------
+// ---------- Step 1: Carts (the new landing) ----------
 function renderCartGrid() {
   const grid = $("#cart-grid");
-  const days = daysBetween(state.dates.start, state.dates.end) || 1;
-  $("#trip-summary").textContent =
-    `${fmtDate(state.dates.start)} → ${fmtDate(state.dates.end)} · ${days} day${days === 1 ? "" : "s"}`;
   grid.innerHTML = "";
   for (const cart of CARTS) {
     const qty = state.selection[cart.id] | 0;
@@ -161,18 +124,18 @@ function renderCartGrid() {
         </div>
         <p class="desc">${cart.desc}</p>
         <div class="footer">
-          <span class="price">${fmtMoney(cart.price)}<small> / day</small></span>
+          <span class="price">${fmtMoneyShort(cart.price)}<small> / day</small></span>
           <div class="stepper" data-id="${cart.id}">
-            <button type="button" data-act="dec" aria-label="Remove one" ${qty === 0 ? "disabled" : ""}>−</button>
+            <button type="button" data-act="dec" aria-label="Remove" ${qty === 0 ? "disabled" : ""}>−</button>
             <b>${qty}</b>
-            <button type="button" data-act="inc" aria-label="Add one">+</button>
+            <button type="button" data-act="inc" aria-label="Add" ${qty >= PER_CART_MAX_QTY ? "disabled" : ""}>+</button>
           </div>
         </div>
       </div>
     `;
     grid.appendChild(tile);
   }
-  grid.addEventListener("click", onStepperClick, { once: false });
+  grid.addEventListener("click", onStepperClick);
   updateTotalBar();
 }
 
@@ -183,10 +146,9 @@ function onStepperClick(ev) {
   if (!stepperEl) return;
   const id = stepperEl.dataset.id;
   const current = state.selection[id] | 0;
-  const total = totalCarts();
   let next = current;
   if (btn.dataset.act === "inc") {
-    if (total >= MAX_CARTS) return;
+    if (current >= PER_CART_MAX_QTY) return;
     next = current + 1;
   } else {
     next = Math.max(0, current - 1);
@@ -199,19 +161,80 @@ function onStepperClick(ev) {
 
 function updateTotalBar() {
   const bar = $("#rental-total");
-  const { total, grand } = computePrice();
+  const total = totalCarts();
   if (total === 0) { bar.hidden = true; return; }
   bar.hidden = false;
+  const perDay = perDayCarts();
   $("#total-count").textContent = total;
   $("#total-count-s").textContent = total === 1 ? "" : "s";
-  $("#total-amount").textContent = fmtMoney(grand);
-  $("#to-step-3").disabled = total === 0 || total > MAX_CARTS;
+  // Step 1 shows per-day total ("$75 / day") until dates are picked
+  // (which happens in step 2). Final total is shown in step 4 summary.
+  $("#total-amount").textContent = fmtMoneyShort(perDay) + " / day";
+  $("#to-step-2").disabled = total === 0;
 }
 
 function fmtDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso + "T00:00:00");
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+// ---------- Step 2: Dates ----------
+function syncDatesStep() {
+  const start = $("#date-start");
+  const end = $("#date-end");
+  const today = new Date().toISOString().slice(0, 10);
+  start.min = today;
+  end.min = today;
+  if (state.dates.start) start.value = state.dates.start;
+  if (state.dates.end) end.value = state.dates.end;
+  updateDurationLine();
+}
+
+function updateDurationLine() {
+  const start = $("#date-start").value;
+  const end = $("#date-end").value;
+  state.dates.start = start;
+  state.dates.end = end;
+  const d = daysBetween(start, end);
+  const out = $("#duration-out");
+  if (start && end && d > 0) {
+    const perDay = perDayCarts();
+    out.textContent = `${d} day${d === 1 ? "" : "s"} × ${fmtMoneyShort(perDay)}/day = ${fmtMoney(perDay * d)} before tax & delivery.`;
+  } else if (start && end) {
+    out.textContent = "Return date must be after pickup date.";
+  } else {
+    out.textContent = "";
+  }
+  saveState();
+}
+
+function initStep2() {
+  const start = $("#date-start");
+  const end = $("#date-end");
+  const today = new Date().toISOString().slice(0, 10);
+  start.addEventListener("input", () => {
+    end.min = start.value || today;
+    if (end.value && end.value < start.value) end.value = "";
+    updateDurationLine();
+  });
+  end.addEventListener("input", updateDurationLine);
+
+  $("#to-step-3").addEventListener("click", () => {
+    const errEl = $("#date-error");
+    errEl.hidden = true;
+    if (!state.dates.start || !state.dates.end) {
+      errEl.textContent = "Pick both a pickup date and a return date.";
+      errEl.hidden = false;
+      return;
+    }
+    if (daysBetween(state.dates.start, state.dates.end) < 1) {
+      errEl.textContent = "Return date must be at least one day after pickup.";
+      errEl.hidden = false;
+      return;
+    }
+    goTo(3);
+  });
 }
 
 // ---------- Step 3: Details ----------
@@ -283,9 +306,6 @@ function renderPaymentSummary() {
     lines.push(`<div class="row"><span>${cart.name} × ${qty} · ${p.days} day${p.days === 1 ? "" : "s"}</span><span>${fmtMoney(lineTotal)}</span></div>`);
   }
   lines.push(`<div class="row"><span>Subtotal</span><span>${fmtMoney(p.subtotal)}</span></div>`);
-  if (p.groupDiscount > 0) {
-    lines.push(`<div class="row group-discount"><span>Group discount (10% off)</span><span>−${fmtMoney(p.groupDiscount)}</span></div>`);
-  }
   if (p.deliveryFee > 0) {
     lines.push(`<div class="row"><span>Extended delivery (25–75 mi)</span><span>${fmtMoney(p.deliveryFee)}</span></div>`);
   }
@@ -297,7 +317,6 @@ function renderPaymentSummary() {
 }
 
 function initStep4() {
-  // Light formatting: card #, exp, CVC
   const card = $("#pay-card");
   card.addEventListener("input", () => {
     let v = card.value.replace(/\D/g, "").slice(0, 19);
@@ -338,8 +357,6 @@ async function payNow() {
 
   const booking = buildBookingRecord();
 
-  // Best-effort POST to the Worker. Failure doesn't block the mock
-  // confirmation — this is a demo flow.
   try {
     const res = await fetch("/api/booking", {
       method: "POST",
@@ -352,7 +369,6 @@ async function payNow() {
     }
   } catch (_) {}
 
-  // Always show confirmation, even if storage failed.
   state.bookingId = booking.id;
   state.bookingRecord = booking;
   saveState();
@@ -378,7 +394,6 @@ function buildBookingRecord() {
     contact: { ...state.contact },
     pricing: {
       subtotal: p.subtotal,
-      groupDiscount: p.groupDiscount,
       deliveryFee: p.deliveryFee,
       tax: p.tax,
       total: p.grand,
@@ -412,15 +427,15 @@ function renderConfirmation() {
 
 // ---------- Boot ----------
 document.addEventListener("DOMContentLoaded", () => {
-  initStep1();
+  initStep2();
   initStep3();
   initStep4();
   $("#back-to-1").addEventListener("click", () => goTo(1));
   $("#back-to-2").addEventListener("click", () => goTo(2));
   $("#back-to-3").addEventListener("click", () => goTo(3));
-  $("#to-step-3").addEventListener("click", () => {
-    if (totalCarts() === 0 || totalCarts() > MAX_CARTS) return;
-    goTo(3);
+  $("#to-step-2").addEventListener("click", () => {
+    if (totalCarts() === 0) return;
+    goTo(2);
   });
   // Restore previous step if user reloads mid-flow.
   goTo(state.step || 1);

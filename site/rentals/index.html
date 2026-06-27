@@ -39,20 +39,40 @@
 <!-- Progress dots, fixed top under header -->
 <nav class="rental-progress" aria-label="Booking progress">
   <ol>
-    <li data-step="1" class="active"><span>1</span>Dates</li>
-    <li data-step="2"><span>2</span>Carts</li>
+    <li data-step="1" class="active"><span>1</span>Carts</li>
+    <li data-step="2"><span>2</span>Dates</li>
     <li data-step="3"><span>3</span>Details</li>
     <li data-step="4"><span>4</span>Pay</li>
   </ol>
 </nav>
 
 <main class="rental">
-  <!-- ============ STEP 1 · DATES ============ -->
+  <!-- ============ STEP 1 · CARTS (the landing) ============ -->
   <section class="rental-step" data-step="1" aria-labelledby="s1-title">
-    <div class="rental-card">
+    <div class="rental-step-head">
       <span class="eyebrow">Step 1 of 4</span>
-      <h1 id="s1-title">When do you need it?</h1>
-      <p class="lede-text">Pick up and return dates — we'll show you what's available.</p>
+      <h1 id="s1-title">Pick your cart.</h1>
+      <p class="lede-text">Six carts in our rental fleet — five 4-seater Yamahas at $75/day and a 6-seater Limo at $125/day. <b>Free pickup &amp; delivery within 25 miles of Livingston.</b></p>
+    </div>
+    <div class="cart-grid" id="cart-grid"></div>
+    <!-- Sticky total bar (mobile) / fixed at bottom on desktop -->
+    <aside class="rental-total" id="rental-total" hidden>
+      <div class="rental-total-line">
+        <span><b id="total-count">0</b> cart<span id="total-count-s">s</span> selected</span>
+        <span><b id="total-amount">$0</b></span>
+      </div>
+      <button class="btn btn-coral" id="to-step-2" type="button" disabled>Continue →</button>
+    </aside>
+    <p class="rental-fineprint">Cancellation policy: 50% refund if you cancel more than 72 hours before pickup. Within 72 hours of pickup, non-refundable.</p>
+  </section>
+
+  <!-- ============ STEP 2 · DATES ============ -->
+  <section class="rental-step" data-step="2" hidden aria-labelledby="s2-title">
+    <div class="rental-card">
+      <button class="rental-back" id="back-to-1" type="button">← Carts</button>
+      <span class="eyebrow">Step 2 of 4</span>
+      <h1 id="s2-title">When do you need it?</h1>
+      <p class="lede-text">Pick up and return dates — we'll calculate the total based on your selection.</p>
       <div class="rental-grid-2">
         <label class="rental-field">
           <span>Pickup</span>
@@ -66,35 +86,15 @@
       <p class="rental-meta" id="duration-out" aria-live="polite"></p>
       <p class="rental-error" id="date-error" hidden></p>
       <div class="rental-cta-row">
-        <button class="btn btn-coral" id="to-step-2" type="button">Continue →</button>
+        <button class="btn btn-coral" id="to-step-3" type="button">Continue →</button>
       </div>
     </div>
-    <p class="rental-fineprint">Cancellation policy: 50% refund if you cancel more than 72 hours before pickup. Within 72 hours of pickup, non-refundable.</p>
-  </section>
-
-  <!-- ============ STEP 2 · CARTS ============ -->
-  <section class="rental-step" data-step="2" hidden aria-labelledby="s2-title">
-    <div class="rental-step-head">
-      <button class="rental-back" id="back-to-1" type="button">← Dates</button>
-      <span class="eyebrow">Step 2 of 4</span>
-      <h1 id="s2-title">Pick your carts.</h1>
-      <p class="lede-text"><span id="trip-summary">—</span> · group discount kicks in at 4 or more carts.</p>
-    </div>
-    <div class="cart-grid" id="cart-grid"></div>
-    <!-- Sticky total bar (mobile) / fixed sidebar (desktop) -->
-    <aside class="rental-total" id="rental-total" hidden>
-      <div class="rental-total-line">
-        <span><b id="total-count">0</b> cart<span id="total-count-s">s</span> selected</span>
-        <span><b id="total-amount">$0</b></span>
-      </div>
-      <button class="btn btn-coral" id="to-step-3" type="button" disabled>Continue →</button>
-    </aside>
   </section>
 
   <!-- ============ STEP 3 · DETAILS ============ -->
   <section class="rental-step" data-step="3" hidden aria-labelledby="s3-title">
     <div class="rental-card">
-      <button class="rental-back" id="back-to-2" type="button">← Carts</button>
+      <button class="rental-back" id="back-to-2" type="button">← Dates</button>
       <span class="eyebrow">Step 3 of 4</span>
       <h1 id="s3-title">Where and who?</h1>
 

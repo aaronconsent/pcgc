@@ -29,6 +29,9 @@ export default {
     if (url.pathname === "/api/booking" && request.method === "GET") {
       return listBookings(request, env);
     }
+    if (url.pathname.startsWith("/api/booking/") && request.method === "PATCH") {
+      return updateBookingStatus(request, env, url);
+    }
     if (url.pathname === "/api/availability" && request.method === "GET") {
       return checkAvailability(request, env, url);
     }
@@ -72,6 +75,8 @@ async function submitBooking(request, env) {
     ...payload,
     id,
     ts,
+    status: "new",
+    statusUpdatedAt: ts,
     ua: (request.headers.get("user-agent") || "").slice(0, 500),
     ip: request.headers.get("cf-connecting-ip") || "",
     country: request.cf?.country || "",
@@ -294,6 +299,137 @@ async function checkAvailability(request, env, url) {
   }
 
   return json({ booked: [...booked] });
+}
+
+// Lifecycle states the owner can assign from the admin UI. The set is
+// closed — any other value gets rejected as a 400 — so we never end up
+// with typos in KV that don't match the UI dropdown.
+const BOOKING_STATUSES = ["new", "picked-up", "delivered", "returned"];
+
+async function updateBookingStatus(request, env, url) {
+  const auth = await checkAdminAuth(request, env);
+  if (auth) return auth;
+  if (!env.FEEDBACK_KV) return json({ error: "kv not configured" }, 503);
+
+  // Path is /api/booking/<PCGC-XXXXXX>; the id segment uniquely
+  // identifies the booking but the KV key is booking:<ts>:<suffix>,
+  // so we have to scan to find the right record.
+  const id = decodeURIComponent(url.pathname.replace(/^\/api\/booking\//, ""));
+  if (!id) return json({ error: "id required" }, 400);
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: "invalid body" }, 400); }
+  const newStatus = body?.status;
+  if (!BOOKING_STATUSES.includes(newStatus)) {
+    return json({ error: "invalid status", allowed: BOOKING_STATUSES }, 400);
+  }
+
+  // Linear scan KV for the matching id. Booking volume is low (single
+  // dealer, manual workflow), so this is fine; if it ever grows we'd
+  // add a secondary id->key index.
+  let match = null;
+  let cursor;
+  do {
+    const page = await env.FEEDBACK_KV.list({ prefix: "booking:", cursor });
+    for (const k of page.keys) {
+      const raw = await env.FEEDBACK_KV.get(k.name);
+      if (!raw) continue;
+      let rec;
+      try { rec = JSON.parse(raw); } catch { continue; }
+      if (rec.id === id) { match = { key: k.name, rec }; break; }
+    }
+    if (match) break;
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  if (!match) return json({ error: "booking not found", id }, 404);
+
+  const prevStatus = match.rec.status || "new";
+  if (prevStatus === newStatus) {
+    return json({ ok: true, status: newStatus, unchanged: true });
+  }
+  match.rec.status = newStatus;
+  match.rec.statusUpdatedAt = new Date().toISOString();
+  await env.FEEDBACK_KV.put(match.key, JSON.stringify(match.rec));
+
+  // Fire the thank-you email the first time a booking lands on
+  // "returned". Skip if it was already returned (shouldn't happen via
+  // the strict-equality check above, but cheap belt-and-suspenders).
+  let emailResult = null;
+  if (newStatus === "returned" && prevStatus !== "returned") {
+    if (env.RESEND_API_KEY) {
+      try {
+        await sendThankYouEmail(match.rec, env);
+        emailResult = "sent";
+      } catch (e) {
+        emailResult = "failed: " + (e?.message || String(e));
+        console.error("thank-you email failed:", emailResult);
+      }
+    } else {
+      emailResult = "skipped (no RESEND_API_KEY)";
+    }
+  }
+
+  return json({ ok: true, status: newStatus, prevStatus, email: emailResult });
+}
+
+// Customer-facing thank-you email sent when status transitions to
+// "returned". Asks for a Google review and links back to /leave-a-review/
+// (which deep-links into the PCGC GBP review form).
+async function sendThankYouEmail(record, env) {
+  const customer = record.contact || {};
+  const to = customer.email;
+  if (!to) throw new Error("no customer email on booking");
+  const from = env.BOOKING_FROM_EMAIL || "bookings@polkcountygolfcarts.com";
+
+  const subject = `Thanks for renting with Polk County Golf Carts!`;
+  const reviewUrl = "https://polkcountygolfcarts.com/leave-a-review/";
+  const firstName = (customer.name || "").split(/\s+/)[0] || "there";
+
+  const html = `<!doctype html><html><body style="font-family:system-ui,Arial,sans-serif; max-width:560px; margin:0 auto; padding:1rem; color:#222;">
+    <h2 style="color:#1f5a68; margin:0 0 .75rem;">Thanks, ${escHtml(firstName)}!</h2>
+    <p>The cart's back safely — hope you had a great time out there.</p>
+    <p>If you've got a minute, the best thing you can do for a small family-owned shop like ours is leave a quick review on Google. It honestly makes a huge difference.</p>
+    <p style="margin:1.5rem 0;">
+      <a href="${reviewUrl}" style="display:inline-block; background:#e85a4f; color:#fff; padding:.85rem 1.4rem; border-radius:8px; text-decoration:none; font-weight:600;">Leave a quick review &rarr;</a>
+    </p>
+    <p>Booking <b>${escHtml(record.id)}</b> &middot; need anything else, just hit reply or call <a href="tel:9362231182">936-223-1182</a>.</p>
+    <p style="margin-top:1.5rem;">— John &amp; the PCGC crew<br>Polk County Golf Carts &middot; Livingston, TX</p>
+  </body></html>`;
+
+  const text = [
+    `Thanks, ${firstName}!`,
+    ``,
+    `The cart's back safely — hope you had a great time out there.`,
+    ``,
+    `If you've got a minute, the best thing you can do for a small family-owned shop like ours is leave a quick review on Google. It honestly makes a huge difference:`,
+    ``,
+    reviewUrl,
+    ``,
+    `Booking ${record.id} · need anything else, just hit reply or call 936-223-1182.`,
+    ``,
+    `— John & the PCGC crew`,
+    `Polk County Golf Carts · Livingston, TX`,
+  ].join("\n");
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "authorization": `Bearer ${env.RESEND_API_KEY}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      from: `Polk County Golf Carts <${from}>`,
+      to: [to],
+      subject,
+      html,
+      text,
+      reply_to: env.BOOKING_TO_EMAIL || "polkcountygolfcarts@yahoo.com",
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`resend ${res.status}: ${t}`);
+  }
 }
 
 // Returns a Response if auth fails, or null if it passes. Accepts EITHER

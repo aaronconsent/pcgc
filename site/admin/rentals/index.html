@@ -46,6 +46,38 @@
     .bk-items .row.total { font-weight: 700; border-top: 1px solid var(--line); padding-top: .35rem; margin-top: .35rem; }
     .bk-empty { text-align: center; padding: 3rem 1rem; color: var(--ink-soft); }
     .bk-empty h2 { color: var(--teal-dk); }
+
+    /* Status pill: color tracks the lifecycle. */
+    .bk-pill {
+      display: inline-flex; align-items: center; gap: .35rem;
+      font: 700 .72rem ui-monospace, monospace;
+      letter-spacing: .08em; text-transform: uppercase;
+      padding: .25rem .6rem; border-radius: 999px;
+      border: 1px solid currentColor;
+    }
+    .bk-pill[data-status="new"]         { color: #c2261a; background: #fde9e6; border-color: #f3c3bc; }
+    .bk-pill[data-status="picked-up"]   { color: #1f5a68; background: #d6ecf0; border-color: #9fcfd7; }
+    .bk-pill[data-status="delivered"]   { color: #1f5a68; background: #d6ecf0; border-color: #9fcfd7; }
+    .bk-pill[data-status="returned"]    { color: #2f6b3b; background: #dff0e1; border-color: #a7d4ad; }
+
+    .bk-status-row {
+      display: flex; align-items: center; gap: .6rem;
+      margin-top: .85rem; padding-top: .85rem;
+      border-top: 1px dashed var(--line);
+      font-size: .9rem;
+    }
+    .bk-status-row label { color: var(--ink-soft); font-weight: 600; }
+    .bk-status-row select {
+      font: inherit; padding: .35rem .6rem;
+      border: 1px solid var(--line); border-radius: 6px;
+      background: #fff;
+    }
+    .bk-status-row .bk-status-msg {
+      margin-left: auto;
+      font-size: .85rem; color: var(--ink-soft);
+    }
+    .bk-status-row .bk-status-msg.error { color: #c2261a; }
+    .bk-status-row .bk-status-msg.success { color: #2f6b3b; }
   </style>
 </head>
 <body>
@@ -141,11 +173,14 @@
       const fmtMoney = n => "$" + (Number(n) || 0).toFixed(2);
       const fmtDate = iso => iso ? new Date(iso + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
       const deliveryLabel = { pickup: "Pickup at shop", local: "Free delivery (≤25 mi)", extended: "Extended delivery (25–100 mi, fee quoted separately)" };
+      const statusLabel = { "new": "New Order", "picked-up": "Picked Up", "delivered": "Delivered", "returned": "Returned" };
+      const statusOptions = ["new", "picked-up", "delivered", "returned"];
       for (const b of entries) {
         const wrap = document.createElement("article");
         wrap.className = "bk-entry";
         const head = document.createElement("header");
-        head.innerHTML = `<span class="id"></span><span class="ts"></span>`;
+        const status = b.status || "new";
+        head.innerHTML = `<span class="id"></span><span class="bk-pill" data-status="${status}">${statusLabel[status] || status}</span><span class="ts"></span>`;
         head.querySelector(".id").textContent = b.id || "—";
         head.querySelector(".ts").textContent = new Date(b.ts).toLocaleString();
         wrap.appendChild(head);
@@ -185,6 +220,75 @@
         rows.push('<div class="row total"><span>Paid</span><span>' + fmtMoney(p.total) + '</span></div>');
         items.innerHTML = rows.join("");
         wrap.appendChild(items);
+
+        // Status control: dropdown lets the owner advance the booking
+        // through New -> Picked Up / Delivered -> Returned. Setting it
+        // to "returned" triggers the customer thank-you email from the
+        // Worker side.
+        const statusRow = document.createElement("div");
+        statusRow.className = "bk-status-row";
+        statusRow.innerHTML = `
+          <label for="status-${b.id}">Status</label>
+          <select id="status-${b.id}" data-id="${b.id}">
+            ${statusOptions.map(s => `<option value="${s}"${s === status ? " selected" : ""}>${statusLabel[s]}</option>`).join("")}
+          </select>
+          <span class="bk-status-msg"></span>
+        `;
+        wrap.appendChild(statusRow);
+
+        const sel = statusRow.querySelector("select");
+        const msg = statusRow.querySelector(".bk-status-msg");
+        const pill = head.querySelector(".bk-pill");
+        sel.addEventListener("change", async () => {
+          const newStatus = sel.value;
+          const prevStatus = pill.dataset.status;
+          if (newStatus === prevStatus) return;
+          sel.disabled = true;
+          msg.textContent = "Saving…";
+          msg.className = "bk-status-msg";
+          try {
+            const res = await fetch(`/api/booking/${encodeURIComponent(b.id)}`, {
+              method: "PATCH",
+              headers: { "content-type": "application/json" },
+              credentials: "same-origin",
+              body: JSON.stringify({ status: newStatus }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              msg.textContent = `Failed: ${data.error || res.status}`;
+              msg.className = "bk-status-msg error";
+              sel.value = prevStatus; // roll back the dropdown
+              return;
+            }
+            // Update the pill in place.
+            pill.dataset.status = newStatus;
+            pill.textContent = statusLabel[newStatus];
+            // Special-case the returned transition so the owner sees
+            // whether the thank-you email actually went out.
+            if (newStatus === "returned") {
+              if (data.email === "sent") {
+                msg.textContent = "Saved · thank-you email sent";
+              } else if (data.email && data.email.startsWith("failed")) {
+                msg.textContent = "Saved · email failed (" + data.email.slice(8) + ")";
+                msg.className = "bk-status-msg error";
+              } else if (data.email && data.email.startsWith("skipped")) {
+                msg.textContent = "Saved · email skipped (no Resend key configured)";
+              } else {
+                msg.textContent = "Saved";
+              }
+            } else {
+              msg.textContent = "Saved";
+              msg.className = "bk-status-msg success";
+            }
+            setTimeout(() => { msg.textContent = ""; msg.className = "bk-status-msg"; }, 4000);
+          } catch (e) {
+            msg.textContent = "Network error: " + e.message;
+            msg.className = "bk-status-msg error";
+            sel.value = prevStatus;
+          } finally {
+            sel.disabled = false;
+          }
+        });
 
         document.querySelector("#bookings-view").appendChild(wrap);
       }

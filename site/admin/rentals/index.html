@@ -114,6 +114,22 @@
         </div>
         <button type="button" id="logout-btn" class="btn btn-ghost" style="font-size:.92rem;">Sign out</button>
       </header>
+
+      <!-- Email diagnostics: click to send a real test email through
+           Resend and get a plain-English answer about what happened. -->
+      <details style="margin-top:1.25rem; background:#fff; border:1px solid var(--line); border-radius:10px; padding:.85rem 1.1rem;">
+        <summary style="cursor:pointer; font-weight:600; color:var(--teal-dk);">🔧 Email diagnostics · test the booking notification pipeline</summary>
+        <div style="margin-top:.85rem; display:flex; flex-direction:column; gap:.75rem;">
+          <label style="display:flex; flex-direction:column; gap:.35rem; font-size:.92rem;">
+            <span>Send test email to</span>
+            <input type="email" id="test-email-to" placeholder="polkcountygolfcarts@yahoo.com (default)" style="padding:.55rem .7rem; border:1px solid var(--line); border-radius:6px; font:inherit;">
+            <span style="font-size:.82rem; color:var(--ink-soft);">Leave blank to send to the configured address (polkcountygolfcarts@yahoo.com). If your Resend domain isn't verified yet, put your own Resend-signup email here — that's the only address Resend will let you send to in test mode.</span>
+          </label>
+          <button type="button" id="test-email-btn" class="btn btn-coral" style="align-self:flex-start;">Send test email</button>
+          <div id="test-email-result" style="display:none; padding:.75rem 1rem; border-radius:8px; font-size:.92rem; white-space:pre-wrap; word-break:break-word;"></div>
+        </div>
+      </details>
+
       <div id="bk-out" class="bk-status" style="margin-top:1.5rem;">Loading…</div>
     </section>
   </main>
@@ -330,6 +346,53 @@
       } catch (_) { /* ignore — cookie may already be gone */ }
       showLogin();
       logoutBtn.disabled = false;
+    });
+
+    // Email diagnostics: click "Send test email", get a plain-English
+    // answer back. The Worker's response has an `ok` + `hint` field —
+    // we just surface the hint verbatim, plus config visibility so the
+    // owner can see what from-address / to-address / key state the
+    // Worker is actually using.
+    const testBtn = document.getElementById("test-email-btn");
+    const testInput = document.getElementById("test-email-to");
+    const testResult = document.getElementById("test-email-result");
+    testBtn.addEventListener("click", async () => {
+      testBtn.disabled = true;
+      const prev = testBtn.textContent;
+      testBtn.textContent = "Sending…";
+      testResult.style.display = "block";
+      testResult.style.background = "#f4f0e8";
+      testResult.style.color = "#333";
+      testResult.textContent = "Contacting Resend…";
+      try {
+        const res = await fetch("/api/admin/test-email", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ to: testInput.value.trim() || undefined }),
+        });
+        const data = await res.json();
+        const cfg = data.config || {};
+        const cfgLines = [
+          `API key set:   ${cfg.resendKeySet ? "yes" : "NO"}`,
+          `From:          ${cfg.fromEmail}${cfg.fromEmailIsDefault ? " (default — BOOKING_FROM_EMAIL not set)" : ""}`,
+          `To (this test): ${cfg.toEmail}`,
+        ].join("\n");
+        const summary = data.ok
+          ? `✓ Test email accepted by Resend.\n\n${data.hint}\n\nConfig:\n${cfgLines}`
+          : `✗ Test failed (${data.reason}).\n\n${data.hint}\n\nConfig:\n${cfgLines}` +
+            (data.resendResponse ? `\n\nRaw Resend response:\n${JSON.stringify(data.resendResponse, null, 2)}` : "");
+        testResult.textContent = summary;
+        testResult.style.background = data.ok ? "#e6f4ea" : "#fde9e6";
+        testResult.style.color = data.ok ? "#1e4a2b" : "#7a1815";
+      } catch (e) {
+        testResult.textContent = "Network error: " + e.message;
+        testResult.style.background = "#fde9e6";
+        testResult.style.color = "#7a1815";
+      } finally {
+        testBtn.disabled = false;
+        testBtn.textContent = prev;
+      }
     });
 
     // Initial probe — if the cookie's already valid we go straight

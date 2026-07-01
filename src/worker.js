@@ -41,6 +41,9 @@ export default {
     if (url.pathname === "/api/admin/logout" && request.method === "POST") {
       return adminLogout();
     }
+    if (url.pathname === "/api/admin/test-email" && request.method === "POST") {
+      return sendTestEmail(request, env);
+    }
 
     // Legacy URLs from the original site — 301 to the new locations
     // so search engines (and bookmarks) move with us.
@@ -85,16 +88,23 @@ async function submitBooking(request, env) {
 
   // Notify the owner via Resend. Failure here must NEVER fail the
   // booking — the record is already saved in KV; the email is a
-  // convenience layer on top.
-  if (env.RESEND_API_KEY) {
+  // convenience layer on top. Outcome is echoed in the response so
+  // the owner can inspect the network tab if a submission looks like
+  // it "worked" but no email arrived.
+  let emailResult;
+  if (!env.RESEND_API_KEY) {
+    emailResult = "skipped: RESEND_API_KEY not set in Cloudflare Worker secrets";
+  } else {
     try {
       await sendBookingEmail(record, env);
+      emailResult = "sent";
     } catch (e) {
-      console.error("booking email failed:", e?.message || e);
+      emailResult = "failed: " + (e?.message || String(e));
+      console.error("booking email failed:", emailResult);
     }
   }
 
-  return json({ ok: true, id });
+  return json({ ok: true, id, email: emailResult });
 }
 
 // Send the booking notification through Resend's HTTP API. The owner
@@ -432,6 +442,108 @@ async function sendThankYouEmail(record, env) {
     const t = await res.text();
     throw new Error(`resend ${res.status}: ${t}`);
   }
+}
+
+// Admin diagnostic: send a real Resend request and report exactly what
+// happened. Owner clicks a button in /admin/rentals/ and gets a
+// human-readable answer — no Worker-log spelunking. Returns config
+// visibility (without leaking the API key), the raw Resend response,
+// and a `hint` field that translates the common error messages into
+// plain English + the next action to take.
+async function sendTestEmail(request, env) {
+  const auth = await checkAdminAuth(request, env);
+  if (auth) return auth;
+
+  const defaultFrom = "bookings@polkcountygolfcarts.com";
+  const defaultTo = "polkcountygolfcarts@yahoo.com";
+  const from = env.BOOKING_FROM_EMAIL || defaultFrom;
+  const configuredTo = env.BOOKING_TO_EMAIL || defaultTo;
+
+  let body = {};
+  try { body = await request.json(); } catch {}
+  // Allow overriding the recipient so the owner can test to their own
+  // Gmail (Resend's test mode only allows sending to the Resend
+  // account owner's email until a domain is verified).
+  const to = (body?.to && String(body.to).trim()) || configuredTo;
+
+  const config = {
+    resendKeySet: !!env.RESEND_API_KEY,
+    fromEmail: from,
+    fromEmailIsDefault: !env.BOOKING_FROM_EMAIL,
+    toEmail: to,
+    toEmailIsConfigured: to === configuredTo,
+  };
+
+  if (!env.RESEND_API_KEY) {
+    return json({
+      ok: false,
+      config,
+      reason: "no_api_key",
+      hint: "RESEND_API_KEY is not set in Cloudflare. From your terminal, run:  wrangler secret put RESEND_API_KEY  and paste your key from resend.com/api-keys, then redeploy with:  npx wrangler deploy",
+    });
+  }
+
+  let res;
+  try {
+    res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "authorization": `Bearer ${env.RESEND_API_KEY}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        from: `PCGC Booking Test <${from}>`,
+        to: [to],
+        subject: "PCGC booking system — test email",
+        html: `<!doctype html><html><body style="font-family:system-ui,Arial,sans-serif; max-width:520px; margin:0 auto; padding:1rem;">
+          <h2 style="color:#1f5a68;">Test email received ✓</h2>
+          <p>If you're reading this in your Yahoo inbox, the PCGC booking system's email pipeline is working — every new rental booking will land here from now on.</p>
+          <p style="color:#666; font-size:.9rem;">Sent from <b>${escHtml(from)}</b>, delivered to <b>${escHtml(to)}</b> via Resend.</p>
+        </body></html>`,
+        text: `Test email received.\n\nIf you're reading this in your Yahoo inbox, the PCGC booking system's email pipeline is working — every new rental booking will land here from now on.\n\nSent from ${from}, delivered to ${to} via Resend.`,
+      }),
+    });
+  } catch (e) {
+    return json({
+      ok: false,
+      config,
+      reason: "network_error",
+      error: e?.message || String(e),
+      hint: "Failed to reach api.resend.com at all — this is rare from a Cloudflare Worker. Try again in a minute; if it persists check https://status.resend.com.",
+    });
+  }
+
+  const raw = await res.text();
+  let parsed; try { parsed = JSON.parse(raw); } catch { parsed = { raw }; }
+
+  if (!res.ok) {
+    const msg = String(parsed?.message || parsed?.error || raw).toLowerCase();
+    let hint = "Unexpected Resend error — the full response is above. Common fixes: verify the from-domain at resend.com/domains, regenerate the API key, or set BOOKING_FROM_EMAIL to a sender you've verified.";
+    if (res.status === 401 || res.status === 403 && msg.includes("api key")) {
+      hint = "The RESEND_API_KEY value is invalid, revoked, or missing the 'sending' permission. Regenerate a Sending key at resend.com/api-keys and rerun:  wrangler secret put RESEND_API_KEY";
+    } else if (msg.includes("verify") && msg.includes("domain")) {
+      hint = `The domain in the from-address (${from}) hasn't been verified in Resend. Go to resend.com/domains, click "Add Domain", enter the domain, and add the three DNS records they show you (SPF, DKIM, return-path) at your domain registrar. Verification usually completes in under 10 minutes. Until then, you can temporarily set BOOKING_FROM_EMAIL to onboarding@resend.dev for testing.`;
+    } else if (msg.includes("only send") || msg.includes("testing") || (msg.includes("verify") && msg.includes("resend.dev") === false)) {
+      hint = `Resend restriction: while no domain is verified, you can ONLY send TO the email address you signed up with. This test tried to send to ${to}. Either (a) send the test to your Resend account email (change the To field), or (b) verify your domain at resend.com/domains so you can send to anyone.`;
+    } else if (msg.includes("from") && msg.includes("verified")) {
+      hint = `The from-address ${from} is not a verified sender. Verify the domain at resend.com/domains, or change BOOKING_FROM_EMAIL to a sender you've already verified.`;
+    }
+    return json({
+      ok: false,
+      config,
+      reason: "resend_rejected",
+      resendStatus: res.status,
+      resendResponse: parsed,
+      hint,
+    });
+  }
+
+  return json({
+    ok: true,
+    config,
+    resendId: parsed?.id,
+    hint: `Resend accepted the email (id ${parsed?.id}). It should arrive at ${to} within about 60 seconds. Check the inbox, then the spam folder if it's not there. If it never arrives, the domain's DKIM/SPF records may not be validating on Yahoo's side — verify at resend.com/domains that the domain is green across all three records.`,
+  });
 }
 
 // Returns a Response if auth fails, or null if it passes. Accepts EITHER

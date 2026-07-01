@@ -91,20 +91,35 @@ async function submitBooking(request, env) {
   // convenience layer on top. Outcome is echoed in the response so
   // the owner can inspect the network tab if a submission looks like
   // it "worked" but no email arrived.
-  let emailResult;
+  // Two emails go out on submit: (1) owner notification -> Yahoo,
+  // (2) customer confirmation -> the customer, with Reply-To pointed
+  // back at the Yahoo address so any customer reply lands in John's
+  // inbox instead of bouncing off an unmonitored bookings@ mailbox.
+  // Both are independent — one failing doesn't block the other, and
+  // neither failing blocks the booking (already saved in KV).
+  let ownerEmailResult;
+  let customerEmailResult;
   if (!env.RESEND_API_KEY) {
-    emailResult = "skipped: RESEND_API_KEY not set in Cloudflare Worker secrets";
+    ownerEmailResult = "skipped: RESEND_API_KEY not set in Cloudflare Worker secrets";
+    customerEmailResult = ownerEmailResult;
   } else {
     try {
       await sendBookingEmail(record, env);
-      emailResult = "sent";
+      ownerEmailResult = "sent";
     } catch (e) {
-      emailResult = "failed: " + (e?.message || String(e));
-      console.error("booking email failed:", emailResult);
+      ownerEmailResult = "failed: " + (e?.message || String(e));
+      console.error("owner booking email failed:", ownerEmailResult);
+    }
+    try {
+      await sendCustomerConfirmationEmail(record, env);
+      customerEmailResult = "sent";
+    } catch (e) {
+      customerEmailResult = "failed: " + (e?.message || String(e));
+      console.error("customer confirmation email failed:", customerEmailResult);
     }
   }
 
-  return json({ ok: true, id, email: emailResult });
+  return json({ ok: true, id, email: ownerEmailResult, customerEmail: customerEmailResult });
 }
 
 // Send the booking notification through Resend's HTTP API. The owner
@@ -148,6 +163,117 @@ async function sendBookingEmail(record, env) {
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`resend ${res.status}: ${text}`);
+  }
+}
+
+// Customer confirmation email sent immediately after a booking is
+// submitted. Distinct from the owner notification: this goes TO the
+// customer, and its Reply-To is polkcountygolfcarts@yahoo.com so any
+// customer reply lands in John's inbox instead of bouncing off the
+// bookings@ mailbox (which doesn't need to exist).
+//
+// Body mirrors the on-screen /rentals/ confirmation: booking code,
+// dates + cart list, per-delivery requirements (DL / insurance /
+// plate photo for pickup; DL only for delivery), and a note about
+// the DocuSign rental agreement.
+async function sendCustomerConfirmationEmail(record, env) {
+  const customer = record.contact || {};
+  const to = customer.email;
+  if (!to) throw new Error("no customer email on booking");
+  const from = env.BOOKING_FROM_EMAIL || "bookings@polkcountygolfcarts.com";
+  const ownerEmail = env.BOOKING_TO_EMAIL || "polkcountygolfcarts@yahoo.com";
+  const isPickup = record.delivery === "pickup";
+
+  const dates = record.dates || {};
+  const subject = `Your Polk County Golf Carts rental is booked · ${record.id}`;
+  const firstName = (customer.name || "").split(/\s+/)[0] || "there";
+
+  const requirements = isPickup
+    ? [
+        "A photo or scan of your driver's license",
+        "A photo or scan of your auto insurance",
+        "A photo of your vehicle's license plate (the vehicle we'll be loading the cart onto)",
+      ]
+    : [
+        "A photo or scan of the driver's license of whoever will be driving the cart",
+      ];
+
+  const itemRows = (record.items || []).map(it => `
+    <tr>
+      <td style="padding:4px 0;">${escHtml(it.name)} × ${it.qty}</td>
+      <td style="padding:4px 0; text-align:right;">${fmtMoney(it.lineTotal)}</td>
+    </tr>
+  `).join("");
+
+  const p = record.pricing || {};
+  const html = `<!doctype html><html><body style="font-family:system-ui,Arial,sans-serif; max-width:560px; margin:0 auto; padding:1rem; color:#222;">
+    <h2 style="color:#1f5a68; margin:0 0 .5rem;">You're booked, ${escHtml(firstName)}!</h2>
+    <p style="margin:.25rem 0 1rem; color:#666;">Confirmation code: <b>${escHtml(record.id)}</b></p>
+
+    <table style="width:100%; border-collapse:collapse; font-size:14px; margin-bottom:1rem;">
+      <tr><td style="width:100px; color:#888; padding:4px 0;">Pickup</td><td style="padding:4px 0;"><b>${escHtml(dates.start)}</b></td></tr>
+      <tr><td style="color:#888; padding:4px 0;">Return</td><td style="padding:4px 0;"><b>${escHtml(dates.end)}</b></td></tr>
+    </table>
+
+    <table style="width:100%; border-collapse:collapse; font-size:14px; border-top:1px solid #ddd;">
+      ${itemRows}
+      <tr><td style="padding:4px 0; color:#888;">Tax</td><td style="padding:4px 0; text-align:right;">${fmtMoney(p.tax)}</td></tr>
+      <tr style="border-top:1px solid #ddd;"><td style="padding:8px 0;"><b>Total</b></td><td style="padding:8px 0; text-align:right;"><b>${fmtMoney(p.total)}</b></td></tr>
+    </table>
+
+    <div style="background:#fff9f4; border:1px solid #f3c3bc; border-radius:8px; padding:1rem 1.2rem; margin-top:1.5rem;">
+      <h3 style="margin:0 0 .5rem; color:#1f5a68;">Before ${isPickup ? "pickup" : "delivery"} — what we'll need from you</h3>
+      <ul style="margin:.35rem 0 0; padding-left:1.2rem;">
+        ${requirements.map(r => `<li>${escHtml(r)}</li>`).join("")}
+      </ul>
+      <p style="margin-top:.85rem; font-size:.92rem; color:#666;">We'll also email a rental agreement through DocuSign to this address for you to sign before ${isPickup ? "pickup" : "delivery"}.</p>
+    </div>
+
+    <p style="margin-top:1.5rem;">Questions or changes? Just reply to this email — it goes straight to John — or give us a ring at <a href="tel:9362231182">936-223-1182</a>.</p>
+    <p style="margin-top:1.5rem;">— The Polk County Golf Carts crew<br>1732 FM 3277 · Livingston, TX</p>
+  </body></html>`;
+
+  const text = [
+    `You're booked, ${firstName}!`,
+    ``,
+    `Confirmation code: ${record.id}`,
+    ``,
+    `Pickup: ${dates.start}`,
+    `Return: ${dates.end}`,
+    ``,
+    ...(record.items || []).map(it => `  ${it.name} x ${it.qty}  ${fmtMoney(it.lineTotal)}`),
+    `  Tax  ${fmtMoney(p.tax)}`,
+    `  Total  ${fmtMoney(p.total)}`,
+    ``,
+    `Before ${isPickup ? "pickup" : "delivery"} — what we'll need from you:`,
+    ...requirements.map(r => `  - ${r}`),
+    ``,
+    `We'll also email a rental agreement through DocuSign to this address for you to sign before ${isPickup ? "pickup" : "delivery"}.`,
+    ``,
+    `Questions or changes? Just reply to this email — it goes straight to John — or give us a ring at 936-223-1182.`,
+    ``,
+    `— The Polk County Golf Carts crew`,
+    `1732 FM 3277 · Livingston, TX`,
+  ].join("\n");
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "authorization": `Bearer ${env.RESEND_API_KEY}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      from: `Polk County Golf Carts <${from}>`,
+      to: [to],
+      subject,
+      html,
+      text,
+      reply_to: ownerEmail,
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`resend ${res.status}: ${t}`);
   }
 }
 

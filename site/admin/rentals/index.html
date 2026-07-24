@@ -59,6 +59,21 @@
     .bk-pill[data-status="picked-up"]   { color: #1f5a68; background: #d6ecf0; border-color: #9fcfd7; }
     .bk-pill[data-status="delivered"]   { color: #1f5a68; background: #d6ecf0; border-color: #9fcfd7; }
     .bk-pill[data-status="returned"]    { color: #2f6b3b; background: #dff0e1; border-color: #a7d4ad; }
+    /* Deposit-required indicator — pickup date is 3+ months out. */
+    .bk-pill-deposit                    { color: #8a5a00; background: #fff2d1; border-color: #f0d78a; cursor: help; }
+
+    /* Rental-agreement checklist — what to collect from the customer. */
+    .bk-checklist {
+      background: #fff9f4;
+      border: 1px solid #f3c3bc;
+      border-radius: 8px;
+      padding: .6rem .85rem;
+      margin-top: .85rem;
+      font-size: .88rem;
+      color: var(--ink);
+    }
+    .bk-checklist ul { margin: .35rem 0 0; padding-left: 1.2rem; }
+    .bk-checklist li { padding: 1px 0; }
 
     .bk-status-row {
       display: flex; align-items: center; gap: .6rem;
@@ -191,31 +206,75 @@
       const deliveryLabel = { pickup: "Pickup at shop", local: "Free delivery (≤25 mi)", extended: "Extended delivery (25–100 mi, fee quoted separately)" };
       const statusLabel = { "new": "New Order", "picked-up": "Picked Up", "delivered": "Delivered", "returned": "Returned" };
       const statusOptions = ["new", "picked-up", "delivered", "returned"];
+      // 3-months-out threshold for the 50% deposit indicator. Uses the
+      // pickup date, matches the customer-facing rule on Step 4 of the
+      // /rentals/ flow.
+      const isFarOut = (startIso) => {
+        if (!startIso) return false;
+        const startMs = Date.parse(startIso + "T00:00:00");
+        return Number.isFinite(startMs) && (startMs - Date.now()) / 86400000 >= 90;
+      };
+      // Rental-agreement checklist per delivery type — matches the docx
+      // requirements list. Pickup needs DL + insurance + plate photo;
+      // delivery needs DL only.
+      const requirementsFor = (delivery) => delivery === "pickup"
+        ? ["Driver's license (each driver)", "Auto insurance", "License plate photo"]
+        : ["Driver's license (each driver)"];
+
+      const fmtAddress = (c) => {
+        const line1 = c.street || "";
+        const line2 = [c.city, c.state].filter(Boolean).join(", ");
+        const line3 = c.zip || "";
+        return [line1, [line2, line3].filter(Boolean).join(" ")].filter(Boolean).join(" · ");
+      };
+
       for (const b of entries) {
         const wrap = document.createElement("article");
         wrap.className = "bk-entry";
         const head = document.createElement("header");
         const status = b.status || "new";
-        head.innerHTML = `<span class="id"></span><span class="bk-pill" data-status="${status}">${statusLabel[status] || status}</span><span class="ts"></span>`;
+        const c = b.contact || {};
+        const depositBadge = isFarOut(b.dates?.start)
+          ? `<span class="bk-pill bk-pill-deposit" title="Pickup is 3+ months out — collect 50% deposit to hold the booking">50% DEPOSIT</span>`
+          : "";
+        head.innerHTML = `<span class="id"></span><span class="bk-pill" data-status="${status}">${statusLabel[status] || status}</span>${depositBadge}<span class="ts"></span>`;
         head.querySelector(".id").textContent = b.id || "—";
         head.querySelector(".ts").textContent = new Date(b.ts).toLocaleString();
         wrap.appendChild(head);
 
         const grid = document.createElement("div");
         grid.className = "grid";
-        const c = b.contact || {};
         grid.innerHTML = `
           <div class="field"><b>Customer</b><span></span></div>
           <div class="field"><b>Trip</b><span></span></div>
           <div class="field"><b>Contact</b><span></span></div>
+          <div class="field"><b>Address</b><span></span></div>
           <div class="field"><b>Delivery</b><span></span></div>
+          ${b.delivery !== "pickup" && c.address ? '<div class="field"><b>Drop-off location</b><span></span></div>' : ""}
         `;
         const cells = grid.querySelectorAll(".field span");
         cells[0].textContent = (c.name || "—") + " · " + (c.guests || 1) + " guests";
         cells[1].textContent = fmtDate(b.dates?.start) + " → " + fmtDate(b.dates?.end) + " (" + (b.dates?.days || 0) + " day" + ((b.dates?.days || 0) === 1 ? "" : "s") + ")";
         cells[2].textContent = (c.phone || "—") + " · " + (c.email || "—");
-        cells[3].textContent = (deliveryLabel[b.delivery] || b.delivery || "—") + (c.address ? " · " + c.address : "");
+        cells[3].textContent = fmtAddress(c) || "—";
+        cells[4].textContent = deliveryLabel[b.delivery] || b.delivery || "—";
+        if (cells[5]) cells[5].textContent = c.address || "—";
         wrap.appendChild(grid);
+
+        // Rental-agreement checklist card — reminder of what to
+        // collect from the customer at time of payment. Renders when
+        // the booking is still active (not yet returned) so John can
+        // see at a glance what's outstanding.
+        if (status !== "returned") {
+          const checklist = document.createElement("div");
+          checklist.className = "bk-checklist";
+          const reqs = requirementsFor(b.delivery);
+          checklist.innerHTML = `
+            <b>Collect at time of payment (via text to 936-223-1182):</b>
+            <ul>${reqs.map(r => `<li>${r}</li>`).join("")}</ul>
+          `;
+          wrap.appendChild(checklist);
+        }
 
         if (c.notes) {
           const notes = document.createElement("p");

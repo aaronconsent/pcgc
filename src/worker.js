@@ -190,13 +190,23 @@ async function sendCustomerConfirmationEmail(record, env) {
 
   const requirements = isPickup
     ? [
-        "A photo or scan of your driver's license",
-        "A photo or scan of your auto insurance",
-        "A photo of your vehicle's license plate (the vehicle we'll be loading the cart onto)",
+        "Driver's license (photo or scan) for everyone who will be driving the cart",
+        "Auto insurance (photo or scan)",
+        "Photo of your vehicle's license plate (the vehicle we'll be loading the cart onto)",
       ]
     : [
-        "A photo or scan of the driver's license of whoever will be driving the cart",
+        "Driver's license (photo or scan) for everyone who will be driving the cart",
       ];
+
+  // 50%-deposit note only shows on the customer email if the pickup is
+  // 3+ months out (matches the on-screen review step).
+  let farOutNote = false;
+  if (dates.start) {
+    const startMs = Date.parse(dates.start + "T00:00:00");
+    if (Number.isFinite(startMs) && (startMs - Date.now()) / 86400000 >= 90) {
+      farOutNote = true;
+    }
+  }
 
   const itemRows = (record.items || []).map(it => `
     <tr>
@@ -221,12 +231,22 @@ async function sendCustomerConfirmationEmail(record, env) {
       <tr style="border-top:1px solid #ddd;"><td style="padding:8px 0;"><b>Total</b></td><td style="padding:8px 0; text-align:right;"><b>${fmtMoney(p.total)}</b></td></tr>
     </table>
 
+    <p style="margin-top:1.5rem;"><b>What happens next:</b> We'll follow up by phone or text within a day to confirm your booking and take payment. ${farOutNote ? "Since your pickup is more than 3 months out, we'll collect a <b>50% deposit</b> to hold the reservation and the balance at pickup." : ""}</p>
+
     <div style="background:#fff9f4; border:1px solid #f3c3bc; border-radius:8px; padding:1rem 1.2rem; margin-top:1.5rem;">
-      <h3 style="margin:0 0 .5rem; color:#1f5a68;">Before ${isPickup ? "pickup" : "delivery"} — what we'll need from you</h3>
+      <h3 style="margin:0 0 .5rem; color:#1f5a68;">At time of payment — please text these to 936-223-1182</h3>
       <ul style="margin:.35rem 0 0; padding-left:1.2rem;">
         ${requirements.map(r => `<li>${escHtml(r)}</li>`).join("")}
       </ul>
-      <p style="margin-top:.85rem; font-size:.92rem; color:#666;">We'll also email a rental agreement through DocuSign to this address for you to sign before ${isPickup ? "pickup" : "delivery"}.</p>
+    </div>
+
+    <div style="background:#f4f0e8; border:1px solid #d6cdb8; border-radius:8px; padding:1rem 1.2rem; margin-top:1rem;">
+      <b>Cancellation policy</b>
+      <ul style="margin:.35rem 0 0; padding-left:1.2rem;">
+        <li><b>7+ days</b> before your first rental day — <b>100% refund</b></li>
+        <li><b>4&ndash;6 days</b> before — <b>50% refund</b></li>
+        <li><b>3 days or less</b> — <b>no refund</b></li>
+      </ul>
     </div>
 
     <p style="margin-top:1.5rem;">Questions or changes? Just reply to this email — it goes straight to John — or give us a ring at <a href="tel:9362231182">936-223-1182</a>.</p>
@@ -245,16 +265,22 @@ async function sendCustomerConfirmationEmail(record, env) {
     `  Tax  ${fmtMoney(p.tax)}`,
     `  Total  ${fmtMoney(p.total)}`,
     ``,
-    `Before ${isPickup ? "pickup" : "delivery"} — what we'll need from you:`,
+    `What happens next: We'll follow up by phone or text within a day to confirm your booking and take payment.`,
+    farOutNote ? `Since your pickup is more than 3 months out, we'll collect a 50% deposit to hold the reservation and the balance at pickup.` : null,
+    ``,
+    `At time of payment — please text these to 936-223-1182:`,
     ...requirements.map(r => `  - ${r}`),
     ``,
-    `We'll also email a rental agreement through DocuSign to this address for you to sign before ${isPickup ? "pickup" : "delivery"}.`,
+    `Cancellation policy:`,
+    `  - 7+ days before your first rental day: 100% refund`,
+    `  - 4-6 days before: 50% refund`,
+    `  - 3 days or less: no refund`,
     ``,
     `Questions or changes? Just reply to this email — it goes straight to John — or give us a ring at 936-223-1182.`,
     ``,
     `— The Polk County Golf Carts crew`,
     `1732 FM 3277 · Livingston, TX`,
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -319,7 +345,8 @@ function renderBookingHtml(r) {
       <tr><td style="color:#888;">Phone</td><td><a href="tel:${escHtml(c.phone)}">${escHtml(c.phone)}</a></td></tr>
       <tr><td style="color:#888;">Email</td><td><a href="mailto:${escHtml(c.email)}">${escHtml(c.email)}</a></td></tr>
       ${c.guests ? `<tr><td style="color:#888;">Guests</td><td>${escHtml(c.guests)}</td></tr>` : ""}
-      ${c.address ? `<tr><td style="color:#888; vertical-align:top;">Address</td><td>${escHtml(c.address)}</td></tr>` : ""}
+      ${(c.street || c.city || c.state || c.zip) ? `<tr><td style="color:#888; vertical-align:top;">Address</td><td>${escHtml(c.street)}${(c.city || c.state || c.zip) ? "<br>" : ""}${escHtml(c.city)}${c.city && (c.state || c.zip) ? ", " : ""}${escHtml(c.state)} ${escHtml(c.zip)}</td></tr>` : ""}
+      ${c.address ? `<tr><td style="color:#888; vertical-align:top;">Drop-off</td><td>${escHtml(c.address)}</td></tr>` : ""}
       ${c.notes ? `<tr><td style="color:#888; vertical-align:top;">Notes</td><td>${escHtml(c.notes)}</td></tr>` : ""}
     </table>
 
@@ -356,11 +383,12 @@ function renderBookingText(r) {
     `New rental booking — ${r.id}`,
     ``,
     `Customer`,
-    `  Name:  ${c.name}`,
-    `  Phone: ${c.phone}`,
-    `  Email: ${c.email}`,
-    c.address ? `  Addr:  ${c.address}` : null,
-    c.notes ? `  Notes: ${c.notes}` : null,
+    `  Name:     ${c.name}`,
+    `  Phone:    ${c.phone}`,
+    `  Email:    ${c.email}`,
+    (c.street || c.city || c.state || c.zip) ? `  Address:  ${[c.street, [c.city, c.state].filter(Boolean).join(", "), c.zip].filter(Boolean).join(" · ")}` : null,
+    c.address ? `  Drop-off: ${c.address}` : null,
+    c.notes ? `  Notes:    ${c.notes}` : null,
     ``,
     `Booking`,
     `  Pickup:   ${d.start}`,

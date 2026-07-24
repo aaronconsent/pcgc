@@ -104,6 +104,25 @@
 }
 @media (max-width: 520px) { .rental-grid-2 { grid-template-columns: 1fr; } }
 
+.rental-grid-3 {
+  display: grid; gap: 1rem;
+  grid-template-columns: 2fr 1fr 1fr;
+}
+@media (max-width: 520px) { .rental-grid-3 { grid-template-columns: 1fr; } }
+
+/* Info callouts on the review step — one for the payment requirements
+   list, one for the cancellation policy, one for the deposit note. */
+.rental-info-box {
+  background: #fff9f4;
+  border: 1px solid #f3c3bc;
+  border-radius: 10px;
+  padding: .9rem 1.15rem;
+  margin: 1rem 0;
+  font-size: .95rem;
+}
+.rental-info-box ul { margin: .35rem 0 0; }
+.rental-info-box a { color: var(--teal-dk); }
+
 .rental-meta { font-size: .85rem; color: var(--ink-soft); margin: .8rem 0 0; }
 .rental-meta code { background: var(--bg); padding: 2px 6px; border-radius: 4px; }
 .rental-error {

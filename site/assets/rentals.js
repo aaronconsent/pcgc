@@ -32,9 +32,10 @@ const DELIVERY_EXTENDED_FEE = 0;
 const TAX_RATE = 0.0825;
 
 // ---------- State ----------
-// Bumped to v2 because the schema changed (cart ids + prices). v1
-// sessions get a clean slate so they don't see stale selections.
-const STORAGE_KEY = "pcgc.rental.v4";
+// Bumped to v5 for the address-split schema change (street/city/state/
+// zip are now separate fields; the old `address` slot is repurposed as
+// the delivery drop-off location). v4 sessions get a clean slate.
+const STORAGE_KEY = "pcgc.rental.v5";
 const state = loadState() || {
   step: 1,
   dates: { start: "", end: "" },
@@ -42,7 +43,12 @@ const state = loadState() || {
   bookedIds: [],          // cart ids unavailable for the selected dates
   availabilityOk: true,   // false if /api/availability errored
   delivery: "pickup",
-  contact: { name: "", email: "", phone: "", guests: 2, address: "", notes: "" },
+  contact: {
+    name: "", email: "", phone: "", guests: 2,
+    street: "", city: "", state: "", zip: "",
+    address: "",  // delivery drop-off (only used when delivery != "pickup")
+    notes: "",
+  },
 };
 
 function saveState() {
@@ -67,6 +73,46 @@ function daysBetween(a, b) {
   const start = new Date(a + "T00:00:00");
   const end = new Date(b + "T00:00:00");
   return Math.max(0, Math.round((end - start) / 86400000));
+}
+
+// US federal + observable holidays that trigger the 2-day minimum.
+// Kept as MM-DD strings so any year matches without maintenance for
+// fixed-date holidays. Floating holidays (Memorial Day, Thanksgiving)
+// are handled below in the "special weeks" check.
+const HOLIDAYS_FIXED = new Set([
+  "01-01", // New Year's Day
+  "07-03", "07-04", "07-05", // July 4th window
+  "12-24", "12-25", "12-26", // Christmas window
+  "12-31", // New Year's Eve
+]);
+
+function isHoliday(date) {
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  if (HOLIDAYS_FIXED.has(`${mm}-${dd}`)) return true;
+  // Memorial Day: last Monday of May
+  if (date.getMonth() === 4 && date.getDay() === 1 && date.getDate() >= 25) return true;
+  // Labor Day: first Monday of September
+  if (date.getMonth() === 8 && date.getDay() === 1 && date.getDate() <= 7) return true;
+  // Thanksgiving + Black Friday: 4th Thursday of Nov and the Friday after
+  if (date.getMonth() === 10) {
+    if (date.getDay() === 4 && date.getDate() >= 22 && date.getDate() <= 28) return true;
+    if (date.getDay() === 5 && date.getDate() >= 23 && date.getDate() <= 29) return true;
+  }
+  return false;
+}
+
+// Walks the date range inclusively and returns true if ANY day falls on
+// Saturday, Sunday, or a recognized holiday.
+function rangeHitsWeekendOrHoliday(startIso, endIso) {
+  const start = new Date(startIso + "T00:00:00");
+  const end = new Date(endIso + "T00:00:00");
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dow = d.getDay();
+    if (dow === 0 || dow === 6) return true;
+    if (isHoliday(d)) return true;
+  }
+  return false;
 }
 
 function totalCarts() {
@@ -285,8 +331,18 @@ function initStep1() {
       errEl.hidden = false;
       return;
     }
-    if (daysBetween(state.dates.start, state.dates.end) < 1) {
+    const days = daysBetween(state.dates.start, state.dates.end);
+    if (days < 1) {
       errEl.textContent = "Return date must be at least one day after pickup.";
+      errEl.hidden = false;
+      return;
+    }
+    // Weekend/holiday rentals need a 2-day minimum. Weekend = any day
+    // in the rental range that falls on Saturday or Sunday; holidays
+    // reuse the same rule via a US federal + Texas-notable holiday
+    // list defined below.
+    if (rangeHitsWeekendOrHoliday(state.dates.start, state.dates.end) && days < 2) {
+      errEl.textContent = "Weekend and holiday rentals require a 2-day minimum.";
       errEl.hidden = false;
       return;
     }
@@ -332,15 +388,20 @@ function initStep3() {
   $("#address-field").hidden = (state.delivery === "pickup");
 
   const fields = {
-    "contact-name":   "name",
-    "contact-phone":  "phone",
-    "contact-email":  "email",
-    "contact-guests": "guests",
-    "contact-address":"address",
-    "contact-notes":  "notes",
+    "contact-name":    "name",
+    "contact-phone":   "phone",
+    "contact-email":   "email",
+    "contact-guests":  "guests",
+    "contact-street":  "street",
+    "contact-city":    "city",
+    "contact-state":   "state",
+    "contact-zip":     "zip",
+    "contact-address": "address",
+    "contact-notes":   "notes",
   };
   for (const [id, key] of Object.entries(fields)) {
     const el = $("#" + id);
+    if (!el) continue;
     if (state.contact[key]) el.value = state.contact[key];
     el.addEventListener("input", () => {
       state.contact[key] = el.value;
@@ -351,23 +412,33 @@ function initStep3() {
   $("#to-step-4").addEventListener("click", () => {
     const err = $("#details-error");
     err.hidden = true;
-    const { name, email, phone, guests, address } = state.contact;
-    if (!name || !email || !phone) {
+    const c = state.contact;
+    if (!c.name || !c.email || !c.phone) {
       err.textContent = "Name, email, and phone are required.";
       err.hidden = false;
       return;
     }
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
+    if (!/^\S+@\S+\.\S+$/.test(c.email)) {
       err.textContent = "That email doesn't look right.";
       err.hidden = false;
       return;
     }
-    if (state.delivery !== "pickup" && !address.trim()) {
-      err.textContent = "Add a delivery address.";
+    if (!c.street.trim() || !c.city.trim() || !c.state.trim() || !c.zip.trim()) {
+      err.textContent = "Please fill in your full address (street, city, state, ZIP).";
       err.hidden = false;
       return;
     }
-    if (Number(guests) < 1) {
+    if (!/^\d{5}(-\d{4})?$/.test(c.zip.trim())) {
+      err.textContent = "ZIP should be 5 digits (or 5+4).";
+      err.hidden = false;
+      return;
+    }
+    if (state.delivery !== "pickup" && !c.address.trim()) {
+      err.textContent = "Add the delivery drop-off location.";
+      err.hidden = false;
+      return;
+    }
+    if (Number(c.guests) < 1) {
       err.textContent = "Number of guests must be at least 1.";
       err.hidden = false;
       return;
@@ -376,7 +447,7 @@ function initStep3() {
   });
 }
 
-// ---------- Step 4: Payment ----------
+// ---------- Step 4: Review & submit ----------
 function renderPaymentSummary() {
   const out = $("#rental-summary");
   const p = computePrice();
@@ -392,49 +463,51 @@ function renderPaymentSummary() {
     lines.push(`<div class="row muted"><span>Extended delivery (25–100 mi)</span><span>Quoted separately</span></div>`);
   }
   lines.push(`<div class="row"><span>Tax (${(TAX_RATE * 100).toFixed(2)}%)</span><span>${fmtMoney(p.tax)}</span></div>`);
-  lines.push(`<div class="row total"><span>Total today</span><span>${fmtMoney(p.grand)}</span></div>`);
+  lines.push(`<div class="row total"><span>Total</span><span>${fmtMoney(p.grand)}</span></div>`);
   out.innerHTML = lines.join("");
-  $("#pay-amount").textContent = fmtMoney(p.grand);
+
+  // Deposit note appears only when the pickup date is 3+ months out.
+  const depositNote = $("#deposit-note");
+  depositNote.hidden = !bookingIsFarOut();
+
+  // Requirements text — pickup needs DL + insurance + plate photo;
+  // delivery only needs the driver's license. Copy matches the owner's
+  // docx: everything goes to us via text at time of payment.
+  const isPickup = state.delivery === "pickup";
+  const reqs = isPickup
+    ? [
+        "Driver's license (photo or scan) for everyone who will be driving the cart",
+        "Auto insurance (photo or scan)",
+        "Photo of your vehicle's license plate (the vehicle we'll be loading the cart onto)",
+      ]
+    : [
+        "Driver's license (photo or scan) for everyone who will be driving the cart",
+      ];
+  $("#review-requirements").innerHTML = reqs.map(r => `<li>${r}</li>`).join("");
+}
+
+// True when the pickup date is 3+ months (~90 days) after today. Owner's
+// docx: 50% deposit required to book that far out.
+function bookingIsFarOut() {
+  if (!state.dates.start) return false;
+  const start = new Date(state.dates.start + "T00:00:00");
+  const now = new Date();
+  const diffDays = (start - now) / 86400000;
+  return diffDays >= 90;
 }
 
 function initStep4() {
-  const card = $("#pay-card");
-  card.addEventListener("input", () => {
-    let v = card.value.replace(/\D/g, "").slice(0, 19);
-    v = v.replace(/(.{4})/g, "$1 ").trim();
-    card.value = v;
-  });
-  const exp = $("#pay-exp");
-  exp.addEventListener("input", () => {
-    let v = exp.value.replace(/\D/g, "").slice(0, 4);
-    if (v.length >= 3) v = v.slice(0, 2) + "/" + v.slice(2);
-    exp.value = v;
-  });
-  const cvc = $("#pay-cvc");
-  cvc.addEventListener("input", () => {
-    cvc.value = cvc.value.replace(/\D/g, "").slice(0, 4);
-  });
-
-  $("#pay-now").addEventListener("click", payNow);
+  $("#pay-now").addEventListener("click", submitBooking);
 }
 
-async function payNow() {
+async function submitBooking() {
   const err = $("#pay-error");
   err.hidden = true;
-  const card = $("#pay-card").value.replace(/\s/g, "");
-  const exp = $("#pay-exp").value;
-  const cvc = $("#pay-cvc").value;
-  const name = $("#pay-name").value.trim();
-  const zip = $("#pay-zip").value.trim();
-  if (card.length < 13 || !/^\d{2}\/\d{2}$/.test(exp) || cvc.length < 3 || !name || !zip) {
-    err.textContent = "Please complete all card fields.";
-    err.hidden = false;
-    return;
-  }
 
   const btn = $("#pay-now");
   btn.disabled = true;
-  btn.textContent = "Processing…";
+  const prevLabel = btn.textContent;
+  btn.textContent = "Submitting…";
 
   const booking = buildBookingRecord();
 
@@ -447,8 +520,20 @@ async function payNow() {
     if (res.ok) {
       const body = await res.json();
       if (body.id) booking.id = body.id;
+    } else {
+      err.textContent = "We couldn't reach our server. Please try again in a minute or call 936-223-1182.";
+      err.hidden = false;
+      btn.disabled = false;
+      btn.textContent = prevLabel;
+      return;
     }
-  } catch (_) {}
+  } catch (_) {
+    err.textContent = "Network error. Please try again or call 936-223-1182.";
+    err.hidden = false;
+    btn.disabled = false;
+    btn.textContent = prevLabel;
+    return;
+  }
 
   state.bookingId = booking.id;
   state.bookingRecord = booking;
@@ -508,24 +593,23 @@ function renderConfirmation() {
     ? "Quoted separately"
     : (b.pricing.deliveryFee ? fmtMoney(b.pricing.deliveryFee) : "Free");
   lines.push(`<div class="row"><span>${deliveryLabel}</span><span>${deliveryDisplay}</span></div>`);
-  lines.push(`<div class="row total"><span>Total paid</span><span>${fmtMoney(b.pricing.total)}</span></div>`);
+  lines.push(`<div class="row total"><span>Total</span><span>${fmtMoney(b.pricing.total)}</span></div>`);
   out.innerHTML = lines.join("");
 
-  // Per-delivery requirements list. Pickup customers need driver's
-  // license, insurance, license plate photo + email for DocuSign.
-  // Delivery customers only need the driver's license + email.
+  // Per-delivery requirements. Owner's docx: everything goes to us by
+  // text at time of payment. Pickup customers need DL + insurance +
+  // plate photo; delivery only needs the driver's license of whoever
+  // will drive.
   const isPickup = b.delivery === "pickup";
-  $("#next-steps-title").textContent = isPickup
-    ? "Before pickup — what we'll need from you"
-    : "Before delivery — what we'll need from you";
+  $("#next-steps-title").textContent = "At time of payment — please text these to 936-223-1182";
   const requirements = isPickup
     ? [
-        "A photo or scan of your driver's license",
-        "A photo or scan of your auto insurance",
-        "A photo of your vehicle's license plate (the vehicle we'll be loading the cart onto)",
+        "Driver's license (photo or scan) for everyone who will be driving the cart",
+        "Auto insurance (photo or scan)",
+        "Photo of your vehicle's license plate (the vehicle we'll be loading the cart onto)",
       ]
     : [
-        "A photo or scan of the driver's license of whoever will be driving the cart",
+        "Driver's license (photo or scan) for everyone who will be driving the cart",
       ];
   $("#requirements-list").innerHTML = requirements.map(r => `<li>${r}</li>`).join("");
   $("#docusign-email").textContent = b.contact.email || "your email";

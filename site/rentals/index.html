@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.cdnfonts.com">
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/grobold">
   <link rel="stylesheet" href="/assets/site.css">
-  <link rel="stylesheet" href="/assets/rentals.css?v=92fb6ee3">
+  <link rel="stylesheet" href="/assets/rentals.css?v=b6fe6c56">
   <meta property="og:title" content="Rent a Golf Cart · Polk County Golf Carts">
   <meta property="og:description" content="Book a golf cart rental in East Texas — up to 8 carts per booking, free delivery within 25 miles of Livingston, extended service up to 75 miles.">
   <meta property="og:image" content="https://polkcountygolfcarts.com/assets/og/rentals.png">
@@ -69,7 +69,7 @@
         <button class="btn btn-coral" id="to-step-2" type="button">Continue →</button>
       </div>
     </div>
-    <p class="rental-fineprint">Cancellation policy: 50% refund if you cancel more than 72 hours before pickup. Within 72 hours of pickup, non-refundable.</p>
+    <p class="rental-fineprint">Weekend/holiday rentals: 2-day minimum. Cancellations: 7+ days out = 100% refund, 4&ndash;6 days = 50%, 3 days or less = no refund.</p>
   </section>
 
   <!-- ============ STEP 2 · CARTS (filtered by availability) ============ -->
@@ -150,9 +150,33 @@
         </label>
       </div>
 
+      <!-- Billing address — collected on every booking for the rental
+           agreement, regardless of pickup vs delivery. -->
+      <label class="rental-field">
+        <span>Street address</span>
+        <input type="text" id="contact-street" required autocomplete="street-address" placeholder="123 Main St">
+      </label>
+      <div class="rental-grid-3">
+        <label class="rental-field">
+          <span>City</span>
+          <input type="text" id="contact-city" required autocomplete="address-level2">
+        </label>
+        <label class="rental-field">
+          <span>State</span>
+          <input type="text" id="contact-state" required autocomplete="address-level1" placeholder="TX" maxlength="2" style="text-transform:uppercase">
+        </label>
+        <label class="rental-field">
+          <span>ZIP</span>
+          <input type="text" id="contact-zip" required autocomplete="postal-code" placeholder="77351" inputmode="numeric">
+        </label>
+      </div>
+
+      <!-- Delivery drop-off spot (may be different from the billing
+           address — e.g. a rented lake house). Only shown when delivery
+           is selected. -->
       <label class="rental-field" id="address-field" hidden>
-        <span>Delivery address</span>
-        <input type="text" id="contact-address" placeholder="Street, city, ZIP" autocomplete="street-address">
+        <span>Where should we drop the cart off?</span>
+        <input type="text" id="contact-address" placeholder="Address, resort name, or landmark" autocomplete="off">
       </label>
 
       <label class="rental-field">
@@ -167,47 +191,42 @@
     </div>
   </section>
 
-  <!-- ============ STEP 4 · PAYMENT ============ -->
+  <!-- ============ STEP 4 · REVIEW & SUBMIT ============ -->
   <section class="rental-step" data-step="4" hidden aria-labelledby="s4-title">
     <div class="rental-card">
       <button class="rental-back" id="back-to-3" type="button">← Details</button>
       <span class="eyebrow">Step 4 of 4</span>
-      <h1 id="s4-title">Confirm and pay.</h1>
+      <h1 id="s4-title">Review and submit.</h1>
+      <p class="lede-text" style="margin-top:.25rem;">This sends us your booking request. We'll follow up by phone or text to confirm and collect payment.</p>
 
       <div class="rental-summary" id="rental-summary"></div>
 
-      <fieldset class="rental-fieldset rental-payment">
-        <legend>Card details</legend>
-        <label class="rental-field">
-          <span>Card number</span>
-          <input type="text" id="pay-card" inputmode="numeric" autocomplete="cc-number" placeholder="4242 4242 4242 4242" required>
-        </label>
-        <div class="rental-grid-2">
-          <label class="rental-field">
-            <span>Expiry (MM/YY)</span>
-            <input type="text" id="pay-exp" inputmode="numeric" autocomplete="cc-exp" placeholder="12/28" required>
-          </label>
-          <label class="rental-field">
-            <span>CVC</span>
-            <input type="text" id="pay-cvc" inputmode="numeric" autocomplete="cc-csc" placeholder="123" required>
-          </label>
-        </div>
-        <label class="rental-field">
-          <span>Name on card</span>
-          <input type="text" id="pay-name" autocomplete="cc-name" required>
-        </label>
-        <label class="rental-field">
-          <span>ZIP</span>
-          <input type="text" id="pay-zip" inputmode="numeric" autocomplete="postal-code" placeholder="77351" required>
-        </label>
-      </fieldset>
-      <p class="rental-fineprint">Cancel more than 72 hours before pickup for a 50% refund; within 72 hours of pickup, non-refundable.</p>
+      <!-- Deposit note surfaces only when the pickup date is 3+
+           months out (populated by rentals.js). -->
+      <div class="rental-info-box" id="deposit-note" hidden>
+        <b>50% deposit required</b> — your pickup date is more than 3 months out, so we'll take a 50% deposit to hold the booking. The balance is due at pickup.
+      </div>
+
+      <div class="rental-info-box">
+        <b>What we'll need from you at time of payment (please text to <a href="tel:9362231182">936-223-1182</a>):</b>
+        <ul id="review-requirements" style="margin:.5rem 0 0; padding-left:1.2rem;"></ul>
+      </div>
+
+      <div class="rental-info-box">
+        <b>Cancellation policy</b>
+        <ul style="margin:.5rem 0 0; padding-left:1.2rem;">
+          <li><b>7+ days</b> before your first rental day &mdash; <b>100% refund</b>.</li>
+          <li><b>4&ndash;6 days</b> before &mdash; <b>50% refund</b>.</li>
+          <li><b>3 days or less</b> &mdash; <b>no refund</b>.</li>
+        </ul>
+      </div>
+
+      <p class="rental-fineprint">Weekend and holiday rentals require a 2-day minimum.</p>
 
       <p class="rental-error" id="pay-error" hidden></p>
       <div class="rental-cta-row">
-        <button class="btn btn-coral" id="pay-now" type="button">Pay <b id="pay-amount">$0</b> now</button>
+        <button class="btn btn-coral" id="pay-now" type="button">Submit booking request</button>
       </div>
-      <p class="rental-meta">🔒 This is a mock checkout. No real card is charged.</p>
     </div>
   </section>
 
@@ -240,6 +259,6 @@
   Polk County Golf Carts · 1732 FM 3277, Livingston, TX · <a href="tel:9362231182">936-223-1182</a>
 </footer>
 
-<script src="/assets/rentals.js?v=4338af58"></script>
+<script src="/assets/rentals.js?v=5d7df4d0"></script>
 </body>
 </html>

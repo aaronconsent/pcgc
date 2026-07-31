@@ -1123,182 +1123,223 @@ function renderConfirmation() {
 
 // ---------- Shareable social image (Step 5) ---------- //
 //
-// Everything here is zero-dependency: a Canvas 2D draw for the image,
-// navigator.share (Web Share API Level 2) for the native share sheet
-// when the browser + platform support it (Safari iOS, Chrome Android,
-// Edge, Chrome Windows 15.90+). Falls back to download + copy-caption
-// on unsupported browsers.
+// Zero-dependency Canvas 2D image composition + platform-specific
+// share routing. Facebook uses their sharer URL (works everywhere).
+// Instagram and Nextdoor have no web share URL, so we route through
+// navigator.share() on mobile (which shows the native share sheet
+// with those platforms as options) and download-the-image + open-
+// the-platform on desktop.
 
+const SHARE_URL     = "https://polkcountygolfcarts.com/rentals/";
 const SHARE_CAPTION = () => (
-  `Just booked a golf cart rental at Polk County Golf Carts for our Lake Livingston trip! 🚗⛳ Family-owned since 2020, best carts in East Texas.\n\nRent yours at https://polkcountygolfcarts.com/rentals/ · 936-223-1182`
+  `Just booked a golf cart rental at Polk County Golf Carts for our Lake Livingston trip! 🚗⛳ Family-owned since 2020, best carts in East Texas.\n\nRent yours at ${SHARE_URL} · 936-223-1182`
 );
 
-let _shareBlob = null;   // cached PNG blob so re-clicking Share doesn't regenerate
-let _shareBooking = null;
+let _shareBlob = null;
 
 async function initShareCard(booking) {
-  _shareBooking = booking;
   const card = $("#share-card");
   const previewImg = $("#share-preview-img");
   const previewLoading = $("#share-preview-loading");
-  const shareBtn = $("#share-btn");
-  const downloadBtn = $("#share-download-btn");
-  const copyBtn = $("#share-copy-btn");
   const toast = $("#share-toast");
   if (!card) return;
 
   card.hidden = false;
-  previewImg.hidden = true;
+  previewImg.style.visibility = "hidden";
   previewLoading.hidden = false;
 
   try {
     _shareBlob = await generateShareImage(booking);
     previewImg.src = URL.createObjectURL(_shareBlob);
-    previewImg.hidden = false;
+    previewImg.style.visibility = "visible";
     previewLoading.hidden = true;
   } catch (e) {
     previewLoading.textContent = "Couldn't generate share image — try refreshing.";
     return;
   }
 
-  // Wire the three buttons (idempotent — safe if renderConfirmation
-  // runs more than once).
-  const flashToast = (msg, ms = 3000) => {
-    toast.textContent = msg;
+  const flashToast = (html, ms = 5000) => {
+    toast.innerHTML = html;
     toast.hidden = false;
     clearTimeout(flashToast._t);
     flashToast._t = setTimeout(() => { toast.hidden = true; }, ms);
   };
 
-  shareBtn.onclick = async () => {
-    if (!_shareBlob) return;
-    const file = new File([_shareBlob], "pcgc-rental.png", { type: "image/png" });
-    const shareData = {
-      files: [file],
-      title: "Polk County Golf Carts",
-      text: SHARE_CAPTION(),
-    };
-    // canShare with files is Web Share Level 2 — Safari iOS 15+,
-    // Chrome Android, Edge, some desktop Chromes. Fall back
-    // gracefully otherwise.
-    if (navigator.canShare && navigator.canShare(shareData)) {
-      try {
-        await navigator.share(shareData);
-        if (window.pcgcTrack) window.pcgcTrack("booking-shared");
-        return;
-      } catch (e) {
-        // AbortError = user cancelled the share sheet — silent no-op.
-        if (e && e.name !== "AbortError") flashToast("Share cancelled or failed. Try Download instead.");
-        return;
-      }
-    }
-    // Fallback for desktops without Web Share API — copy caption +
-    // hint the user to save the image below.
-    try { await navigator.clipboard.writeText(SHARE_CAPTION()); } catch (_) {}
-    flashToast("Caption copied ✓ — save the image below and paste both wherever you're posting.", 5000);
-  };
-
-  downloadBtn.onclick = () => {
-    if (!_shareBlob) return;
-    const url = URL.createObjectURL(_shareBlob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pcgc-rental-${booking.id || "share"}.png`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    flashToast("Downloaded ✓");
-    if (window.pcgcTrack) window.pcgcTrack("booking-shared");
-  };
-
-  copyBtn.onclick = async () => {
-    try {
-      await navigator.clipboard.writeText(SHARE_CAPTION());
-      flashToast("Caption copied ✓");
-    } catch (_) {
-      flashToast("Copy failed — long-press the caption to copy manually.");
-    }
-  };
+  // Wire each platform button. Using ONCE-registered listener via
+  // dataset flag so re-rendering Step 5 doesn't double-fire.
+  document.querySelectorAll(".share-btn").forEach(btn => {
+    if (btn.dataset.wired === "1") return;
+    btn.dataset.wired = "1";
+    btn.addEventListener("click", () => handleShareClick(btn.dataset.platform, flashToast));
+  });
 }
 
-// Draws a 1080x1080 branded share card on an offscreen canvas.
-// Layout:
-//   background: coral -> teal diagonal gradient
-//   cream card in the middle (90% inset)
-//   cart photo top of card (16:9-ish)
-//   "Just booked at PCGC!" headline
-//   customer first name + dates
-//   URL + phone footer
-// Returns a PNG blob.
+async function handleShareClick(platform, flashToast) {
+  if (!_shareBlob) return;
+
+  // Silent-copy the caption to clipboard on every click — makes
+  // the "paste into the app" step frictionless.
+  try { await navigator.clipboard.writeText(SHARE_CAPTION()); } catch (_) {}
+
+  const file = new File([_shareBlob], "pcgc-rental.png", { type: "image/png" });
+  const canWebShare = navigator.canShare && navigator.canShare({ files: [file] });
+
+  // Universal path on mobile: native share sheet has all three
+  // platforms as installed-app options. Cleanest UX by far.
+  if (canWebShare) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: "Polk County Golf Carts",
+        text: SHARE_CAPTION(),
+      });
+      if (window.pcgcTrack) window.pcgcTrack("booking-shared");
+      return;
+    } catch (e) {
+      // User cancelled — silent no-op. Anything else falls through
+      // to the platform-specific desktop path below.
+      if (e && e.name === "AbortError") return;
+    }
+  }
+
+  // Desktop path — no Web Share API OR share failed. Route per
+  // platform with a helpful toast + auto-download for platforms
+  // that need the user to attach the image manually.
+  if (window.pcgcTrack) window.pcgcTrack("booking-shared");
+
+  if (platform === "facebook") {
+    // Facebook Sharer accepts a URL and pulls OG image + title from
+    // the target page. Uses the /rentals/ page's OG image (branded
+    // PCGC card) rather than the customer's booking image.
+    const u = encodeURIComponent(SHARE_URL);
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${u}`, "_blank", "noopener,width=680,height=560");
+    flashToast(`Caption copied ✓ — paste into your Facebook post. Opening Facebook…`);
+    return;
+  }
+
+  if (platform === "instagram") {
+    // No web-share URL exists for IG. Save the image to disk so the
+    // user can drop it into an IG Story from their computer's
+    // Meta account (or AirDrop to their phone).
+    triggerDownload(_shareBlob, "pcgc-rental.png");
+    flashToast(
+      `Instagram doesn't allow web-posting — the image just downloaded. ` +
+      `Post it as a Story from the <a href="https://www.instagram.com/" target="_blank" rel="noopener">Instagram app</a> ` +
+      `(paste the copied caption). On your phone? Use the Share button on this page instead — Instagram will show up in the share sheet.`
+    , 12000);
+    return;
+  }
+
+  if (platform === "nextdoor") {
+    // Nextdoor has no public share intent URL. Same play as IG:
+    // download the image, open Nextdoor, guide the user.
+    triggerDownload(_shareBlob, "pcgc-rental.png");
+    flashToast(
+      `The image just downloaded — paste the caption and drop the image into a new post at ` +
+      `<a href="https://nextdoor.com/news_feed/" target="_blank" rel="noopener">nextdoor.com</a>. ` +
+      `On your phone? Use the Share button on this page and pick Nextdoor from the sheet.`
+    , 12000);
+    return;
+  }
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Redesigned 1080x1080 share image — Instagram-style full-bleed
+// photo with a dark gradient overlay at the bottom for text.
+// Layout (top -> bottom):
+//   Cart photo covers the whole square
+//   Coral accent bar top-left with "POLK COUNTY GOLF CARTS"
+//   Dark gradient fades in over the bottom 40%
+//   "JUST BOOKED WITH" pre-header (small caps, coral)
+//   Big serif headline "Cart Day. Lake Day."
+//   White subhead — First name · dates
+//   Cart name in coral accent
+//   Small footer: URL + phone
 async function generateShareImage(booking) {
   const W = 1080, H = 1080;
   const c = document.createElement("canvas");
   c.width = W; c.height = H;
   const ctx = c.getContext("2d");
 
-  // Background: brand gradient
-  const grad = ctx.createLinearGradient(0, 0, W, H);
-  grad.addColorStop(0, "#e85a4f");
-  grad.addColorStop(1, "#1f5a68");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
-
-  // Interior card
-  const pad = 48;
-  roundRect(ctx, pad, pad, W - pad * 2, H - pad * 2, 32, "#fbf8f3");
-
-  // Cart photo (of the first cart they rented, if any)
+  // 1. Full-bleed cart photo, object-fit: cover
   const cart = (booking.items && booking.items[0]) || null;
   const cartMeta = cart ? CARTS.find(x => x.id === cart.id) : null;
   const imgSrc = (cartMeta && cartMeta.img) || "/assets/photos/rentals/limo.jpg";
-
   const cartImg = await loadImage(imgSrc).catch(() => null);
-  const photoX = pad + 48, photoY = pad + 48;
-  const photoW = W - pad * 2 - 96, photoH = 520;
-  ctx.save();
-  roundRect(ctx, photoX, photoY, photoW, photoH, 20, null);
-  ctx.clip();
-  if (cartImg) drawCover(ctx, cartImg, photoX, photoY, photoW, photoH);
-  else { ctx.fillStyle = "#e6f1f3"; ctx.fillRect(photoX, photoY, photoW, photoH); }
-  ctx.restore();
+  if (cartImg) drawCover(ctx, cartImg, 0, 0, W, H);
+  else { ctx.fillStyle = "#1f5a68"; ctx.fillRect(0, 0, W, H); }
 
-  // Headline
-  ctx.textAlign = "center";
+  // 2. Bottom gradient overlay for text legibility (transparent
+  //    at ~35% height fading to near-black at bottom).
+  const grad = ctx.createLinearGradient(0, H * 0.30, 0, H);
+  grad.addColorStop(0.0, "rgba(0,0,0,0)");
+  grad.addColorStop(0.35, "rgba(0,0,0,0.35)");
+  grad.addColorStop(1.0, "rgba(15,40,50,0.92)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // 3. Top-left brand tag with coral underline
+  ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = "#1f5a68";
-  ctx.font = "700 68px Georgia, 'Times New Roman', serif";
-  ctx.fillText("Just booked at PCGC!", W / 2, photoY + photoH + 90);
+  ctx.fillStyle = "rgba(255,255,255,0.95)";
+  ctx.font = "700 28px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+  const brandText = "POLK COUNTY GOLF CARTS";
+  ctx.fillText(brandText, 60, 78);
+  const brandW = ctx.measureText(brandText).width;
+  ctx.fillStyle = "#e85a4f";
+  ctx.fillRect(60, 92, brandW, 3);
 
-  // First name + dates
+  // 4. Bottom text stack
   const c1 = booking.contact || {};
   const firstName = (c1.name || "").split(/\s+/)[0] || "";
   const start = fmtShort(booking.dates?.start);
   const end = fmtShort(booking.dates?.end);
-  ctx.fillStyle = "#555";
-  ctx.font = "500 32px system-ui, -apple-system, Segoe UI, sans-serif";
-  const sub = firstName ? `${firstName} · ${start} → ${end}` : `${start} → ${end}`;
-  ctx.fillText(sub, W / 2, photoY + photoH + 140);
 
-  // Cart-name line (e.g. "Cart #2 — The Limo")
+  // Pre-header: JUST BOOKED WITH
+  ctx.fillStyle = "#e85a4f";
+  ctx.font = "700 26px system-ui, sans-serif";
+  ctx.letterSpacing = "0.15em"; // ignored by canvas API but harmless
+  ctx.fillText("JUST BOOKED WITH POLK COUNTY GOLF CARTS", 60, H - 330);
+
+  // Main headline — big, serif, tight leading over 2 lines
+  ctx.fillStyle = "#fff";
+  ctx.font = "800 96px Georgia, 'Times New Roman', serif";
+  ctx.fillText("Cart Day.", 60, H - 240);
+  ctx.fillText("Lake Day.", 60, H - 150);
+
+  // Sub: first name + dates
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.font = "500 34px system-ui, -apple-system, Segoe UI, sans-serif";
+  const subline = firstName
+    ? `${firstName} · ${start} → ${end}`
+    : `${start} → ${end}`;
+  ctx.fillText(subline, 60, H - 95);
   if (cartMeta) {
-    ctx.fillStyle = "#e85a4f";
-    ctx.font = "700 28px system-ui, -apple-system, Segoe UI, sans-serif";
-    ctx.fillText(cartMeta.name, W / 2, photoY + photoH + 185);
+    ctx.fillStyle = "#f8bcb6"; // soft coral
+    ctx.font = "600 26px system-ui, sans-serif";
+    ctx.fillText(cartMeta.name, 60, H - 60);
   }
 
-  // Footer strip
-  const footerY = H - pad - 100;
-  ctx.fillStyle = "#e85a4f";
-  ctx.fillRect(pad, footerY, W - pad * 2, 4);
-  ctx.fillStyle = "#1f5a68";
-  ctx.font = "700 36px Georgia, serif";
-  ctx.fillText("polkcountygolfcarts.com", W / 2, footerY + 55);
-  ctx.fillStyle = "#666";
-  ctx.font = "400 26px system-ui, sans-serif";
-  ctx.fillText("Livingston, TX · 936-223-1182", W / 2, footerY + 92);
+  // 5. Footer strip right side: URL
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#fff";
+  ctx.font = "700 30px Georgia, serif";
+  ctx.fillText("polkcountygolfcarts.com", W - 60, H - 95);
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.font = "400 22px system-ui, sans-serif";
+  ctx.fillText("Livingston, TX · 936-223-1182", W - 60, H - 60);
 
-  return new Promise((resolve) => c.toBlob(resolve, "image/png"));
+  return new Promise((resolve) => c.toBlob(resolve, "image/png", 0.94));
 }
 
 // Canvas draw helpers.

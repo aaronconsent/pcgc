@@ -110,35 +110,100 @@
 }
 @media (max-width: 520px) { .rental-grid-3 { grid-template-columns: 1fr; } }
 
-/* Shareable social image card on Step 5. Preview centered above three
-   action buttons (share sheet / download / copy caption). */
+/* Shareable social card on Step 5 — full-bleed image preview above
+   three platform-branded buttons (Facebook / Instagram / Nextdoor).
+   The visual weight is on the image; buttons are supporting actors. */
 .share-card {
-  background: linear-gradient(140deg, #fff9f4 0%, #e6f1f3 100%);
-  border: 2px solid var(--coral);
-  border-radius: 14px;
-  padding: 1.5rem 1.75rem;
-  box-shadow: 0 6px 24px rgba(232, 90, 79, .12);
+  margin-top: 2rem;
+  padding: 0;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 24px rgba(20,50,58,.1);
+}
+.share-header {
+  padding: 1.5rem 1.75rem 0;
+  text-align: center;
+}
+.share-header h2 {
+  margin: 0 0 .35rem;
+  color: var(--teal-dk);
+  font-size: clamp(1.35rem, 3vw, 1.7rem);
+}
+.share-header p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: .95rem;
 }
 .share-preview {
+  padding: 1.25rem 1.75rem 0;
   display: flex; justify-content: center;
-  margin: 1rem 0;
-  min-height: 100px;
+  min-height: 120px;
+  position: relative;
 }
 .share-preview img {
   max-width: 100%;
-  max-height: 460px;
+  max-height: 520px;
   border-radius: 12px;
-  box-shadow: 0 8px 28px rgba(20,50,58,.18);
-  background: #fff;
+  box-shadow: 0 10px 32px rgba(20,50,58,.22);
+  background: #f4f0e8;
+  display: block;
 }
+.share-loading {
+  position: absolute;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  color: var(--ink-soft); font-size: .9rem;
+}
+
+/* Platform-branded share buttons. Each uses its brand color as the
+   background; hover slightly darkens; icons come from the inline
+   SVG in the markup. Layout: horizontal on desktop, stacked on
+   narrow phones. */
 .share-actions {
-  display: flex; flex-wrap: wrap; gap: .5rem;
-  justify-content: center;
-  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .6rem;
+  padding: 1.25rem 1.75rem 1.75rem;
 }
-.share-actions .btn { font-size: .95rem; }
-#share-toast { animation: toastFadeIn .25s ease; }
-@keyframes toastFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (max-width: 520px) {
+  .share-actions { grid-template-columns: 1fr; }
+}
+.share-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: .55rem;
+  padding: .85rem 1rem;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font: 600 .98rem inherit;
+  cursor: pointer;
+  transition: transform .1s ease, filter .15s ease, box-shadow .15s ease;
+  box-shadow: 0 3px 10px rgba(0,0,0,.12);
+}
+.share-btn:hover  { filter: brightness(0.94); transform: translateY(-1px); }
+.share-btn:active { transform: translateY(0); }
+.share-fb  { background: #1877f2; }
+.share-ig  { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
+.share-nd  { background: #46a67c; }
+.share-btn svg { flex-shrink: 0; }
+
+.share-toast {
+  margin: 0 1.75rem 1.5rem;
+  padding: .65rem 1rem;
+  background: var(--bg-alt);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--teal-dk);
+  font-size: .88rem;
+  text-align: center;
+  animation: shareToastIn .25s ease;
+}
+.share-toast a { color: var(--coral); }
+@keyframes shareToastIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
 
 /* flatpickr — visible alt-input needs to match the rest of the form,
    and the calendar popup should pick up our teal accent color. */

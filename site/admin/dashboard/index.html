@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Conversion Dashboard · PCGC Admin</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/logos/logo-color.svg">
+  <link rel="stylesheet" href="/assets/site.css">
+  <style>
+    .dash-page { max-width: 1080px; margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+    .dash-page h1 { color: var(--teal-dk); margin-bottom: .25rem; }
+    .dash-page .sub { color: var(--ink-soft); margin: 0 0 1rem; }
+    .dash-nav { display: flex; gap: 1rem; margin-bottom: 1.5rem; font-size: .92rem; }
+    .dash-nav a { color: var(--teal-dk); text-decoration: none; }
+    .dash-nav a:hover { text-decoration: underline; }
+
+    .dash-controls {
+      display: flex; align-items: center; gap: .5rem;
+      margin: 1rem 0 1.5rem; flex-wrap: wrap;
+    }
+    .dash-controls label { font-weight: 600; font-size: .92rem; color: var(--ink-soft); }
+    .dash-controls select {
+      font: inherit; padding: .35rem .6rem;
+      border: 1px solid var(--line); border-radius: 6px; background: #fff;
+    }
+
+    .dash-kpis {
+      display: grid; gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      margin-bottom: 2rem;
+    }
+    .kpi {
+      background: #fff; border: 1px solid var(--line);
+      border-left: 4px solid var(--coral);
+      border-radius: 10px; padding: 1rem 1.15rem;
+      box-shadow: var(--shadow);
+    }
+    .kpi b { display: block; font-size: 2rem; color: var(--teal-dk); line-height: 1; }
+    .kpi span { display: block; margin-top: .35rem; font-size: .85rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .06em; }
+    .kpi.accent { border-left-color: var(--teal-dk); }
+
+    /* Simple SVG bar chart per event. One row per event, one bar per day. */
+    .chart-wrap {
+      background: #fff; border: 1px solid var(--line); border-radius: 10px;
+      padding: 1.15rem 1.25rem; margin-bottom: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+    .chart-wrap h2 { margin: 0 0 .5rem; color: var(--teal-dk); font-size: 1.1rem; }
+    .chart-legend { color: var(--ink-soft); font-size: .85rem; margin-bottom: .85rem; }
+    .chart-row { display: grid; grid-template-columns: 200px 1fr 60px; align-items: center; gap: 1rem; padding: .35rem 0; font-size: .88rem; }
+    .chart-row .label { color: var(--ink); font-family: ui-monospace, monospace; font-size: .82rem; }
+    .chart-row .bar-track { background: var(--bg); border-radius: 4px; overflow: hidden; height: 18px; position: relative; }
+    .chart-row .bar-fill { background: linear-gradient(90deg, var(--coral), var(--teal-dk)); height: 100%; border-radius: 4px; transition: width .3s ease; }
+    .chart-row .count { text-align: right; font-weight: 700; color: var(--teal-dk); }
+    @media (max-width: 640px) {
+      .chart-row { grid-template-columns: 1fr; gap: .35rem; }
+      .chart-row .count { text-align: left; }
+    }
+
+    .daily-chart { display: flex; align-items: flex-end; gap: 4px; height: 100px; margin-top: .5rem; }
+    .daily-chart .day { flex: 1; background: var(--coral); border-radius: 3px 3px 0 0; min-height: 2px; position: relative; }
+    .daily-chart .day:hover { background: var(--teal-dk); }
+    .daily-chart .day span { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: var(--teal-dk); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: .75rem; white-space: nowrap; opacity: 0; pointer-events: none; margin-bottom: 4px; }
+    .daily-chart .day:hover span { opacity: 1; }
+    .daily-labels { display: flex; gap: 4px; margin-top: 4px; font-size: .7rem; color: var(--ink-soft); }
+    .daily-labels div { flex: 1; text-align: center; }
+
+    #dash-status { text-align: center; padding: 3rem; color: var(--ink-soft); }
+    .empty { text-align: center; padding: 2rem; color: var(--ink-soft); font-style: italic; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="/">
+        <img class="brand-mark" src="/assets/logos/logo-color.svg" alt="" width="144" height="112" aria-hidden="true">
+        <span class="brand-text">Polk County Golf Carts<small>Admin · Dashboard</small></span>
+      </a>
+    </div>
+  </header>
+  <main class="dash-page">
+    <section id="login-view" hidden>
+      <h1>PCGC Admin</h1>
+      <p class="sub">Sign in to see the conversion dashboard.</p>
+      <form id="login-form" style="max-width:340px; margin:0 auto; display:flex; flex-direction:column; gap:.75rem;">
+        <label style="display:flex; flex-direction:column; gap:.35rem;">
+          <span style="font-weight:600;">Password</span>
+          <input type="password" id="login-password" required autocomplete="current-password" style="padding:.7rem .85rem; border:1px solid var(--line); border-radius:8px; font:inherit;">
+        </label>
+        <button type="submit" class="btn btn-coral" id="login-submit" style="margin-top:.35rem;">Sign in</button>
+        <p id="login-error" style="color:#c2261a; margin:0; font-size:.92rem;" hidden></p>
+      </form>
+    </section>
+
+    <section id="dash-view" hidden>
+      <header style="display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+        <div>
+          <h1 style="margin-bottom:.25rem;">Conversion dashboard</h1>
+          <p class="sub">Every click, tap, and booking submission across the site.</p>
+        </div>
+        <button type="button" id="logout-btn" class="btn btn-ghost" style="font-size:.92rem;">Sign out</button>
+      </header>
+
+      <nav class="dash-nav">
+        <a href="/admin/dashboard/" aria-current="page">Conversions</a>
+        <a href="/admin/rentals/">Rental bookings →</a>
+      </nav>
+
+      <div class="dash-controls">
+        <label for="days-select">Range</label>
+        <select id="days-select">
+          <option value="7" selected>Last 7 days</option>
+          <option value="14">Last 14 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
+        <span id="dash-range" style="color: var(--ink-soft); font-size: .88rem;"></span>
+      </div>
+
+      <div id="dash-status" hidden>Loading…</div>
+      <div id="dash-body" hidden>
+        <div class="dash-kpis" id="dash-kpis"></div>
+        <div class="chart-wrap">
+          <h2>Events by type</h2>
+          <p class="chart-legend">Total counts across the selected window.</p>
+          <div id="event-bars"></div>
+        </div>
+        <div class="chart-wrap">
+          <h2>Daily total</h2>
+          <p class="chart-legend">All events combined, per day. Hover a bar to see the count.</p>
+          <div class="daily-chart" id="daily-chart"></div>
+          <div class="daily-labels" id="daily-labels"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+  (() => {
+    const loginView = document.getElementById("login-view");
+    const dashView = document.getElementById("dash-view");
+    const loginForm = document.getElementById("login-form");
+    const loginPassword = document.getElementById("login-password");
+    const loginSubmit = document.getElementById("login-submit");
+    const loginError = document.getElementById("login-error");
+    const logoutBtn = document.getElementById("logout-btn");
+    const daysSelect = document.getElementById("days-select");
+    const status = document.getElementById("dash-status");
+    const body = document.getElementById("dash-body");
+
+    function showLogin(msg) {
+      dashView.hidden = true;
+      loginView.hidden = false;
+      if (msg) { loginError.textContent = msg; loginError.hidden = false; }
+      else { loginError.hidden = true; }
+      loginPassword.focus();
+    }
+    function showDash() {
+      loginView.hidden = true;
+      dashView.hidden = false;
+    }
+
+    const EVENT_LABELS = {
+      "finance-apply-hero":         "Financing → Apply Now (hero button)",
+      "finance-apply-lendmark":     "Financing → Lendmark direct",
+      "finance-apply-dealer-direct":"Financing → Dealer Direct",
+      "finance-apply-bottom":       "Financing → Apply (bottom CTA)",
+      "phone-tap":                  "Phone tap (any 📞 link)",
+      "booking-submitted":          "Rental booking submitted",
+      "rental-flow-start":          "Rental flow started",
+    };
+
+    async function load() {
+      status.hidden = false;
+      body.hidden = true;
+      status.textContent = "Loading…";
+      const days = daysSelect.value;
+      let res;
+      try {
+        res = await fetch("/api/track/summary?days=" + encodeURIComponent(days), { credentials: "same-origin" });
+      } catch (e) {
+        status.textContent = "Network error: " + e.message;
+        return;
+      }
+      if (res.status === 401) { showLogin(); return; }
+      if (!res.ok) {
+        const t = await res.text();
+        status.textContent = "Error " + res.status + ": " + t;
+        return;
+      }
+      showDash();
+      const data = await res.json();
+      render(data);
+    }
+
+    function render(data) {
+      const byEvent = data.byEvent || {};
+      const byDay = data.byDay || {};
+
+      // Range line
+      document.getElementById("dash-range").textContent =
+        (data.startDay || "?") + "  →  " + (data.endDay || "?");
+
+      // KPI tiles
+      const kpiEvents = ["booking-submitted", "finance-apply-hero", "finance-apply-lendmark", "finance-apply-dealer-direct", "phone-tap"];
+      const kpiHtml = kpiEvents.map(ev => {
+        const n = byEvent[ev] || 0;
+        const label = ev === "booking-submitted" ? "Bookings" :
+                      ev === "finance-apply-hero" ? "Finance clicks (hero)" :
+                      ev === "finance-apply-lendmark" ? "Lendmark applies" :
+                      ev === "finance-apply-dealer-direct" ? "Dealer Direct applies" :
+                      ev === "phone-tap" ? "Phone taps" : ev;
+        const accent = ev === "booking-submitted" ? " accent" : "";
+        return `<div class="kpi${accent}"><b>${n}</b><span>${label}</span></div>`;
+      }).join("");
+      document.getElementById("dash-kpis").innerHTML = kpiHtml;
+
+      // Event bar chart (horizontal, total counts)
+      const events = data.events || Object.keys(byEvent);
+      const rows = events
+        .map(ev => [ev, byEvent[ev] || 0])
+        .sort((a, b) => b[1] - a[1]);
+      const max = Math.max(1, ...rows.map(r => r[1]));
+      const bars = document.getElementById("event-bars");
+      if (rows.every(r => r[1] === 0)) {
+        bars.innerHTML = '<div class="empty">No events yet. Once the deploy rolls out, the first click on a tracked button lands here within seconds.</div>';
+      } else {
+        bars.innerHTML = rows.map(([ev, n]) => {
+          const pct = (n / max) * 100;
+          const label = EVENT_LABELS[ev] || ev;
+          return `<div class="chart-row"><span class="label">${label}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%;"></div></div><span class="count">${n}</span></div>`;
+        }).join("");
+      }
+
+      // Daily total chart — build the complete window (fill zeros for days
+      // with no events so the x-axis is continuous).
+      const startDay = data.startDay ? new Date(data.startDay + "T00:00:00") : new Date();
+      const dayCount = parseInt(daysSelect.value, 10) || 7;
+      const dailyTotals = [];
+      for (let i = 0; i < dayCount; i++) {
+        const d = new Date(startDay);
+        d.setDate(startDay.getDate() + i);
+        const iso = d.toISOString().slice(0, 10);
+        const total = byDay[iso] ? Object.values(byDay[iso]).reduce((a, b) => a + b, 0) : 0;
+        dailyTotals.push({ iso, total });
+      }
+      const dailyMax = Math.max(1, ...dailyTotals.map(d => d.total));
+      const dailyEl = document.getElementById("daily-chart");
+      const labelsEl = document.getElementById("daily-labels");
+      dailyEl.innerHTML = dailyTotals.map(({ iso, total }) => {
+        const heightPct = (total / dailyMax) * 100;
+        const readable = new Date(iso + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+        return `<div class="day" style="height:${Math.max(2, heightPct)}%"><span>${readable}: ${total}</span></div>`;
+      }).join("");
+      // Only show labels for every other day on 14+ ranges to avoid crowding
+      const step = dayCount > 14 ? Math.ceil(dayCount / 7) : 1;
+      labelsEl.innerHTML = dailyTotals.map(({ iso }, i) => {
+        if (i % step !== 0 && i !== dailyTotals.length - 1) return '<div>&nbsp;</div>';
+        const short = new Date(iso + "T00:00:00").toLocaleDateString(undefined, { month: "numeric", day: "numeric" });
+        return `<div>${short}</div>`;
+      }).join("");
+    }
+
+    loginForm.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const password = loginPassword.value;
+      if (!password) return;
+      loginSubmit.disabled = true;
+      const prev = loginSubmit.textContent;
+      loginSubmit.textContent = "Signing in…";
+      loginError.hidden = true;
+      try {
+        const res = await fetch("/api/admin/login", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ password }),
+        });
+        if (!res.ok) {
+          showLogin(res.status === 401 ? "Wrong password." : `Login failed (${res.status}).`);
+          return;
+        }
+        loginPassword.value = "";
+        await load();
+      } catch (e) {
+        showLogin("Network error: " + e.message);
+      } finally {
+        loginSubmit.disabled = false;
+        loginSubmit.textContent = prev;
+      }
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      logoutBtn.disabled = true;
+      try { await fetch("/api/admin/logout", { method: "POST", credentials: "same-origin" }); } catch (_) {}
+      showLogin();
+      logoutBtn.disabled = false;
+    });
+
+    daysSelect.addEventListener("change", load);
+
+    load();
+  })();
+  </script>
+</body>
+</html>

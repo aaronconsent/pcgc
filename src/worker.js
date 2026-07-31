@@ -56,6 +56,12 @@ export default {
     if (url.pathname === "/api/admin/test-email" && request.method === "POST") {
       return sendTestEmail(request, env);
     }
+    if (url.pathname === "/api/track" && request.method === "POST") {
+      return trackEvent(request, env);
+    }
+    if (url.pathname === "/api/track/summary" && request.method === "GET") {
+      return trackSummary(request, env, url);
+    }
 
     // Legacy URLs from the original site — 301 to the new locations
     // so search engines (and bookmarks) move with us.
@@ -709,6 +715,88 @@ async function sendTestEmail(request, env) {
     config,
     resendId: parsed?.id,
     hint: `Resend accepted the email (id ${parsed?.id}). It should arrive at ${to} within about 60 seconds. Check the inbox, then the spam folder if it's not there. If it never arrives, the domain's DKIM/SPF records may not be validating on Yahoo's side — verify at resend.com/domains that the domain is green across all three records.`,
+  });
+}
+
+// -------------------- Event tracking (Tier 2 analytics) -------------------- //
+//
+// Public POST /api/track logs one increment for a named event to KV under
+// key `evt:<YYYY-MM-DD>:<event>`, kept for 90 days. Uses a closed
+// allow-list so URL-crafters can't fill KV with junk.
+//
+// Admin GET /api/track/summary?days=N reads all evt:* keys in the window
+// and returns { byDay, byEvent } aggregates for the dashboard.
+const TRACKED_EVENTS = new Set([
+  // Finance page CTAs — data-cta attributes already on the buttons.
+  "finance-apply-hero",
+  "finance-apply-lendmark",
+  "finance-apply-dealer-direct",
+  "finance-apply-bottom",
+  // Universal — any a[href^="tel:"] click site-wide.
+  "phone-tap",
+  // Rentals — fired from rentals.js on successful submit.
+  "booking-submitted",
+  // Rental flow entry — fired from rentals.js on Step 1 first-view.
+  "rental-flow-start",
+]);
+const TRACK_TTL_SEC = 90 * 24 * 60 * 60; // 90-day retention
+
+async function trackEvent(request, env) {
+  // Public endpoint — no auth. Silently absorb errors so a broken KV
+  // never bubbles up to the customer as a JS console error.
+  if (!env.FEEDBACK_KV) return json({ ok: false }, 204);
+  let body;
+  try { body = await request.json(); } catch { return json({ ok: false }, 400); }
+  const event = String(body?.event || "").trim();
+  if (!TRACKED_EVENTS.has(event)) return json({ ok: false, error: "unknown event" }, 400);
+
+  const day = new Date().toISOString().slice(0, 10);
+  const key = `evt:${day}:${event}`;
+  const cur = parseInt((await env.FEEDBACK_KV.get(key)) || "0", 10) || 0;
+  await env.FEEDBACK_KV.put(key, String(cur + 1), { expirationTtl: TRACK_TTL_SEC });
+  return json({ ok: true });
+}
+
+async function trackSummary(request, env, url) {
+  const auth = await checkAdminAuth(request, env);
+  if (auth) return auth;
+  if (!env.FEEDBACK_KV) return json({ events: [...TRACKED_EVENTS], byDay: {}, byEvent: {} });
+
+  const days = Math.min(90, Math.max(1, parseInt(url.searchParams.get("days") || "7", 10)));
+  const startDay = new Date();
+  startDay.setDate(startDay.getDate() - (days - 1));
+  const startIso = startDay.toISOString().slice(0, 10);
+
+  const byDay = {};   // { "2026-07-31": { "finance-apply-hero": 5, "phone-tap": 3 } }
+  const byEvent = {}; // { "finance-apply-hero": 12 }
+
+  let cursor;
+  do {
+    const page = await env.FEEDBACK_KV.list({ prefix: "evt:", cursor });
+    for (const k of page.keys) {
+      // Key format: evt:YYYY-MM-DD:event-name (event may contain hyphens
+      // but no colons, so a 3-way split is enough).
+      const parts = k.name.split(":");
+      if (parts.length < 3) continue;
+      const day = parts[1];
+      const ev = parts.slice(2).join(":");
+      if (day < startIso) continue;
+      const val = parseInt(await env.FEEDBACK_KV.get(k.name), 10) || 0;
+      if (!val) continue;
+      byDay[day] = byDay[day] || {};
+      byDay[day][ev] = (byDay[day][ev] || 0) + val;
+      byEvent[ev] = (byEvent[ev] || 0) + val;
+    }
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+
+  return json({
+    days,
+    startDay: startIso,
+    endDay: new Date().toISOString().slice(0, 10),
+    events: [...TRACKED_EVENTS],
+    byDay,
+    byEvent,
   });
 }
 

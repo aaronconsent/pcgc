@@ -29,6 +29,14 @@ def _site_css_version():
         return "0"
 SITE_CSS_VER = _site_css_version()
 
+def _track_js_version():
+    import hashlib
+    p = os.path.join(ROOT, "assets", "track.js")
+    if not os.path.exists(p): return "0"
+    with open(p, "rb") as f:
+        return hashlib.sha1(f.read()).hexdigest()[:8]
+TRACK_JS_VER = _track_js_version()
+
 BIZ = {
     "name": "Polk County Golf Carts",
     "short": "PCGC",
@@ -107,6 +115,7 @@ def head(title, desc, path="/", og_slug=None, noindex=False, structured_data=Non
           <meta name="twitter:description" content="{desc}">
           <meta name="twitter:image" content="https://polkcountygolfcarts.com{og_image}">
           {sd}{verify}{analytics}
+          <script defer src="/assets/track.js?v={TRACK_JS_VER}"></script>
         </head>
         <body>
         <div class="banner">FREE WARRANTIES on every cart purchased through PCGC · BBB Accredited · {BIZ['tagline']}</div>

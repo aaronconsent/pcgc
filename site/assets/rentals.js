@@ -313,6 +313,15 @@ function updateDurationLine() {
 }
 
 function initStep1() {
+  // Once-per-session flow-start ping so the analytics dashboard has
+  // a denominator for the booking-submission conversion rate.
+  try {
+    if (!sessionStorage.getItem("pcgc.rental.flow_started")) {
+      sessionStorage.setItem("pcgc.rental.flow_started", "1");
+      if (window.pcgcTrack) window.pcgcTrack("rental-flow-start");
+    }
+  } catch (_) {}
+
   const start = $("#date-start");
   const end = $("#date-end");
   const today = new Date().toISOString().slice(0, 10);
@@ -538,6 +547,7 @@ async function submitBooking() {
   state.bookingId = booking.id;
   state.bookingRecord = booking;
   saveState();
+  if (window.pcgcTrack) window.pcgcTrack("booking-submitted");
   goTo(5);
 }
 

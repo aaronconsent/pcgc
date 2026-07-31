@@ -23,6 +23,18 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    // Force everything onto the canonical apex hostname. Google (and
+    // some directory backfills) had www.polkcountygolfcarts.com in
+    // the index against a hostname that wasn't bound to the Worker;
+    // customers who clicked those results hit a raw Cloudflare 522.
+    // Now www is routed here, and we 301 straight to the apex so
+    // there's exactly one canonical version of every URL.
+    if (url.hostname === "www.polkcountygolfcarts.com") {
+      const canonical = new URL(url);
+      canonical.hostname = "polkcountygolfcarts.com";
+      return Response.redirect(canonical.toString(), 301);
+    }
+
     if (url.pathname === "/api/booking" && request.method === "POST") {
       return submitBooking(request, env);
     }

@@ -2,6 +2,15 @@ name = "pcgc"
 main = "src/worker.js"
 compatibility_date = "2026-04-01"
 
+# HOSTNAME BINDING (not managed here):
+#   The apex polkcountygolfcarts.com is attached to this Worker via
+#   the Cloudflare dashboard's Custom Domains UI. www.* needs to be
+#   attached there too — Custom Domains + wrangler `routes` can
+#   collide for the same zone, so we leave both attachments to the
+#   dashboard. Until www is added there, src/worker.js's www->apex
+#   301 (below) never fires because no www request reaches the
+#   Worker.
+
 # Static-asset bucket: the worker calls env.ASSETS.fetch(request) for
 # anything not handled by /api/booking. Directory-index resolution
 # (e.g. /about-us/ -> site/about-us/index.html) happens automatically.

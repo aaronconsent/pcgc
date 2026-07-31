@@ -317,10 +317,11 @@ function updateDurationLine() {
   state.dates.end = end;
   const d = daysBetween(start, end);
   const out = $("#duration-out");
-  if (start && end && d > 0) {
-    const perDay = perDayCarts();
-    out.textContent = `${d} day${d === 1 ? "" : "s"} × ${fmtMoneyShort(perDay)}/day = ${fmtMoney(perDay * d)} before tax & delivery.`;
-  } else if (start && end) {
+  // Only surface the invalid-range warning on Step 1. Pricing math
+  // used to live here too, but on Step 1 no carts are picked yet
+  // (that happens Step 2) so it always read "$0/day = $0.00" —
+  // pulled per owner request. Real pricing appears on Steps 2 + 4.
+  if (start && end && d < 1) {
     out.textContent = "Return date must be after pickup date.";
   } else {
     out.textContent = "";

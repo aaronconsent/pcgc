@@ -65,6 +65,21 @@ def head(title, desc, path="/", og_slug=None, noindex=False, structured_data=Non
     sd = ""
     if structured_data:
         sd = f'<script type="application/ld+json">{structured_data}</script>'
+    # Verification meta tags — only emit when the constant is set,
+    # so an unclaimed property doesn't leak an empty tag into the page.
+    verify = ""
+    if GOOGLE_SITE_VERIFICATION:
+        verify += f'\n  <meta name="google-site-verification" content="{GOOGLE_SITE_VERIFICATION}">'
+    if BING_SITE_VERIFICATION:
+        verify += f'\n  <meta name="msvalidate.01" content="{BING_SITE_VERIFICATION}">'
+    # Cloudflare Web Analytics — beacon fires on every pageview, no
+    # cookies, no fingerprint. Deferred so it never blocks render.
+    analytics = ""
+    if CLOUDFLARE_ANALYTICS_TOKEN:
+        analytics = (
+            f'\n  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" '
+            f"data-cf-beacon='{{\"token\": \"{CLOUDFLARE_ANALYTICS_TOKEN}\"}}'></script>"
+        )
     return dedent(f"""\
         <!doctype html>
         <html lang="en">
@@ -91,7 +106,7 @@ def head(title, desc, path="/", og_slug=None, noindex=False, structured_data=Non
           <meta name="twitter:title" content="{title} | {BIZ['name']}">
           <meta name="twitter:description" content="{desc}">
           <meta name="twitter:image" content="https://polkcountygolfcarts.com{og_image}">
-          {sd}
+          {sd}{verify}{analytics}
         </head>
         <body>
         <div class="banner">FREE WARRANTIES on every cart purchased through PCGC · BBB Accredited · {BIZ['tagline']}</div>
@@ -225,6 +240,34 @@ LENDMARK_APPLY_URL = "https://securedlr.lendmarkfinancial.com/Kiosk/Home/Default
 # Owner-supplied Dealer Direct guest application URL (apptraker.com),
 # scoped to PCGC's dealer code 11194.
 DEALER_DIRECT_APPLY_URL = "https://dealerdirect.apptraker.com/my/guest?dealer=11194"
+
+# ---------------- Analytics + verification (Tier 1 SEO) ---------------- #
+#
+# Each of these emits one line in the <head> of every page WHEN SET.
+# Leave empty to skip. Fill in the value from the respective dashboard:
+#
+#   GOOGLE_SITE_VERIFICATION
+#     Search Console -> https://search.google.com/search-console
+#     Add property (Domain type, "polkcountygolfcarts.com") or URL prefix
+#     ("https://polkcountygolfcarts.com"). Pick "HTML tag" verification.
+#     Google shows a tag like:
+#       <meta name="google-site-verification" content="ABCDEF123..." />
+#     Paste ONLY the content value below.
+#
+#   BING_SITE_VERIFICATION
+#     Bing Webmaster Tools -> https://www.bing.com/webmasters
+#     Fastest path: click "Import from Google Search Console" once GSC is
+#     verified — no code change needed. Otherwise pick "Meta tag"
+#     verification, paste the content value below.
+#
+#   CLOUDFLARE_ANALYTICS_TOKEN
+#     Cloudflare dashboard -> Analytics & Logs -> Web Analytics ->
+#     Add a site -> polkcountygolfcarts.com. Cloudflare gives a
+#     <script> tag with data-cf-beacon='{"token":"XXXX"}'. Paste the
+#     token below. Free, no cookies, no perf hit, zero PII.
+GOOGLE_SITE_VERIFICATION = ""
+BING_SITE_VERIFICATION = ""
+CLOUDFLARE_ANALYTICS_TOKEN = ""
 
 import json as _json
 

@@ -127,6 +127,12 @@ async function submitBooking(request, env) {
     }
   }
   if (sa.agreed !== true) return json({ error: "you must agree to the terms" }, 400);
+  // Optional signed-agreement PDF (base64) generated client-side.
+  // Bounded at ~5MB to keep the KV write under the 25MB per-value cap
+  // even with the rest of the record.
+  if (sa.pdfBase64 && (typeof sa.pdfBase64 !== "string" || sa.pdfBase64.length > 5_000_000)) {
+    return json({ error: "signed agreement PDF too large" }, 413);
+  }
 
   const ts = new Date().toISOString();
   const idSuffix = crypto.randomUUID().slice(0, 6).toUpperCase();
@@ -187,6 +193,12 @@ async function submitBooking(request, env) {
       dlMethod,
       dlImageDataUrl: dlMethod === "upload" ? sa.dlImageDataUrl : null,
       signatureDataUrl: sa.signatureDataUrl,
+      // Optional full signed-doc PDF generated client-side. Stored
+      // alongside the record + emailed to the customer as an
+      // attachment. Presence is optional — a booking without the
+      // PDF is still valid; the pieces to regenerate one live in
+      // the record too.
+      pdfBase64: sa.pdfBase64 || null,
       signedIp: request.headers.get("cf-connecting-ip") || "",
       signedUa: (request.headers.get("user-agent") || "").slice(0, 500),
     },
@@ -426,20 +438,36 @@ async function sendCustomerConfirmationEmail(record, env, agreementPath) {
     `1732 FM 3277 · Livingston, TX`,
   ].filter(Boolean).join("\n");
 
+  // Attach the signed-agreement PDF if the client uploaded one.
+  // Resend accepts up to ~40MB total per email; our client-side cap
+  // is 5MB so we're safely inside.
+  const attachments = [];
+  const pdfB64 = record?.agreement?.pdfBase64;
+  if (pdfB64 && typeof pdfB64 === "string" && pdfB64.length > 100) {
+    attachments.push({
+      filename: `pcgc-agreement-${record.id || "signed"}.pdf`,
+      content: pdfB64,
+      contentType: "application/pdf",
+    });
+  }
+
+  const emailBody = {
+    from: `Polk County Golf Carts <${from}>`,
+    to: [to],
+    subject,
+    html,
+    text,
+    reply_to: ownerEmail,
+  };
+  if (attachments.length) emailBody.attachments = attachments;
+
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       "authorization": `Bearer ${env.RESEND_API_KEY}`,
       "content-type": "application/json",
     },
-    body: JSON.stringify({
-      from: `Polk County Golf Carts <${from}>`,
-      to: [to],
-      subject,
-      html,
-      text,
-      reply_to: ownerEmail,
-    }),
+    body: JSON.stringify(emailBody),
   });
   if (!res.ok) {
     const t = await res.text();

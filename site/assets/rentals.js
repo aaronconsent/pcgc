@@ -980,6 +980,43 @@ async function submitBooking() {
   // stores it alongside the record. Server also validates.
   booking.signedAgreement = collected.agreement;
 
+  // Generate the signed-agreement PDF client-side, attach it to the
+  // POST as base64 (Worker stores + emails it as a Resend attachment),
+  // and also stash the Blob so Step 5's Download button has it ready.
+  // Never fail the booking on a PDF error — the KV record is what
+  // matters; the PDF is a convenience layer.
+  let pdfBlob = null;
+  try {
+    // Build a synthetic booking object shaped like the server-side
+    // record so generateAgreementPdf sees the same fields it will
+    // read out of KV later.
+    const draft = {
+      id: booking.id,
+      dates: booking.dates,
+      items: booking.items,
+      delivery: booking.delivery,
+      contact: booking.contact,
+      agreement: {
+        ...collected.agreement,
+        signedAt: new Date().toISOString(),
+      },
+    };
+    pdfBlob = await generateAgreementPdf(draft);
+    if (pdfBlob) {
+      const b64 = await blobToBase64(pdfBlob);
+      // Cap outgoing payload — jsPDF should produce a small doc (<1MB),
+      // but a DL image can bloat it. Anything over 5MB gets dropped
+      // from the payload (customer can still download from Step 5).
+      if (b64.length <= 5_000_000) {
+        booking.signedAgreement.pdfBase64 = b64;
+      } else {
+        console.warn("Agreement PDF > 5MB, not uploading");
+      }
+    }
+  } catch (e) {
+    console.warn("Agreement PDF generation failed:", e?.message || e);
+  }
+
   try {
     const res = await fetch("/api/booking", {
       method: "POST",
@@ -1020,10 +1057,20 @@ async function submitBooking() {
 
   state.bookingId = booking.id;
   state.bookingRecord = booking;
+  // Stash the PDF blob on a module-scoped map, keyed by booking id.
+  // Not persisted to sessionStorage (would blow past its 5MB limit).
+  // A user who bookmarks Step 5 and comes back can regen the PDF from
+  // state.bookingRecord if we ever want that flow.
+  if (pdfBlob) _pdfBlobs[booking.id] = pdfBlob;
   saveState();
   if (window.pcgcTrack) window.pcgcTrack("booking-submitted");
   goTo(5);
 }
+
+// Module-scoped cache: booking id -> agreement PDF Blob. Populated
+// by submitBooking() after generation, read by the Step 5 download
+// button. Not persisted to sessionStorage.
+const _pdfBlobs = Object.create(null);
 
 function buildBookingRecord() {
   const p = computePrice();
@@ -1119,6 +1166,59 @@ function renderConfirmation() {
   // (~200ms) but async because we wait on an <img> to load. The
   // share card unhides once the preview blob is ready.
   initShareCard(b);
+  initPdfDownloadCta(b);
+}
+
+function initPdfDownloadCta(booking) {
+  const cta = document.getElementById("pdf-cta");
+  const btn = document.getElementById("pdf-download-btn");
+  const emailTarget = document.getElementById("pdf-email-target");
+  if (!cta || !btn) return;
+
+  // Prefer the blob we already generated at submit time. If the
+  // customer refreshed Step 5, that blob is gone — regenerate on
+  // the fly from state.bookingRecord (which persists in
+  // sessionStorage).
+  const cached = booking.id ? _pdfBlobs[booking.id] : null;
+  if (!cached && !booking.agreement && !state.contact) { cta.hidden = true; return; }
+
+  if (emailTarget) emailTarget.textContent = booking.contact?.email || "your email";
+  cta.hidden = false;
+
+  btn.onclick = async () => {
+    btn.disabled = true;
+    const prev = btn.textContent;
+    btn.textContent = "Preparing…";
+    try {
+      let blob = cached;
+      if (!blob) {
+        // Reconstruct the draft shape generateAgreementPdf expects.
+        // The signed-agreement fields live under state.contact + the
+        // signed data captured at submit — we approximate from
+        // whatever the booking record + state have.
+        blob = await generateAgreementPdf({
+          id: booking.id,
+          dates: booking.dates,
+          items: booking.items,
+          delivery: booking.delivery,
+          contact: booking.contact,
+          agreement: booking.agreement || {
+            signedAt: booking.ts,
+            typedName: state.contact?.name || "",
+            dlNumber: "", dlState: "",
+            signatureDataUrl: null,
+          },
+        });
+        _pdfBlobs[booking.id] = blob;
+      }
+      triggerDownload(blob, `pcgc-agreement-${booking.id || "signed"}.pdf`);
+    } catch (e) {
+      alert("Couldn't generate the PDF — please reload the page and try again, or check your email for the copy we sent.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = prev;
+    }
+  };
 }
 
 // ---------- Shareable social image (Step 5) ---------- //
@@ -1335,6 +1435,233 @@ async function generateShareImage(booking) {
   ctx.fillText("Livingston, TX  ·  936-223-1182", W / 2, PHOTO_H + 100);
 
   return new Promise((resolve) => c.toBlob(resolve, "image/png", 0.94));
+}
+
+// ---------- Signed-agreement PDF (jsPDF, client-side) ---------- //
+//
+// Builds a 2-3 page US Letter PDF of the signed rental agreement:
+//   Page 1: Header + customer info + carts + dates + terms (part 1)
+//   Page 2: Terms (continued) + signature block
+//   Page 3 (if uploaded): Driver's license photo
+//
+// The PDF blob is then:
+//   - stashed in state.bookingRecord.agreementPdfBlob for the
+//     Step 5 "Download signed agreement" button
+//   - base64-encoded and sent to the Worker in the booking POST
+//     under signedAgreement.pdfBase64; server saves it in the
+//     KV record + emails it as a Resend attachment to the customer
+
+const AGREEMENT_TERMS = [
+  { h: "Weekend / Holiday Rentals",
+    t: "A two (2) day minimum rental is required for all weekend and holiday rentals." },
+  { h: "Cancellation Policy",
+    t: "If you cancel your rental seven (7) days prior to the first rental date you will be refunded 100%. If you cancel within four (4) days of the first rental date you will be refunded 50%. If your cancellation is three (3) days or less, no refund will be granted." },
+  { h: "Return of Cart",
+    t: "Make sure the cart is parked back at the office when finished. Thank you!" },
+  { h: "Risk of Loss or Injury",
+    t: "I will operate the golf cart(s) safely and responsibly and I will preserve and protect the golf cart(s) from loss or damage, my person or property, and the persons or property of others. I agree to be legally and financially liable for all damage and costs of repairs or total replacement for the golf cart(s), and for the loss, damage and/or injuries to my person or property and the persons or property of others regardless of fault. I agree to hold harmless, defend and indemnify PCGC, the owner of the golf cart(s) for all damages and claims of any nature whatsoever that may arise from the use of the golf cart(s) itself, my person and property, and the persons and property of others. Effective upon delivery or pick up of the golf cart(s) and until the golf cart is returned to PCGC, customer relieves PCGC of responsibility for all risk of physical damage to, or loss or destruction of the golf cart(s), regardless of who caused the damage. Acceptance of delivery includes customer not being present. Customer is responsible and liable for the golf cart(s) rented from the start and end dates listed in this agreement, not the number of days charged." },
+  { h: "Operations",
+    t: "I understand that if the golf cart(s) should be inoperable through no fault of mine, I will contact PCGC immediately upon discovery (936) 223-1182, as PCGC will take reasonable steps to have the vehicle repaired / serviced / replaced as soon as it is possible and during normal business hours. This does not relieve me of the responsibility to ensure the golf cart(s) is not damaged or stolen regardless of mechanical or damage failure." },
+  { h: "Return of Equipment",
+    t: "I promise to return the golf cart(s) to the location delivered from or picked up, in the same condition as I received it. Upon return, PCGC will perform an inspection to determine the condition of the golf cart(s). In the event of any damage, Customer agrees to pay for said damages including up to total replacement and hereby authorizes PCGC, in advance, to charge the credit card given at time of rental and/or the difference of the cash deposit, to make repairs or replace the entire unit(s) at full price in the event damage is beyond repair. If the cart is stolen or missing, customer agrees to pay for the unit(s) at full retail price as determined by PCGC's cart inventory log at the time of agreement." },
+  { h: "Miscellaneous Terms",
+    t: "I understand that a golf cart(s) is subject to laws and regulations by both local and the State of Texas authorities. Customer agrees that the golf cart(s) will be operated in accordance with the laws of the State, including but not limited to the requirement that persons driving the golf cart(s) must not be under the influence of alcohol and/or illegal drugs or prescribed medication that could cause impairment. Customer further agrees that they will be personally responsible for all moving and/or parking violations issued to said cart(s) while in their possession, under their control, or at any time during the rental / loaner / demonstration agreement.\n\nCustomer agrees that only person(s) who are 16 years of age and/or older will be permitted to operate the golf cart(s). Maximum occupancy is the number of available seats (NO STANDING ON THE FENDER OR FOOT PLATE).\n\nCustomer will remove the key from the golf cart(s) when not in use, will not sublease the golf cart(s), and will keep the golf cart(s) at the listed location of use." },
+];
+
+async function generateAgreementPdf(booking) {
+  // jsPDF exports { jsPDF } via UMD → window.jspdf.jsPDF.
+  const ns = (typeof window !== "undefined" && window.jspdf) || (typeof jspdf !== "undefined" ? jspdf : null);
+  if (!ns || !ns.jsPDF) throw new Error("jsPDF not loaded");
+  const { jsPDF } = ns;
+
+  const doc = new jsPDF({ unit: "pt", format: "letter" });
+  const PAGE_W = 612, PAGE_H = 792;
+  const M = 50;                       // margin
+  const W = PAGE_W - M * 2;           // usable width
+  const BOTTOM = PAGE_H - 60;         // where a new-page check should fire
+  let y = M;
+
+  const c = booking.contact || {};
+  const ag = booking.agreement || {};
+
+  // Helpers ---------------------------------------------------------
+  const setFill = (r, g, b) => doc.setTextColor(r, g, b);
+  const teal   = () => setFill(31, 90, 104);
+  const coral  = () => setFill(232, 90, 79);
+  const ink    = () => setFill(20, 20, 20);
+  const muted  = () => setFill(90, 90, 90);
+  const ensureSpace = (need) => {
+    if (y + need > BOTTOM) { doc.addPage(); y = M; }
+  };
+  const paragraph = (text, size, opts = {}) => {
+    doc.setFontSize(size);
+    doc.setFont("helvetica", opts.bold ? "bold" : "normal");
+    if (opts.color === "teal") teal();
+    else if (opts.color === "coral") coral();
+    else if (opts.color === "muted") muted();
+    else ink();
+    const lines = doc.splitTextToSize(text, W);
+    const need = lines.length * (size * 1.25);
+    ensureSpace(need);
+    doc.text(lines, M, y);
+    y += need;
+  };
+
+  // Header ----------------------------------------------------------
+  doc.setFontSize(20); doc.setFont("helvetica", "bold"); teal();
+  doc.text("Polk County Golf Carts, LLC", M, y);
+  y += 18;
+  doc.setFontSize(10); doc.setFont("helvetica", "normal"); muted();
+  doc.text("1732 FM 3277  ·  Livingston, TX 77351  ·  936-223-1182  ·  polkcountygolfcarts.com", M, y);
+  y += 18;
+  // Coral divider
+  doc.setDrawColor(232, 90, 79); doc.setLineWidth(2);
+  doc.line(M, y, M + W, y);
+  y += 22;
+
+  paragraph("Short Term Rental Agreement", 18, { bold: true, color: "teal" });
+  paragraph(`Confirmation ${booking.id || "PCGC-—"}  ·  Signed ${new Date(ag.signedAt || Date.now()).toLocaleString()}`, 9, { color: "muted" });
+  y += 6;
+
+  // Customer info
+  paragraph("Customer", 12, { bold: true, color: "teal" });
+  const addressLine = [c.street, [c.city, c.state].filter(Boolean).join(", "), c.zip].filter(Boolean).join(" · ");
+  const rows = [
+    ["Name", c.name || "—"],
+    ["Phone", c.phone || "—"],
+    ["Email", c.email || "—"],
+    ["Billing address", addressLine || "—"],
+    ["Driver's license", (ag.dlNumber || "—") + "  (" + (ag.dlState || "—") + ")"],
+    ["DL delivery", ({ upload: "Photo uploaded on the agreement page", text: "Customer will text photo to 936-223-1182 at payment", "in-person": "Customer will bring physical copy at pickup" }[ag.dlMethod]) || "—"],
+  ];
+  doc.setFontSize(10); doc.setFont("helvetica", "normal"); ink();
+  for (const [k, v] of rows) {
+    ensureSpace(14);
+    muted(); doc.text(k, M, y);
+    ink();  doc.text(String(v), M + 110, y);
+    y += 14;
+  }
+  y += 8;
+
+  // Cart(s)
+  paragraph("Cart(s) Rented", 12, { bold: true, color: "teal" });
+  const rentedIds = new Set((booking.items || []).map(it => it.id));
+  const rentedCarts = CARTS.filter(x => rentedIds.has(x.id));
+  for (const cart of rentedCarts) {
+    ensureSpace(14);
+    ink(); doc.setFontSize(10); doc.setFont("helvetica", "bold");
+    doc.text(cart.name, M, y);
+    doc.setFont("helvetica", "normal"); muted();
+    doc.text(`${cart.make} · ${cart.modelDetails || ""} · Serial ${cart.serial}`, M + 200, y);
+    y += 14;
+  }
+  y += 6;
+
+  paragraph(`Rental period: ${booking.dates?.start || "—"} → ${booking.dates?.end || "—"}${booking.dates?.days ? ` (${booking.dates.days} day${booking.dates.days === 1 ? "" : "s"})` : ""}`, 10);
+  const locText = booking.delivery === "pickup"
+    ? "Pickup at PCGC shop (1732 FM 3277, Livingston, TX)"
+    : `Delivery drop-off: ${c.address || "—"}`;
+  paragraph(locText, 10);
+  y += 8;
+
+  // Terms
+  paragraph("Terms & Conditions", 12, { bold: true, color: "teal" });
+  for (const term of AGREEMENT_TERMS) {
+    ensureSpace(18);
+    paragraph(term.h, 11, { bold: true });
+    for (const para of term.t.split("\n\n")) {
+      paragraph(para, 9);
+    }
+    y += 4;
+  }
+
+  // Signature block ------------------------------------------------
+  ensureSpace(180);
+  y += 10;
+  paragraph("Signed Agreement", 12, { bold: true, color: "teal" });
+  // Checkbox
+  doc.setDrawColor(31, 90, 104); doc.setLineWidth(1);
+  doc.rect(M, y - 10, 12, 12);
+  // Check mark
+  doc.setLineWidth(1.5);
+  doc.line(M + 2, y - 5, M + 5, y - 2);
+  doc.line(M + 5, y - 2, M + 10, y - 9);
+  doc.setLineWidth(1);
+  doc.setFontSize(10); doc.setFont("helvetica", "normal"); ink();
+  const chkText = "The customer has read and agreed to the terms of this Short Term Rental Agreement, and confirms the information above is accurate.";
+  const chkLines = doc.splitTextToSize(chkText, W - 20);
+  doc.text(chkLines, M + 20, y);
+  y += chkLines.length * 12 + 12;
+
+  // Signature image
+  const sig = ag.signatureDataUrl;
+  ensureSpace(120);
+  muted(); doc.setFontSize(9);
+  doc.text("Customer signature:", M, y);
+  y += 10;
+  if (sig) {
+    try { doc.addImage(sig, "PNG", M, y, 220, 70); } catch (_) {}
+  }
+  y += 74;
+  doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.5);
+  doc.line(M, y, M + 260, y);
+  y += 12;
+  ink(); doc.setFontSize(10); doc.setFont("helvetica", "bold");
+  doc.text(ag.typedName || "—", M, y);
+  y += 12;
+  muted(); doc.setFontSize(9); doc.setFont("helvetica", "normal");
+  doc.text(`Signed electronically on ${new Date(ag.signedAt || Date.now()).toLocaleString()}`, M, y);
+  y += 12;
+  if (ag.signedIp) { doc.text(`Signed from IP ${ag.signedIp}`, M, y); y += 12; }
+
+  // Countersignature line (PCGC)
+  y += 24;
+  ensureSpace(60);
+  doc.setDrawColor(150, 150, 150);
+  doc.line(M + 320, y, M + 320 + 200, y);
+  y += 12;
+  ink(); doc.setFontSize(10); doc.setFont("helvetica", "bold");
+  doc.text("Polk County Golf Carts, LLC", M + 320, y);
+  y += 12;
+  muted(); doc.setFontSize(9); doc.setFont("helvetica", "normal");
+  doc.text("Callie Long, Office Manager", M + 320, y);
+
+  // DL image on its own page (if uploaded)
+  if (ag.dlMethod === "upload" && ag.dlImageDataUrl) {
+    doc.addPage();
+    y = M;
+    paragraph("Driver's License on File", 14, { bold: true, color: "teal" });
+    y += 6;
+    try {
+      // Fit inside the usable area at max 500px wide, preserving aspect.
+      const imgProps = doc.getImageProperties(ag.dlImageDataUrl);
+      const maxW = Math.min(W, 500);
+      const scale = maxW / imgProps.width;
+      const drawW = maxW;
+      const drawH = imgProps.height * scale;
+      doc.addImage(ag.dlImageDataUrl, "JPEG", M, y, drawW, drawH);
+      y += drawH + 10;
+      muted(); doc.setFontSize(9);
+      doc.text(`DL number: ${ag.dlNumber || "—"} (${ag.dlState || "—"})  ·  Uploaded ${new Date(ag.signedAt || Date.now()).toLocaleString()}`, M, y);
+    } catch (_) { /* ignore addImage failures — some browsers reject certain data URLs */ }
+  }
+
+  return doc.output("blob");
+}
+
+// Base64-encode a Blob so we can transport the PDF over JSON. Returns
+// the "data:application/pdf;base64,..." portion (no data URL prefix).
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onerror = () => reject(new Error("read fail"));
+    r.onload = () => {
+      const dataUrl = String(r.result || "");
+      const idx = dataUrl.indexOf(",");
+      resolve(idx > -1 ? dataUrl.slice(idx + 1) : "");
+    };
+    r.readAsDataURL(blob);
+  });
 }
 
 // Canvas draw helpers.

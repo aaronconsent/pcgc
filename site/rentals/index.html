@@ -24,6 +24,11 @@
        everywhere for consistency). -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" defer></script>
+  <!-- jsPDF — client-side PDF generation for the signed agreement.
+       Runs at submit time, packs the signed doc into a File which
+       the customer can download from Step 5 and which we email as
+       an attachment through Resend. -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
   <link rel="stylesheet" href="/assets/site.css">
   <link rel="stylesheet" href="/assets/rentals.css?v=7f443b37">
   <meta property="og:title" content="Rent a Golf Cart · Polk County Golf Carts">
@@ -389,6 +394,15 @@
         <a id="agreement-link" class="btn btn-coral" href="#" target="_blank" rel="noopener">Open agreement →</a>
       </div>
 
+      <!-- Signed-agreement PDF download. Also emailed to the customer
+           as an attachment; shown here so they can save a local copy
+           without waiting on email. -->
+      <div id="pdf-cta" hidden style="background:#e6f1f3; border:1px solid #9fcfd7; border-radius:10px; padding:1.25rem 1.5rem; margin-top:1rem; text-align:left;">
+        <h2 style="color: var(--teal-dk); margin-top: 0;">📄 Your signed rental agreement</h2>
+        <p style="margin: .35rem 0 1rem;">A copy has been emailed to <b id="pdf-email-target">your email</b>. You can also download it here for your records.</p>
+        <button id="pdf-download-btn" class="btn btn-coral" type="button">Download signed agreement (PDF)</button>
+      </div>
+
       <!-- Next-steps requirements card, populated by renderConfirmation()
            based on whether the customer picked pickup or delivery. -->
       <div class="rental-card rental-next-steps" id="next-steps" style="text-align:left; margin-top: 1.5rem; background: #fff9f4; border-color: var(--coral-soft, #f3c3bc);">
@@ -439,6 +453,6 @@
   Polk County Golf Carts · 1732 FM 3277, Livingston, TX · <a href="tel:9362231182">936-223-1182</a>
 </footer>
 
-<script src="/assets/rentals.js?v=bd4f59e4"></script>
+<script src="/assets/rentals.js?v=cc5e48bb"></script>
 </body>
 </html>

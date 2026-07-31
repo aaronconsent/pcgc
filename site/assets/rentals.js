@@ -350,12 +350,57 @@ function initStep1() {
   const start = $("#date-start");
   const end = $("#date-end");
   const today = new Date().toISOString().slice(0, 10);
-  start.addEventListener("input", () => {
-    end.min = start.value || today;
-    if (end.value && end.value < start.value) end.value = "";
-    updateDurationLine();
-  });
-  end.addEventListener("input", updateDurationLine);
+
+  // flatpickr gives us a consistent picker across desktop / tablet /
+  // mobile. `disableMobile: true` forces flatpickr's own UI on mobile
+  // too (default would fall back to native, which then looks different
+  // from desktop). altInput swaps the visible field to a friendly
+  // "Sat, Aug 15, 2026" string while keeping the underlying ISO
+  // value the rest of the code reads via .value.
+  function mountFlatpickr() {
+    if (typeof flatpickr === "undefined") { setTimeout(mountFlatpickr, 100); return; }
+    const startPicker = flatpickr(start, {
+      minDate: "today",
+      dateFormat: "Y-m-d",
+      altInput: true,
+      altFormat: "l, F j, Y",
+      disableMobile: true,
+      defaultDate: state.dates.start || null,
+      onChange: (dates) => {
+        const iso = dates[0] ? formatIso(dates[0]) : "";
+        start.value = iso;
+        // Keep the end picker's min in sync so nothing before the
+        // new start is selectable.
+        if (endPicker) endPicker.set("minDate", iso || "today");
+        // Clear a stale end that's now before the new start.
+        if (iso && end.value && end.value < iso) {
+          if (endPicker) endPicker.clear();
+          end.value = "";
+        }
+        updateDurationLine();
+      },
+    });
+    const endPicker = flatpickr(end, {
+      minDate: state.dates.start || "today",
+      dateFormat: "Y-m-d",
+      altInput: true,
+      altFormat: "l, F j, Y",
+      disableMobile: true,
+      defaultDate: state.dates.end || null,
+      onChange: (dates) => {
+        end.value = dates[0] ? formatIso(dates[0]) : "";
+        updateDurationLine();
+      },
+    });
+  }
+  mountFlatpickr();
+
+  function formatIso(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${dd}`;
+  }
 
   $("#to-step-2").addEventListener("click", async () => {
     const errEl = $("#date-error");

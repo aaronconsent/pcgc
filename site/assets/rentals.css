@@ -110,6 +110,33 @@
 }
 @media (max-width: 520px) { .rental-grid-3 { grid-template-columns: 1fr; } }
 
+/* flatpickr — visible alt-input needs to match the rest of the form,
+   and the calendar popup should pick up our teal accent color. */
+.rental-field input.flatpickr-input,
+.rental-field input.form-control.input {
+  padding: .65rem .8rem; border: 1px solid var(--line); border-radius: 8px;
+  font: inherit; background: #fff;
+  cursor: pointer;
+}
+.rental-field input.flatpickr-input:focus,
+.rental-field input.form-control.input:focus {
+  outline: none; border-color: var(--teal-dk);
+  box-shadow: 0 0 0 2px rgba(31, 90, 104, .15);
+}
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+  background: var(--coral) !important;
+  border-color: var(--coral) !important;
+  color: #fff !important;
+}
+.flatpickr-day.today { border-color: var(--teal-dk); }
+.flatpickr-months .flatpickr-month,
+.flatpickr-weekdays,
+span.flatpickr-weekday { color: var(--teal-dk); }
+.flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month input.cur-year { color: var(--teal-dk); font-weight: 600; }
+
 /* Inline rental agreement (Step 4) — terms scrollbox, DL radio
    chooser, signature canvas. Same visual language as the /agreement/
    page but rendered directly in the booking flow. */

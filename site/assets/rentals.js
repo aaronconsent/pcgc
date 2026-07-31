@@ -45,75 +45,6 @@ const MAX_CARTS = CARTS.length;
 const DELIVERY_EXTENDED_FEE = 0;
 const TAX_RATE = 0.0825;
 
-// ---------- Clover Ecommerce SDK (embedded card entry) ----------
-// clover holds the initialized SDK instance once /api/config confirms
-// public-key + merchant-id are configured. cloverElements holds the
-// mounted iframe field references we call .createToken() on.
-let clover = null;
-let cloverElements = null;
-let cloverConfigured = false;
-
-async function initCloverIfConfigured() {
-  if (cloverConfigured) return;
-  let cfg;
-  try {
-    const res = await fetch("/api/config");
-    if (!res.ok) return;
-    cfg = await res.json();
-  } catch (_) { return; }
-  if (!cfg?.clover?.publicKey || !cfg?.clover?.merchantId) return;
-
-  // Load the Clover.js SDK. Sandbox and production have different
-  // hosts; both expose the same window.Clover constructor.
-  const sdkSrc = cfg.clover.environment === "production"
-    ? "https://checkout.clover.com/sdk.js"
-    : "https://checkout.sandbox.dev.clover.com/sdk.js";
-  await loadScript(sdkSrc);
-  if (!window.Clover) return;
-
-  // eslint-disable-next-line no-undef
-  clover = new Clover(cfg.clover.publicKey, { merchantId: cfg.clover.merchantId });
-  cloverElements = clover.elements();
-
-  const styles = {
-    body:  { fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif", color: "#333" },
-    input: { fontSize: "16px", color: "#333" },
-    ".invalid": { color: "#c2261a" },
-    ".focus":   { color: "#1f5a68" },
-  };
-  const number = cloverElements.create("CARD_NUMBER", { styles });
-  const date   = cloverElements.create("CARD_DATE",   { styles });
-  const cvv    = cloverElements.create("CARD_CVV",    { styles });
-  const postal = cloverElements.create("CARD_POSTAL_CODE", { styles });
-  number.mount("#card-number");
-  date.mount("#card-date");
-  cvv.mount("#card-cvv");
-  postal.mount("#card-postal");
-
-  // Reveal the payment fieldset + flip the CTA to "Pay $X now".
-  const fs = document.getElementById("card-fieldset");
-  if (fs) fs.hidden = false;
-  const btn = document.getElementById("pay-now");
-  if (btn) {
-    const p = computePrice();
-    btn.textContent = `Pay ${fmtMoney(p.grand)} now`;
-  }
-  cloverConfigured = true;
-}
-
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    // De-dupe: don't re-add the SDK if it's already on the page.
-    if ([...document.scripts].some(s => s.src === src)) return resolve();
-    const s = document.createElement("script");
-    s.src = src;
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error("Failed to load " + src));
-    document.head.appendChild(s);
-  });
-}
-
 // ---------- State ----------
 // Bumped to v5 for the address-split schema change (street/city/state/
 // zip are now separate fields; the old `address` slot is repurposed as
@@ -592,12 +523,9 @@ function bookingIsFarOut() {
 
 function initStep4() {
   $("#pay-now").addEventListener("click", submitBooking);
-  // Kick off the Clover SDK init in the background — if configured,
-  // the card fields mount and the CTA flips to "Pay $X now". If not,
-  // this is a silent no-op and the CTA stays as "Submit booking
-  // request" (owner takes payment offline).
-  initCloverIfConfigured();
   // Inline rental-agreement pieces (fleet grid, DL upload, signature).
+  // Payment happens offline — PCGC calls the customer after the
+  // booking lands. No inline card fields to wire.
   initAgreementUi();
 }
 
@@ -777,19 +705,15 @@ function collectAgreement() {
 
 async function submitBooking() {
   const err = $("#pay-error");
-  const cardErr = $("#card-error");
   err.hidden = true;
-  if (cardErr) cardErr.hidden = true;
 
-  // Inline agreement validation runs FIRST — no point tokenizing a
-  // card if the customer hasn't signed yet.
+  // Inline agreement validation runs first — nothing gets POSTed
+  // until the customer has filled the license fields, drawn a
+  // signature, and checked the "I agree" box.
   const collected = collectAgreement();
   if (!collected.ok) {
     err.textContent = collected.msg;
     err.hidden = false;
-    // Scroll the error into view — the agreement is above the CTA
-    // and if the customer clicked Submit while its fields are off
-    // screen they won't otherwise see the message.
     err.scrollIntoView({ behavior: "smooth", block: "center" });
     return;
   }
@@ -797,47 +721,11 @@ async function submitBooking() {
   const btn = $("#pay-now");
   btn.disabled = true;
   const prevLabel = btn.textContent;
-
-  // If Clover's mounted, tokenize the card BEFORE we submit. The
-  // resulting source token goes into the booking POST; the Worker
-  // uses it to charge and only saves the booking on charge success.
-  let paymentSourceToken = null;
-  if (cloverConfigured && clover) {
-    btn.textContent = "Verifying card…";
-    try {
-      const result = await clover.createToken();
-      if (result?.errors && Object.keys(result.errors).length) {
-        const first = Object.values(result.errors)[0];
-        if (cardErr) { cardErr.textContent = first || "Please check your card details."; cardErr.hidden = false; }
-        else { err.textContent = first || "Please check your card details."; err.hidden = false; }
-        btn.disabled = false;
-        btn.textContent = prevLabel;
-        return;
-      }
-      if (!result?.token) {
-        err.textContent = "We couldn't verify the card. Please try again or call 936-223-1182.";
-        err.hidden = false;
-        btn.disabled = false;
-        btn.textContent = prevLabel;
-        return;
-      }
-      paymentSourceToken = result.token;
-    } catch (e) {
-      err.textContent = "Card verification failed: " + (e?.message || e);
-      err.hidden = false;
-      btn.disabled = false;
-      btn.textContent = prevLabel;
-      return;
-    }
-  }
-
-  btn.textContent = paymentSourceToken ? "Charging card…" : "Submitting…";
+  btn.textContent = "Submitting…";
 
   const booking = buildBookingRecord();
-  if (paymentSourceToken) booking.paymentSourceToken = paymentSourceToken;
   // Attach the signed agreement to the booking POST so the Worker
-  // stores it alongside the record. Nothing goes into KV without a
-  // valid signature — the server also validates.
+  // stores it alongside the record. Server also validates.
   booking.signedAgreement = collected.agreement;
 
   try {

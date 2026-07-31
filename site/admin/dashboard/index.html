@@ -191,6 +191,11 @@
       }
       showDash();
       const data = await res.json();
+      // Hide the "Loading…" placeholder and reveal the KPI / chart
+      // container. Both are hidden by default in the markup so the
+      // login form doesn't briefly flash empty tiles before auth.
+      status.hidden = true;
+      body.hidden = false;
       render(data);
     }
 

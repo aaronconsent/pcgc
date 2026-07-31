@@ -597,6 +597,182 @@ function initStep4() {
   // this is a silent no-op and the CTA stays as "Submit booking
   // request" (owner takes payment offline).
   initCloverIfConfigured();
+  // Inline rental-agreement pieces (fleet grid, DL upload, signature).
+  initAgreementUi();
+}
+
+// ---------- Inline rental agreement (moved from /agreement/ page) ----------
+// State captured from the agreement UI at submit time.
+let agreementSignature = null;    // data URL of the drawn signature
+let agreementDlImage = null;      // data URL of the uploaded DL photo (or null)
+let sigCanvas, sigCtx, sigDrawn = false, sigDrawing = false;
+
+function initAgreementUi() {
+  renderAgreementFleet();
+
+  // Signature canvas — same lightweight pad as /agreement/index.html.
+  sigCanvas = $("#sig-canvas");
+  if (!sigCanvas) return;
+  sigCtx = sigCanvas.getContext("2d");
+  resizeSigCanvas();
+  window.addEventListener("resize", resizeSigCanvas);
+  sigCanvas.addEventListener("mousedown", sigStart);
+  sigCanvas.addEventListener("mousemove", sigMove);
+  window.addEventListener("mouseup", sigEnd);
+  sigCanvas.addEventListener("touchstart", sigStart, { passive: false });
+  sigCanvas.addEventListener("touchmove", sigMove, { passive: false });
+  sigCanvas.addEventListener("touchend", sigEnd);
+  $("#sig-clear").addEventListener("click", () => {
+    sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+    sigDrawn = false;
+  });
+
+  // DL delivery-method radios — show/hide the upload box.
+  $$('input[name="dl-method"]').forEach(r => r.addEventListener("change", updateDlMethodUi));
+  updateDlMethodUi();
+
+  // DL upload — client-side resize + preview.
+  $("#dl-file").addEventListener("change", handleDlFile);
+}
+
+function renderAgreementFleet() {
+  const grid = $("#agreement-fleet-grid");
+  if (!grid) return;
+  const rented = new Set(Object.entries(state.selection || {}).filter(([, q]) => q > 0).map(([id]) => id));
+  grid.innerHTML = CARTS.map(cart => `
+    <div class="fleet-cart${rented.has(cart.id) ? ' rented' : ''}">
+      <h5>${cart.name}</h5>
+      <div class="meta">${cart.make} · ${cart.modelDetails || ''}<br>Serial <code>${cart.serial}</code></div>
+    </div>
+  `).join("");
+}
+
+function resizeSigCanvas() {
+  const rect = sigCanvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const prev = document.createElement("canvas");
+  prev.width = sigCanvas.width;
+  prev.height = sigCanvas.height;
+  prev.getContext("2d").drawImage(sigCanvas, 0, 0);
+  sigCanvas.width = Math.floor(rect.width * dpr);
+  sigCanvas.height = Math.floor(rect.height * dpr);
+  sigCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  sigCtx.strokeStyle = "#1f5a68";
+  sigCtx.lineWidth = 2.2;
+  sigCtx.lineCap = "round";
+  sigCtx.lineJoin = "round";
+  if (sigDrawn) {
+    sigCtx.save();
+    sigCtx.setTransform(1, 0, 0, 1, 0, 0);
+    sigCtx.drawImage(prev, 0, 0, sigCanvas.width, sigCanvas.height);
+    sigCtx.restore();
+  }
+}
+function sigPos(ev) {
+  const rect = sigCanvas.getBoundingClientRect();
+  const t = ev.touches ? ev.touches[0] : ev;
+  return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+}
+function sigStart(ev) {
+  ev.preventDefault();
+  sigDrawing = true;
+  const p = sigPos(ev);
+  sigCtx.beginPath();
+  sigCtx.moveTo(p.x, p.y);
+}
+function sigMove(ev) {
+  if (!sigDrawing) return;
+  ev.preventDefault();
+  const p = sigPos(ev);
+  sigCtx.lineTo(p.x, p.y);
+  sigCtx.stroke();
+  sigDrawn = true;
+}
+function sigEnd() {
+  if (!sigDrawing) return;
+  sigDrawing = false;
+  sigCtx.closePath();
+}
+
+function updateDlMethodUi() {
+  const method = document.querySelector('input[name="dl-method"]:checked')?.value || "upload";
+  const box = $("#dl-upload-box");
+  if (!box) return;
+  box.hidden = (method !== "upload");
+  if (method !== "upload") {
+    $("#dl-file").value = "";
+    agreementDlImage = null;
+    $("#dl-preview").hidden = true;
+    $("#dl-preview").removeAttribute("src");
+  }
+}
+
+async function handleDlFile() {
+  const file = $("#dl-file").files && $("#dl-file").files[0];
+  if (!file) { agreementDlImage = null; $("#dl-preview").hidden = true; return; }
+  try {
+    const url = await resizeImage(file, 1600, 0.72);
+    agreementDlImage = url;
+    $("#dl-preview").src = url;
+    $("#dl-preview").hidden = false;
+  } catch (_) {
+    agreementDlImage = null;
+    $("#dl-preview").hidden = true;
+    alert("Could not process that image. Please try again or pick 'text a photo' instead.");
+  }
+}
+
+function resizeImage(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("read"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("decode"));
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL("image/jpeg", quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Returns { ok: true, agreement } or { ok: false, msg }. Called from
+// submitBooking() before we POST — surfaces inline errors on missing
+// fields instead of round-tripping to the server.
+function collectAgreement() {
+  const dlNumber = $("#dl-number").value.trim();
+  const dlState = $("#dl-state").value.trim();
+  const typedName = $("#typed-name").value.trim();
+  const agreed = $("#agreed").checked;
+  const dlMethod = document.querySelector('input[name="dl-method"]:checked')?.value || "upload";
+
+  if (!dlNumber || !dlState) return { ok: false, msg: "Please fill in your driver's license number and state." };
+  if (!agreed) return { ok: false, msg: "Please check the box to agree to the rental agreement terms." };
+  if (!sigDrawn) return { ok: false, msg: "Please draw your signature in the box." };
+  if (!typedName) return { ok: false, msg: "Please type your full legal name below the signature." };
+  if (dlMethod === "upload" && !agreementDlImage) {
+    return { ok: false, msg: "Please attach your driver's license photo, or pick a different delivery option." };
+  }
+  return {
+    ok: true,
+    agreement: {
+      typedName,
+      dlNumber,
+      dlState,
+      dlMethod,
+      dlImageDataUrl: dlMethod === "upload" ? agreementDlImage : null,
+      signatureDataUrl: sigCanvas.toDataURL("image/png"),
+      agreed: true,
+    },
+  };
 }
 
 async function submitBooking() {
@@ -604,6 +780,19 @@ async function submitBooking() {
   const cardErr = $("#card-error");
   err.hidden = true;
   if (cardErr) cardErr.hidden = true;
+
+  // Inline agreement validation runs FIRST — no point tokenizing a
+  // card if the customer hasn't signed yet.
+  const collected = collectAgreement();
+  if (!collected.ok) {
+    err.textContent = collected.msg;
+    err.hidden = false;
+    // Scroll the error into view — the agreement is above the CTA
+    // and if the customer clicked Submit while its fields are off
+    // screen they won't otherwise see the message.
+    err.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
 
   const btn = $("#pay-now");
   btn.disabled = true;
@@ -646,6 +835,10 @@ async function submitBooking() {
 
   const booking = buildBookingRecord();
   if (paymentSourceToken) booking.paymentSourceToken = paymentSourceToken;
+  // Attach the signed agreement to the booking POST so the Worker
+  // stores it alongside the record. Nothing goes into KV without a
+  // valid signature — the server also validates.
+  booking.signedAgreement = collected.agreement;
 
   try {
     const res = await fetch("/api/booking", {
@@ -765,12 +958,19 @@ function renderConfirmation() {
   $("#requirements-list").innerHTML = requirements.map(r => `<li>${r}</li>`).join("");
   $("#docusign-email").textContent = b.contact.email || "your email";
 
-  // Show the agreement CTA when the server minted a token. Local dev
-  // (no worker) won't have this; production always will.
+  // Post-submit "Sign the agreement" CTA — the agreement is signed
+  // inline on Step 4 now, so this becomes a "View your signed copy"
+  // link instead of a call-to-action. Only surface when the Worker
+  // returned an agreementPath (production only).
   const cta = document.getElementById("agreement-cta");
   const link = document.getElementById("agreement-link");
   if (b.agreementPath && cta && link) {
     link.href = b.agreementPath;
+    link.textContent = "View your signed agreement →";
+    const heading = cta.querySelector("h2");
+    const body = cta.querySelector("p");
+    if (heading) heading.textContent = "Your signed agreement";
+    if (body) body.textContent = "A copy of the agreement you signed is available online — bookmark it or save it for your records.";
     cta.hidden = false;
   } else if (cta) {
     cta.hidden = true;

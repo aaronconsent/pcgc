@@ -104,6 +104,30 @@ async function submitBooking(request, env) {
     return json({ error: "missing contact details" }, 400);
   }
 
+  // Inline rental agreement — validated on the client too, but never
+  // trust the client. If it's missing or malformed the booking is
+  // rejected outright; the customer sees the error and fills it in.
+  const sa = payload.signedAgreement || {};
+  if (!sa.signatureDataUrl || typeof sa.signatureDataUrl !== "string" || !sa.signatureDataUrl.startsWith("data:image/")) {
+    return json({ error: "signature required" }, 400);
+  }
+  if (sa.signatureDataUrl.length > 250_000) {
+    return json({ error: "signature too large" }, 413);
+  }
+  if (!sa.typedName || !sa.typedName.trim()) return json({ error: "typed name required on agreement" }, 400);
+  if (!sa.dlNumber || !sa.dlState) return json({ error: "driver's license number and state required" }, 400);
+  const ALLOWED_DL_METHODS = ["upload", "text", "in-person"];
+  const dlMethod = ALLOWED_DL_METHODS.includes(sa.dlMethod) ? sa.dlMethod : "text";
+  if (dlMethod === "upload") {
+    if (!sa.dlImageDataUrl || typeof sa.dlImageDataUrl !== "string" || !sa.dlImageDataUrl.startsWith("data:image/")) {
+      return json({ error: "driver's license photo required for the 'upload now' option" }, 400);
+    }
+    if (sa.dlImageDataUrl.length > 1_500_000) {
+      return json({ error: "driver's license photo too large" }, 413);
+    }
+  }
+  if (sa.agreed !== true) return json({ error: "you must agree to the terms" }, 400);
+
   const ts = new Date().toISOString();
   const idSuffix = crypto.randomUUID().slice(0, 6).toUpperCase();
   const id = "PCGC-" + idSuffix;
@@ -154,10 +178,22 @@ async function submitBooking(request, env) {
       amountCents: Math.round(((payload?.pricing?.grand ?? payload?.pricing?.total) || 0) * 100),
       chargedAt: ts,
     } : null,
+    agreement: {
+      version: AGREEMENT_VERSION,
+      signedAt: ts,
+      typedName: String(sa.typedName).slice(0, 200),
+      dlNumber: String(sa.dlNumber).slice(0, 40),
+      dlState: String(sa.dlState).slice(0, 4).toUpperCase(),
+      dlMethod,
+      dlImageDataUrl: dlMethod === "upload" ? sa.dlImageDataUrl : null,
+      signatureDataUrl: sa.signatureDataUrl,
+      signedIp: request.headers.get("cf-connecting-ip") || "",
+      signedUa: (request.headers.get("user-agent") || "").slice(0, 500),
+    },
   };
-  // Never persist the source token — it's single-use anyway, but no
-  // reason to keep it around.
+  // Never persist single-use fields alongside the record.
   delete record.paymentSourceToken;
+  delete record.signedAgreement;
   await env.FEEDBACK_KV.put(`booking:${ts}:${idSuffix}`, JSON.stringify(record));
 
   // Mint the agreement token now so the on-screen confirmation + both
@@ -325,10 +361,10 @@ async function sendCustomerConfirmationEmail(record, env, agreementPath) {
     <p style="margin-top:1.5rem;"><b>What happens next:</b> We'll follow up by phone or text within a day to confirm your booking and take payment. ${farOutNote ? "Since your pickup is more than 3 months out, we'll collect a <b>50% deposit</b> to hold the reservation and the balance at pickup." : ""}</p>
 
     ${agreementPath ? `<div style="background:#e6f1f3; border:1px solid #9fcfd7; border-radius:8px; padding:1rem 1.2rem; margin-top:1.5rem;">
-      <h3 style="margin:0 0 .5rem; color:#1f5a68;">Sign your rental agreement</h3>
-      <p style="margin:.35rem 0 .85rem;">Please sign the short rental agreement online before your rental — it takes about a minute and covers the terms of use, insurance, and cancellation policy.</p>
+      <h3 style="margin:0 0 .5rem; color:#1f5a68;">Your signed agreement</h3>
+      <p style="margin:.35rem 0 .85rem;">You signed the rental agreement during checkout — a copy is available online for your records anytime.</p>
       <p style="margin:0;">
-        <a href="https://polkcountygolfcarts.com${agreementPath}" style="display:inline-block; background:#e85a4f; color:#fff; padding:.7rem 1.25rem; border-radius:8px; text-decoration:none; font-weight:600;">Sign the agreement &rarr;</a>
+        <a href="https://polkcountygolfcarts.com${agreementPath}" style="display:inline-block; background:#1f5a68; color:#fff; padding:.7rem 1.25rem; border-radius:8px; text-decoration:none; font-weight:600;">View your signed agreement &rarr;</a>
       </p>
     </div>` : ""}
 

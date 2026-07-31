@@ -110,6 +110,78 @@
 }
 @media (max-width: 520px) { .rental-grid-3 { grid-template-columns: 1fr; } }
 
+/* Inline rental agreement (Step 4) — terms scrollbox, DL radio
+   chooser, signature canvas. Same visual language as the /agreement/
+   page but rendered directly in the booking flow. */
+.agreement-terms-box {
+  background: #fbf8f3;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  font-size: .92rem;
+  line-height: 1.55;
+  max-height: 280px;
+  overflow-y: auto;
+  margin: .85rem 0 1rem;
+}
+.agreement-terms-box h4 { color: var(--teal-dk); margin: .85rem 0 .25rem; font-size: .95rem; }
+.agreement-terms-box h4:first-child { margin-top: 0; }
+.agreement-terms-box p { margin: .5rem 0; }
+
+.fleet-grid { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.fleet-cart {
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: .6rem .75rem; background: var(--bg-alt);
+  opacity: .5;
+}
+.fleet-cart.rented {
+  opacity: 1; background: #fff;
+  border: 2px solid var(--coral); box-shadow: 0 4px 14px rgba(232,90,79,.15);
+  position: relative;
+}
+.fleet-cart.rented::after {
+  content: "RENTED"; position: absolute; top: -8px; right: 8px;
+  background: var(--coral); color: #fff; font: 700 .65rem inherit;
+  letter-spacing: .08em; padding: 2px 7px; border-radius: 999px;
+}
+.fleet-cart h5 { margin: 0 0 .2rem; color: var(--teal-dk); font-size: .9rem; }
+.fleet-cart .meta { font-size: .78rem; color: var(--ink-soft); line-height: 1.35; }
+.fleet-cart .meta code { font-family: ui-monospace, monospace; font-size: .76rem; background: rgba(0,0,0,.04); padding: 1px 4px; border-radius: 3px; }
+
+.dl-choice { display: flex; flex-direction: column; gap: .4rem; }
+.dl-radio {
+  display: flex; gap: .65rem; align-items: flex-start;
+  padding: .65rem .85rem; border: 1px solid var(--line);
+  border-radius: 8px; background: #fff; cursor: pointer;
+}
+.dl-radio:hover { border-color: var(--teal-dk); }
+.dl-radio input { margin-top: 3px; }
+.dl-radio small { color: var(--ink-soft); }
+
+.dl-upload-box {
+  padding: 1rem 1.15rem;
+  background: #fff; border: 2px dashed var(--line); border-radius: 8px;
+}
+
+.sig-box {
+  border: 2px dashed var(--line); border-radius: 8px;
+  background: #fff; padding: .35rem;
+}
+.sig-canvas {
+  width: 100%; height: 180px; display: block; touch-action: none;
+  cursor: crosshair; border-radius: 4px;
+}
+.sig-controls {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: .35rem; font-size: .82rem; color: var(--ink-soft);
+  flex-wrap: wrap; gap: .5rem;
+}
+.sig-controls button {
+  background: transparent; border: none; color: var(--coral);
+  cursor: pointer; font: inherit; padding: 0;
+}
+.sig-controls button:hover { text-decoration: underline; }
+
 /* Clover Ecommerce SDK renders each card field into a <div> we mount
    an iframe inside; we style the container to match the rest of the
    form and Clover styles the iframe contents via their initialize()

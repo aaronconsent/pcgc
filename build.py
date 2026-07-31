@@ -267,7 +267,7 @@ DEALER_DIRECT_APPLY_URL = "https://dealerdirect.apptraker.com/my/guest?dealer=11
 #     token below. Free, no cookies, no perf hit, zero PII.
 GOOGLE_SITE_VERIFICATION = ""
 BING_SITE_VERIFICATION = ""
-CLOUDFLARE_ANALYTICS_TOKEN = ""
+CLOUDFLARE_ANALYTICS_TOKEN = "fd4f94c888f9437ba7a7b44e9dd051fa"
 
 import json as _json
 

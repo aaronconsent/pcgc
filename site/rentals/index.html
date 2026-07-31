@@ -9,7 +9,12 @@
   <link rel="canonical" href="https://polkcountygolfcarts.com/rentals/">
   <link rel="icon" type="image/svg+xml" href="/assets/logos/logo-color.svg">
   <link rel="preconnect" href="https://fonts.cdnfonts.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/grobold">
+  <!-- Cedarville Cursive — used to auto-render the typed name as a
+       signature-style preview on the /rentals/ Step 4 signature pad. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cedarville+Cursive&display=swap">
   <link rel="stylesheet" href="/assets/site.css">
   <link rel="stylesheet" href="/assets/rentals.css?v=685ab324">
   <meta property="og:title" content="Rent a Golf Cart · Polk County Golf Carts">
@@ -153,7 +158,7 @@
       <!-- Billing address — collected on every booking for the rental
            agreement, regardless of pickup vs delivery. -->
       <label class="rental-field">
-        <span>Street address</span>
+        <span>Billing address</span>
         <input type="text" id="contact-street" required autocomplete="street-address" placeholder="123 Main St">
       </label>
       <div class="rental-grid-3">
@@ -173,11 +178,18 @@
 
       <!-- Delivery drop-off spot (may be different from the billing
            address — e.g. a rented lake house). Only shown when delivery
-           is selected. -->
-      <label class="rental-field" id="address-field" hidden>
-        <span>Where should we drop the cart off?</span>
-        <input type="text" id="contact-address" placeholder="Address, resort name, or landmark" autocomplete="off">
-      </label>
+           is selected. The "Same as billing" checkbox pre-fills the
+           input with the billing address and hides the input. -->
+      <div id="address-field" hidden>
+        <label style="display:flex; gap:.5rem; align-items:center; margin-top:1rem; font-weight:600; cursor:pointer;">
+          <input type="checkbox" id="dropoff-same-as-billing">
+          <span>Drop-off location is same as my billing address</span>
+        </label>
+        <label class="rental-field" id="dropoff-field-wrap" style="margin-top:.5rem;">
+          <span>Where should we drop the cart off?</span>
+          <input type="text" id="contact-address" placeholder="Address, resort name, or landmark" autocomplete="off">
+        </label>
+      </div>
 
       <label class="rental-field">
         <span>Anything we should know? <em>(optional)</em></span>
@@ -205,11 +217,6 @@
            months out (populated by rentals.js). -->
       <div class="rental-info-box" id="deposit-note" hidden>
         <b>50% deposit required</b> — your pickup date is more than 3 months out, so we'll take a 50% deposit to hold the booking. The balance is due at pickup.
-      </div>
-
-      <div class="rental-info-box">
-        <b>What we'll need from you at time of payment (please text to <a href="tel:9362231182">936-223-1182</a>):</b>
-        <ul id="review-requirements" style="margin:.5rem 0 0; padding-left:1.2rem;"></ul>
       </div>
 
       <div class="rental-info-box">
@@ -383,6 +390,6 @@
   Polk County Golf Carts · 1732 FM 3277, Livingston, TX · <a href="tel:9362231182">936-223-1182</a>
 </footer>
 
-<script src="/assets/rentals.js?v=77e66581"></script>
+<script src="/assets/rentals.js?v=5b225275"></script>
 </body>
 </html>

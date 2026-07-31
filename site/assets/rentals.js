@@ -170,7 +170,17 @@ function goTo(step) {
 
   if (step === 1) syncDatesStep();
   if (step === 2) renderCartGrid();
-  if (step === 4) renderPaymentSummary();
+  if (step === 4) {
+    renderPaymentSummary();
+    // Re-render the fleet grid (customer may have changed cart
+    // selection on a back-and-forth), and re-init the signature
+    // canvas. Signature was initialized on DOMContentLoaded when
+    // Step 4 was still hidden — hidden elements have 0x0 rects, so
+    // the canvas came up sized 0x0 and strokes silently no-op'd.
+    // Re-run now that the step is visible.
+    renderAgreementFleet();
+    if (typeof resizeSigCanvas === "function" && sigCanvas) resizeSigCanvas();
+  }
   if (step === 5) renderConfirmation();
 }
 
@@ -435,6 +445,49 @@ function initStep3() {
     });
   }
 
+  // "Same as billing" — when checked, drop-off input auto-fills
+  // from billing (street + city, state zip) and the field hides.
+  // Uncheck reveals + clears the field.
+  const sameChk = $("#dropoff-same-as-billing");
+  const dropoffWrap = $("#dropoff-field-wrap");
+  const dropoffInput = $("#contact-address");
+  function billingFormatted() {
+    const c = state.contact;
+    const line2 = [c.city, c.state].filter(Boolean).join(", ");
+    return [c.street, [line2, c.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  }
+  function applySameAsBilling() {
+    if (!sameChk?.checked) {
+      dropoffWrap.hidden = false;
+      return;
+    }
+    const filled = billingFormatted();
+    if (!filled) {
+      // Nothing to copy yet — show a hint below the checkbox.
+      dropoffWrap.hidden = false;
+      dropoffInput.value = "";
+      state.contact.address = "";
+      saveState();
+      return;
+    }
+    dropoffInput.value = filled;
+    state.contact.address = filled;
+    dropoffWrap.hidden = true;
+    saveState();
+  }
+  sameChk?.addEventListener("change", applySameAsBilling);
+  // Re-copy the billing address whenever any billing field changes,
+  // so a customer who ticks the box THEN edits their address doesn't
+  // end up with a stale drop-off value.
+  ["contact-street", "contact-city", "contact-state", "contact-zip"].forEach(id => {
+    $("#" + id)?.addEventListener("input", () => { if (sameChk?.checked) applySameAsBilling(); });
+  });
+  // Re-apply on radio flips too — the wrapper's visibility is
+  // controlled by both delivery choice AND the checkbox.
+  $$('input[name="delivery"]').forEach(r => r.addEventListener("change", () => {
+    if (state.delivery !== "pickup" && sameChk?.checked) applySameAsBilling();
+  }));
+
   $("#to-step-4").addEventListener("click", () => {
     const err = $("#details-error");
     err.hidden = true;
@@ -554,7 +607,20 @@ function initAgreementUi() {
   $("#sig-clear").addEventListener("click", () => {
     sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
     sigDrawn = false;
+    sigTypedRendered = false;
   });
+
+  // Auto-render the typed name into the canvas as a signature-style
+  // preview whenever the customer types. If they draw over it, the
+  // manual strokes take over; if they clear + re-type, we re-render.
+  const typed = $("#typed-name");
+  if (typed) {
+    typed.addEventListener("input", () => {
+      if (!sigDrawn || sigTypedRendered) {
+        renderTypedSignature(typed.value.trim());
+      }
+    });
+  }
 
   // DL delivery-method radios — show/hide the upload box.
   $$('input[name="dl-method"]').forEach(r => r.addEventListener("change", updateDlMethodUi));
@@ -564,12 +630,47 @@ function initAgreementUi() {
   $("#dl-file").addEventListener("change", handleDlFile);
 }
 
+// Whether the current canvas content came from the typed-name
+// auto-render (as opposed to a real hand-drawn stroke). Lets us
+// safely replace it when the customer keeps typing without losing
+// their manual strokes.
+let sigTypedRendered = false;
+
+function renderTypedSignature(name) {
+  if (!sigCanvas || !sigCtx) return;
+  // Clear + repaint in the cursive font. Devicepixel-aware sizing —
+  // resizeSigCanvas() sets transform(dpr, ...) so we draw in CSS px.
+  const cssW = sigCanvas.width / (window.devicePixelRatio || 1);
+  const cssH = sigCanvas.height / (window.devicePixelRatio || 1);
+  sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+  if (!name) { sigDrawn = false; sigTypedRendered = false; return; }
+  // Font size proportional to canvas height; drop-shadow off.
+  const size = Math.max(28, Math.min(64, Math.floor(cssH * 0.55)));
+  sigCtx.save();
+  sigCtx.font = `${size}px "Cedarville Cursive", "Snell Roundhand", "Segoe Script", cursive`;
+  sigCtx.fillStyle = "#1f5a68";
+  sigCtx.textBaseline = "middle";
+  sigCtx.textAlign = "left";
+  sigCtx.fillText(name, 24, cssH / 2);
+  sigCtx.restore();
+  sigDrawn = true;
+  sigTypedRendered = true;
+}
+
 function renderAgreementFleet() {
   const grid = $("#agreement-fleet-grid");
   if (!grid) return;
   const rented = new Set(Object.entries(state.selection || {}).filter(([, q]) => q > 0).map(([id]) => id));
-  grid.innerHTML = CARTS.map(cart => `
-    <div class="fleet-cart${rented.has(cart.id) ? ' rented' : ''}">
+  // Owner request: agreement should only show the cart(s) the
+  // customer is actually renting, WITH the cart photo.
+  const rentedCarts = CARTS.filter(c => rented.has(c.id));
+  if (!rentedCarts.length) {
+    grid.innerHTML = '<div class="fleet-cart" style="opacity:.7">No carts selected — go back and pick at least one.</div>';
+    return;
+  }
+  grid.innerHTML = rentedCarts.map(cart => `
+    <div class="fleet-cart rented">
+      <img src="${cart.img}" alt="${cart.name}" loading="lazy" style="width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:6px; margin-bottom:.4rem;">
       <h5>${cart.name}</h5>
       <div class="meta">${cart.make} · ${cart.modelDetails || ''}<br>Serial <code>${cart.serial}</code></div>
     </div>
@@ -577,12 +678,23 @@ function renderAgreementFleet() {
 }
 
 function resizeSigCanvas() {
+  if (!sigCanvas || !sigCtx) return;
   const rect = sigCanvas.getBoundingClientRect();
+  // No visible layout yet (Step 4 still hidden). Bail without touching
+  // the canvas — goTo(4) will call us again once the step is visible.
+  if (rect.width < 2 || rect.height < 2) return;
   const dpr = window.devicePixelRatio || 1;
-  const prev = document.createElement("canvas");
-  prev.width = sigCanvas.width;
-  prev.height = sigCanvas.height;
-  prev.getContext("2d").drawImage(sigCanvas, 0, 0);
+  // Preserve the current drawing so a mid-flow resize (device rotation,
+  // window resize) doesn't wipe an in-progress signature. Only try if
+  // there's actually something on the canvas — drawImage() throws when
+  // the source is 0x0, which killed the whole function on first init.
+  let prev = null;
+  if (sigCanvas.width > 0 && sigCanvas.height > 0) {
+    prev = document.createElement("canvas");
+    prev.width = sigCanvas.width;
+    prev.height = sigCanvas.height;
+    prev.getContext("2d").drawImage(sigCanvas, 0, 0);
+  }
   sigCanvas.width = Math.floor(rect.width * dpr);
   sigCanvas.height = Math.floor(rect.height * dpr);
   sigCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -590,7 +702,7 @@ function resizeSigCanvas() {
   sigCtx.lineWidth = 2.2;
   sigCtx.lineCap = "round";
   sigCtx.lineJoin = "round";
-  if (sigDrawn) {
+  if (sigDrawn && prev) {
     sigCtx.save();
     sigCtx.setTransform(1, 0, 0, 1, 0, 0);
     sigCtx.drawImage(prev, 0, 0, sigCanvas.width, sigCanvas.height);
@@ -605,6 +717,13 @@ function sigPos(ev) {
 function sigStart(ev) {
   ev.preventDefault();
   sigDrawing = true;
+  // If the canvas currently holds a typed-name auto-signature, wipe
+  // it so the customer's freehand drawing isn't overlaid on top of
+  // the cursive text.
+  if (sigTypedRendered && sigCtx && sigCanvas) {
+    sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+    sigTypedRendered = false;
+  }
   const p = sigPos(ev);
   sigCtx.beginPath();
   sigCtx.moveTo(p.x, p.y);

@@ -14,12 +14,26 @@
  * are similar enough that not every one needs a unique shot.
  */
 
+// Fleet — matches the physical inventory numbered by John. Cart #2 is
+// the Limo; #3-#6 are the four Yamahas. Make/model/serial are shown on
+// the /rentals/ Step 2 tile and on the /agreement/ page so the rental
+// agreement always identifies the exact cart(s) leaving the lot.
 const CARTS = [
-  { id: "cart-1", name: "Cart 1", seats: 4, price: 75,  img: "/assets/photos/rentals/4-seater-a.jpg", desc: "4-seater golf cart with rear flip seat." },
-  { id: "cart-2", name: "Cart 2", seats: 4, price: 75,  img: "/assets/photos/rentals/4-seater-b.jpg", desc: "4-seater golf cart with rear flip seat." },
-  { id: "cart-3", name: "Cart 3", seats: 4, price: 75,  img: "/assets/photos/rentals/4-seater-a.jpg", desc: "4-seater golf cart with rear flip seat." },
-  { id: "cart-4", name: "Cart 4", seats: 4, price: 75,  img: "/assets/photos/rentals/4-seater-b.jpg", desc: "4-seater golf cart with rear flip seat." },
-  { id: "cart-5", name: "Cart 5 — The Limo", seats: 6, price: 125, img: "/assets/photos/rentals/limo.jpg", desc: "6-seater Limo. Three rows of seating for the whole crew." },
+  { id: "cart-2", cartNo: 2, name: "Cart #2 — The Limo", seats: 6, price: 125,
+    make: "Club Car Limo", modelDetails: "Gas · White", serial: "LG9939-808771",
+    img: "/assets/photos/rentals/limo.jpg", desc: "6-seater Limo. Three rows of seating for the whole crew." },
+  { id: "cart-3", cartNo: 3, name: "Cart #3", seats: 4, price: 75,
+    make: "Yamaha", modelDetails: "Gas · Tan", serial: "J0B-001578",
+    img: "/assets/photos/rentals/4-seater-a.jpg", desc: "4-seater golf cart with rear flip seat." },
+  { id: "cart-4", cartNo: 4, name: "Cart #4", seats: 4, price: 75,
+    make: "Yamaha", modelDetails: "Gas · Tan", serial: "J0B-105687",
+    img: "/assets/photos/rentals/4-seater-b.jpg", desc: "4-seater golf cart with rear flip seat." },
+  { id: "cart-5", cartNo: 5, name: "Cart #5", seats: 4, price: 75,
+    make: "Yamaha", modelDetails: "Gas · Tan", serial: "J0B-105659",
+    img: "/assets/photos/rentals/4-seater-a.jpg", desc: "4-seater golf cart with rear flip seat." },
+  { id: "cart-6", cartNo: 6, name: "Cart #6", seats: 4, price: 75,
+    make: "Yamaha", modelDetails: "Gas · Grey", serial: "J0K-203736",
+    img: "/assets/photos/rentals/4-seater-b.jpg", desc: "4-seater golf cart with rear flip seat." },
 ];
 
 // One copy of each cart exists in the fleet — a renter can pick up to
@@ -35,7 +49,7 @@ const TAX_RATE = 0.0825;
 // Bumped to v5 for the address-split schema change (street/city/state/
 // zip are now separate fields; the old `address` slot is repurposed as
 // the delivery drop-off location). v4 sessions get a clean slate.
-const STORAGE_KEY = "pcgc.rental.v5";
+const STORAGE_KEY = "pcgc.rental.v6";
 const state = loadState() || {
   step: 1,
   dates: { start: "", end: "" },
@@ -201,6 +215,8 @@ function renderCartGrid() {
         <h3>${cart.name}</h3>
         <div class="badges">
           <span class="badge">${cart.seats}-seater</span>
+          <span class="badge">${cart.make}</span>
+          <span class="badge cart-serial" title="Serial number">${cart.serial}</span>
         </div>
         <p class="desc">${cart.desc}</p>
         <div class="footer">
@@ -529,6 +545,8 @@ async function submitBooking() {
     if (res.ok) {
       const body = await res.json();
       if (body.id) booking.id = body.id;
+      // Stash the server-signed agreement URL so Step 5 can link to it.
+      if (body.agreementPath) booking.agreementPath = body.agreementPath;
     } else {
       err.textContent = "We couldn't reach our server. Please try again in a minute or call 936-223-1182.";
       err.hidden = false;
@@ -623,6 +641,17 @@ function renderConfirmation() {
       ];
   $("#requirements-list").innerHTML = requirements.map(r => `<li>${r}</li>`).join("");
   $("#docusign-email").textContent = b.contact.email || "your email";
+
+  // Show the agreement CTA when the server minted a token. Local dev
+  // (no worker) won't have this; production always will.
+  const cta = document.getElementById("agreement-cta");
+  const link = document.getElementById("agreement-link");
+  if (b.agreementPath && cta && link) {
+    link.href = b.agreementPath;
+    cta.hidden = false;
+  } else if (cta) {
+    cta.hidden = true;
+  }
 }
 
 // ---------- Boot ----------

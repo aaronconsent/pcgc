@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Rental Agreement · Polk County Golf Carts</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/logos/logo-color.svg">
+  <link rel="stylesheet" href="/assets/site.css">
+  <style>
+    .agree-page { max-width: 780px; margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+    .agree-page h1 { color: var(--teal-dk); margin: 0 0 .35rem; font-size: clamp(1.6rem, 3vw, 2.2rem); }
+    .agree-page .sub { color: var(--ink-soft); margin: 0 0 2rem; }
+    .agree-status {
+      background: #f4f0e8; border: 1px solid var(--line); border-radius: 10px;
+      padding: 1.25rem 1.5rem; text-align: center; color: var(--ink-soft);
+    }
+    .agree-status.ok { background: #dff0e1; border-color: #a7d4ad; color: #1e4a2b; }
+    .agree-status.err { background: #fde9e6; border-color: #f3c3bc; color: #7a1815; }
+
+    .agree-card {
+      background: #fff; border: 1px solid var(--line); border-radius: 12px;
+      padding: 1.5rem 1.75rem; margin: 1rem 0;
+      box-shadow: var(--shadow);
+    }
+    .agree-card h2 { margin-top: 0; color: var(--teal-dk); font-size: 1.15rem; }
+    .agree-card h3 { color: var(--teal-dk); font-size: 1rem; margin: 1.25rem 0 .35rem; }
+    .agree-card p { margin: .5rem 0; }
+    .agree-card ul { margin: .5rem 0; padding-left: 1.2rem; }
+
+    .booking-grid {
+      display: grid; gap: .5rem 1.5rem;
+      grid-template-columns: 130px 1fr;
+      font-size: .95rem;
+      margin: .35rem 0;
+    }
+    .booking-grid dt { color: var(--ink-soft); font-weight: 500; }
+    .booking-grid dd { margin: 0; color: var(--ink); font-weight: 600; }
+    @media (max-width: 480px) { .booking-grid { grid-template-columns: 1fr; } .booking-grid dd { margin-bottom: .5rem; } }
+
+    .terms-body {
+      background: #fbf8f3; border: 1px solid var(--line); border-radius: 8px;
+      padding: 1rem 1.25rem; font-size: .92rem; line-height: 1.55;
+      max-height: 320px; overflow-y: auto;
+    }
+    .terms-body p { margin: .5rem 0; }
+    .terms-body h4 { color: var(--teal-dk); margin: .85rem 0 .25rem; font-size: .95rem; }
+
+    .field { display: flex; flex-direction: column; gap: .35rem; margin: 1rem 0; }
+    .field label > span:first-child { font-weight: 600; font-size: .92rem; color: var(--ink); }
+    .field input, .field textarea {
+      padding: .65rem .8rem; border: 1px solid var(--line); border-radius: 8px; font: inherit;
+    }
+    .field-row { display: grid; grid-template-columns: 3fr 1fr; gap: 1rem; }
+    @media (max-width: 520px) { .field-row { grid-template-columns: 1fr; } }
+
+    .agree-check {
+      display: flex; gap: .65rem; align-items: flex-start;
+      background: #fff9f4; border: 1px solid #f3c3bc; border-radius: 8px;
+      padding: .85rem 1.15rem; margin: 1.25rem 0;
+    }
+    .agree-check input { margin-top: 4px; }
+
+    .sig-box { border: 2px dashed var(--line); border-radius: 8px; background: #fff; padding: .5rem; margin: .5rem 0; }
+    .sig-canvas { width: 100%; height: 180px; display: block; touch-action: none; cursor: crosshair; border-radius: 4px; }
+    .sig-controls { display: flex; justify-content: space-between; align-items: center; margin-top: .35rem; font-size: .85rem; color: var(--ink-soft); }
+    .sig-controls button { background: transparent; border: none; color: var(--coral); cursor: pointer; font: inherit; padding: 0; }
+    .sig-controls button:hover { text-decoration: underline; }
+
+    .agree-cta { text-align: center; margin-top: 1.5rem; }
+    .agree-cta button { min-width: 260px; }
+    .agree-err { color: #c2261a; margin: .5rem 0 0; font-size: .92rem; text-align: center; }
+
+    .signed-preview {
+      background: #dff0e1; border: 1px solid #a7d4ad; border-radius: 10px;
+      padding: 1.25rem 1.5rem; margin: 1rem 0; text-align: center;
+    }
+    .signed-preview h2 { color: #1e4a2b; margin-top: 0; }
+    .signed-preview img { max-width: 100%; margin-top: 1rem; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+    .signed-preview .meta { color: var(--ink-soft); font-size: .88rem; margin-top: .5rem; }
+
+    /* Fleet grid on the agreement — rented carts pop, others muted. */
+    .fleet-grid {
+      display: grid; gap: .75rem;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-top: .5rem;
+    }
+    .fleet-cart {
+      border: 1px solid var(--line); border-radius: 10px;
+      padding: .75rem .9rem; background: var(--bg);
+      opacity: .5; transition: opacity .15s ease;
+    }
+    .fleet-cart.rented {
+      opacity: 1; background: #fff;
+      border: 2px solid var(--coral); box-shadow: 0 4px 14px rgba(232,90,79,.15);
+      position: relative;
+    }
+    .fleet-cart.rented::after {
+      content: "RENTED"; position: absolute; top: -8px; right: 10px;
+      background: var(--coral); color: #fff; font: 700 .68rem inherit;
+      letter-spacing: .08em; padding: 2px 8px; border-radius: 999px;
+    }
+    .fleet-cart h4 { margin: 0 0 .2rem; color: var(--teal-dk); font-size: .95rem; }
+    .fleet-cart .meta { font-size: .8rem; color: var(--ink-soft); line-height: 1.35; }
+    .fleet-cart .meta code { font-family: ui-monospace, monospace; font-size: .78rem; background: rgba(0,0,0,.04); padding: 1px 4px; border-radius: 3px; }
+
+    /* DL delivery radio + upload */
+    .dl-choice { display: flex; flex-direction: column; gap: .5rem; margin: .5rem 0; }
+    .dl-choice label {
+      display: flex; gap: .65rem; align-items: flex-start;
+      border: 1px solid var(--line); border-radius: 8px;
+      padding: .75rem .9rem; cursor: pointer;
+      background: #fff;
+    }
+    .dl-choice label:hover { border-color: var(--teal-dk); }
+    .dl-choice input[type="radio"] { margin-top: 3px; }
+    .dl-choice .lbl-body { display: flex; flex-direction: column; gap: .15rem; }
+    .dl-choice .lbl-body b { color: var(--ink); }
+    .dl-choice .lbl-body span { color: var(--ink-soft); font-size: .85rem; }
+
+    .dl-upload {
+      margin-top: .85rem; padding: 1rem 1.15rem;
+      background: #fff; border: 2px dashed var(--line); border-radius: 8px;
+    }
+    .dl-upload input[type="file"] { display: block; margin: .5rem 0; }
+    .dl-preview {
+      max-width: 100%; max-height: 240px; margin-top: .5rem;
+      border: 1px solid var(--line); border-radius: 6px; background: var(--bg);
+    }
+    .dl-note { font-size: .82rem; color: var(--ink-soft); margin: .5rem 0 0; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="/">
+        <img class="brand-mark" src="/assets/logos/logo-color.svg" alt="" width="144" height="112" aria-hidden="true">
+        <span class="brand-text">Polk County Golf Carts<small>Rental Agreement</small></span>
+      </a>
+    </div>
+  </header>
+
+  <main class="agree-page">
+    <div id="loading" class="agree-status">Loading your agreement…</div>
+    <div id="error-view" class="agree-status err" hidden></div>
+
+    <div id="signed-view" hidden>
+      <div class="signed-preview">
+        <h2>✓ Agreement signed</h2>
+        <p>Thanks — we've recorded your signature. A copy is attached to your booking on our side; you can also print or save this page for your records.</p>
+        <p class="meta"><b>Booking:</b> <span id="signed-id"></span> · <b>Signed on:</b> <span id="signed-at"></span></p>
+        <img id="signed-sig" alt="Your signature">
+        <p class="meta"><b>Signed by:</b> <span id="signed-name"></span></p>
+      </div>
+      <div class="agree-cta">
+        <a href="/" class="btn btn-ghost">Back to PCGC</a>
+      </div>
+    </div>
+
+    <form id="agree-form" hidden>
+      <h1>Short Term Rental Agreement</h1>
+      <p class="sub">Between Polk County Golf Carts, LLC ("PCGC") and the Customer.</p>
+
+      <div class="agree-card">
+        <h2>Your booking</h2>
+        <dl class="booking-grid">
+          <dt>Confirmation</dt>          <dd id="fld-id"></dd>
+          <dt>Customer</dt>               <dd id="fld-name"></dd>
+          <dt>Phone</dt>                  <dd id="fld-phone"></dd>
+          <dt>Email</dt>                  <dd id="fld-email"></dd>
+          <dt>Address</dt>                <dd id="fld-address"></dd>
+          <dt>Location of use</dt>        <dd id="fld-location"></dd>
+          <dt>Start date</dt>             <dd id="fld-start"></dd>
+          <dt>End date</dt>               <dd id="fld-end"></dd>
+        </dl>
+      </div>
+
+      <div class="agree-card">
+        <h2>Cart(s) being rented</h2>
+        <p class="sub">The highlighted cart(s) below are yours for the rental window. Cart # and serial identify the exact physical unit.</p>
+        <div class="fleet-grid" id="fleet-grid"></div>
+      </div>
+
+      <div class="agree-card">
+        <h2>Driver's license</h2>
+        <p class="sub">Required for the primary driver.</p>
+        <div class="field-row">
+          <label class="field">
+            <span>Driver's license number</span>
+            <input id="dl-number" type="text" required autocomplete="off">
+          </label>
+          <label class="field">
+            <span>State</span>
+            <input id="dl-state" type="text" required maxlength="2" placeholder="TX" style="text-transform:uppercase">
+          </label>
+        </div>
+
+        <h3 style="margin-top:1.25rem;">How would you like to send us a copy of your license?</h3>
+        <div class="dl-choice">
+          <label>
+            <input type="radio" name="dl-method" value="upload" checked>
+            <span class="lbl-body">
+              <b>Upload a photo now (recommended)</b>
+              <span>Snap a picture with your phone, or attach a scan. We'll keep it with your booking.</span>
+            </span>
+          </label>
+          <label>
+            <input type="radio" name="dl-method" value="text">
+            <span class="lbl-body">
+              <b>I'll text a photo to 936-223-1182 before pickup</b>
+              <span>Fine — just make sure it lands before your rental starts.</span>
+            </span>
+          </label>
+          <label>
+            <input type="radio" name="dl-method" value="in-person">
+            <span class="lbl-body">
+              <b>I'll bring a physical copy at pickup</b>
+              <span>We'll photocopy it when you arrive at the shop.</span>
+            </span>
+          </label>
+        </div>
+
+        <div class="dl-upload" id="dl-upload-box">
+          <label>
+            <b>Attach your driver's license photo</b>
+            <input id="dl-file" type="file" accept="image/*" capture="environment">
+          </label>
+          <p class="dl-note">The image is resized on your device and stored securely with your booking. Nothing is shared with any third party.</p>
+          <img id="dl-preview" class="dl-preview" hidden alt="Driver's license preview">
+        </div>
+      </div>
+
+      <div class="agree-card">
+        <h2>Terms &amp; conditions</h2>
+        <div class="terms-body" id="terms-body">
+          <h4>Weekend / holiday rentals</h4>
+          <p>A two (2) day minimum rental is required for all weekend and holiday rentals.</p>
+
+          <h4>Cancellation policy</h4>
+          <p>If you cancel your rental <b>seven (7) days</b> prior to the first rental date you will be refunded <b>100%</b>. If you cancel within <b>four (4) days</b> of the first rental date you will be refunded <b>50%</b>. If your cancellation is <b>three (3) days or less</b>, <b>no refund</b> will be granted.</p>
+
+          <h4>Return of cart</h4>
+          <p>Make sure the cart is parked back at the office when finished. Thank you!</p>
+
+          <h4>Risk of Loss or Injury</h4>
+          <p>I will operate the golf cart(s) safely and responsibly and I will preserve and protect the golf cart(s) from loss or damage, my person or property, and the persons or property of others. I agree to be legally and financially liable for all damage and costs of repairs or total replacement for the golf cart(s), and for the loss, damage and/or injuries to my person or property and the persons or property of others regardless of fault. I agree to hold harmless, defend and indemnify PCGC, the owner of the golf cart(s) for all damages and claims of any nature whatsoever that may arise from the use of the golf cart(s) itself, my person and property, and the persons and property of others. Effective upon delivery or pick up of the golf cart(s) and until the golf cart is returned to PCGC, customer relieves PCGC of responsibility for all risk of physical damage to, or loss or destruction of the golf cart(s), regardless of who caused the damage. Acceptance of delivery includes customer not being present. Customer is responsible and liable for the golf cart(s) rented from the start and end dates listed in this agreement, not the number of days charged.</p>
+
+          <h4>Operations</h4>
+          <p>I understand that if the golf cart(s) should be inoperable through no fault of mine, I will contact PCGC immediately upon discovery (936) 223-1182, as PCGC will take reasonable steps to have the vehicle repaired / serviced / replaced as soon as it is possible and during normal business hours. This does not relieve me of the responsibility to ensure the golf cart(s) is not damaged or stolen regardless of mechanical or damage failure.</p>
+
+          <h4>Return of Equipment</h4>
+          <p>I promise to return the golf cart(s) to the location delivered from or picked up, in the same condition as I received it. Upon return, PCGC will perform an inspection to determine the condition of the golf cart(s). In the event of any damage, Customer agrees to pay for said damages including up to total replacement and hereby authorizes PCGC, in advance, to charge the credit card given at time of rental and/or the difference of the cash deposit, to make repairs or replace the entire unit(s) at full price in the event damage is beyond repair. If the cart is stolen or missing, customer agrees to pay for the unit(s) at full retail price as determined by PCGC's cart inventory log at the time of agreement.</p>
+
+          <h4>Miscellaneous Terms</h4>
+          <p>I understand that a golf cart(s) is subject to laws and regulations by both local and the State of Texas authorities. Customer agrees that the golf cart(s) will be operated in accordance with the laws of the State, including but not limited to the requirement that persons driving the golf cart(s) must not be under the influence of alcohol and/or illegal drugs or prescribed medication that could cause impairment. Customer further agrees that they will be personally responsible for all moving and/or parking violations issued to said cart(s) while in their possession, under their control, or at any time during the rental / loaner / demonstration agreement.</p>
+          <p>Customer agrees that only person(s) who are <b>16 years of age and/or older</b> will be permitted to operate the golf cart(s). I further agree that the maximum occupancy of the golf cart(s) is the number of available seats (<b>NO STANDING ON THE FENDER OR FOOT PLATE</b>).</p>
+          <p>Customer will also remove the key from golf cart(s) when not in use. Customer shall not sublease the golf cart(s). Customer shall keep the golf cart(s) at the listed location of use. The customer agrees not to relocate the golf cart(s) to any location other than the listed location.</p>
+          <p>I agree to contact PCGC if I have any questions or concerns about operating the golf cart(s) or I have caused any damage to the golf cart(s) or to others through the use of the golf cart(s). I agree to examine and inspect the safety and mechanical condition of the golf cart(s), reporting any concerns or problems before driving the vehicle. In the event that I have violated any of the above, I agree and understand that I will be responsible for any damage, including up to full golf cart(s) replacement.</p>
+        </div>
+      </div>
+
+      <label class="agree-check">
+        <input type="checkbox" id="agreed" required>
+        <span>I have read and agree to the terms of this Short Term Rental Agreement, and I confirm the information above is accurate.</span>
+      </label>
+
+      <div class="agree-card">
+        <h2>Your signature</h2>
+        <p class="sub">Draw your signature below (use your finger on mobile, or your mouse / trackpad).</p>
+        <div class="sig-box">
+          <canvas id="sig-canvas" class="sig-canvas"></canvas>
+        </div>
+        <div class="sig-controls">
+          <span>By signing below, you acknowledge that this electronic signature has the same legal effect as a handwritten signature.</span>
+          <button type="button" id="sig-clear">Clear</button>
+        </div>
+
+        <div class="field" style="margin-top: 1rem;">
+          <label>
+            <span>Type your full legal name</span>
+            <input id="typed-name" type="text" required autocomplete="name">
+          </label>
+        </div>
+      </div>
+
+      <div class="agree-cta">
+        <button type="submit" class="btn btn-coral" id="submit-btn">Submit signed agreement</button>
+        <p id="submit-err" class="agree-err" hidden></p>
+      </div>
+    </form>
+  </main>
+
+  <script>
+  (() => {
+    const loading = document.getElementById("loading");
+    const errorView = document.getElementById("error-view");
+    const signedView = document.getElementById("signed-view");
+    const form = document.getElementById("agree-form");
+    const submitBtn = document.getElementById("submit-btn");
+    const submitErr = document.getElementById("submit-err");
+
+    const params = new URLSearchParams(location.search);
+    const bookingId = params.get("id");
+    const token = params.get("t");
+
+    function showError(msg) {
+      loading.hidden = true;
+      form.hidden = true;
+      signedView.hidden = true;
+      errorView.hidden = false;
+      errorView.textContent = msg;
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return "—";
+      const d = new Date(iso + "T00:00:00");
+      return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+    }
+    function fmtDateTime(iso) {
+      if (!iso) return "—";
+      return new Date(iso).toLocaleString();
+    }
+
+    // ----- Signature pad (lightweight, no deps) -----
+    const canvas = document.getElementById("sig-canvas");
+    const ctx = canvas.getContext("2d");
+    let sigDirty = false;
+    let drawing = false;
+    let lastX = 0, lastY = 0;
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      // Save current image so a resize doesn't wipe an in-progress sig
+      const prev = document.createElement("canvas");
+      prev.width = canvas.width;
+      prev.height = canvas.height;
+      prev.getContext("2d").drawImage(canvas, 0, 0);
+      canvas.width = Math.floor(rect.width * dpr);
+      canvas.height = Math.floor(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.strokeStyle = "#1f5a68";
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      // Restore previous drawing scaled to new size
+      if (sigDirty) {
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.drawImage(prev, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+    }
+    function pointerPos(ev) {
+      const rect = canvas.getBoundingClientRect();
+      const t = ev.touches ? ev.touches[0] : ev;
+      return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+    }
+    function start(ev) {
+      ev.preventDefault();
+      drawing = true;
+      const p = pointerPos(ev);
+      lastX = p.x; lastY = p.y;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    }
+    function move(ev) {
+      if (!drawing) return;
+      ev.preventDefault();
+      const p = pointerPos(ev);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      lastX = p.x; lastY = p.y;
+      sigDirty = true;
+    }
+    function end(ev) {
+      if (!drawing) return;
+      drawing = false;
+      ctx.closePath();
+    }
+    canvas.addEventListener("mousedown", start);
+    canvas.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", end);
+    canvas.addEventListener("touchstart", start, { passive: false });
+    canvas.addEventListener("touchmove", move, { passive: false });
+    canvas.addEventListener("touchend", end);
+    window.addEventListener("resize", resizeCanvas);
+    document.getElementById("sig-clear").addEventListener("click", () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      sigDirty = false;
+    });
+
+    // ----- Load agreement data -----
+    if (!bookingId || !token) {
+      showError("This link is missing required parameters. Please use the link we emailed you, or contact 936-223-1182 for help.");
+      return;
+    }
+
+    (async () => {
+      let res;
+      try {
+        res = await fetch(`/api/agreement/${encodeURIComponent(bookingId)}?t=${encodeURIComponent(token)}`);
+      } catch (e) {
+        showError("We couldn't reach our server. Please try again in a minute or call 936-223-1182.");
+        return;
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        showError(body.error === "bad token"
+          ? "This agreement link is invalid or expired. Please contact 936-223-1182 for a fresh link."
+          : body.error === "booking not found"
+          ? "We couldn't find your booking. Please double-check the link or call 936-223-1182."
+          : `Something went wrong (${res.status}). Please call 936-223-1182 for help.`);
+        return;
+      }
+      const data = await res.json();
+
+      // Already-signed short circuit
+      if (data.agreement && data.agreement.signedAt) {
+        loading.hidden = true;
+        signedView.hidden = false;
+        document.getElementById("signed-id").textContent = data.id;
+        document.getElementById("signed-at").textContent = fmtDateTime(data.agreement.signedAt);
+        document.getElementById("signed-name").textContent = data.agreement.typedName || "";
+        document.getElementById("signed-sig").src = data.agreement.signatureDataUrl;
+        return;
+      }
+
+      // Pre-fill the booking summary
+      const c = data.contact || {};
+      const address = [c.street, [c.city, c.state].filter(Boolean).join(", "), c.zip].filter(Boolean).join(", ");
+      const location = data.delivery === "pickup"
+        ? "Pickup at PCGC shop (1732 FM 3277, Livingston, TX)"
+        : c.address || address || "—";
+      document.getElementById("fld-id").textContent = data.id || "—";
+      document.getElementById("fld-name").textContent = c.name || "—";
+      document.getElementById("fld-phone").textContent = c.phone || "—";
+      document.getElementById("fld-email").textContent = c.email || "—";
+      document.getElementById("fld-address").textContent = address || "—";
+      document.getElementById("fld-location").textContent = location;
+      document.getElementById("fld-start").textContent = fmtDate(data.dates?.start);
+      document.getElementById("fld-end").textContent = fmtDate(data.dates?.end);
+
+      // Render the fleet grid — the customer sees ALL carts, with the
+      // rented ones highlighted. Makes the agreement match the physical
+      // inventory sheet the owner keeps at the shop.
+      const rentedIds = new Set((data.items || []).map(it => it.id));
+      const fleetHtml = (data.fleet || []).map(cart => {
+        const rented = rentedIds.has(cart.id);
+        return `<div class="fleet-cart${rented ? ' rented' : ''}">
+          <h4>${escapeHtml(cart.name)}</h4>
+          <div class="meta">
+            ${escapeHtml(cart.make)} · ${escapeHtml(cart.modelDetails || '')}<br>
+            Serial <code>${escapeHtml(cart.serial)}</code>
+          </div>
+        </div>`;
+      }).join("");
+      document.getElementById("fleet-grid").innerHTML = fleetHtml
+        || '<p class="sub">Cart details are not available for this booking.</p>';
+
+      // Show the form
+      loading.hidden = true;
+      form.hidden = false;
+      // Resize canvas now that it's visible
+      resizeCanvas();
+    })();
+
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+    }
+
+    // ----- DL method radios + client-side resize on upload -----
+    const dlUploadBox = document.getElementById("dl-upload-box");
+    const dlFile = document.getElementById("dl-file");
+    const dlPreview = document.getElementById("dl-preview");
+    let dlImageDataUrl = null;
+
+    function updateDlUi() {
+      const method = document.querySelector('input[name="dl-method"]:checked')?.value || "upload";
+      dlUploadBox.hidden = (method !== "upload");
+      if (method !== "upload") {
+        dlFile.value = "";
+        dlImageDataUrl = null;
+        dlPreview.hidden = true;
+        dlPreview.removeAttribute("src");
+      }
+    }
+    document.querySelectorAll('input[name="dl-method"]').forEach(r => r.addEventListener("change", updateDlUi));
+    updateDlUi();
+
+    // Resize any file the customer picks to at most 1600px on the long
+    // edge and encode as JPEG q0.72. Keeps typical phone shots under
+    // 200KB — safely inside KV's 25MB per-value cap and reasonable
+    // for a POST body.
+    dlFile.addEventListener("change", async () => {
+      const file = dlFile.files && dlFile.files[0];
+      if (!file) { dlImageDataUrl = null; dlPreview.hidden = true; return; }
+      try {
+        const dataUrl = await resizeImageToDataUrl(file, 1600, 0.72);
+        dlImageDataUrl = dataUrl;
+        dlPreview.src = dataUrl;
+        dlPreview.hidden = false;
+      } catch (e) {
+        alert("Could not process that image. Please try again or pick 'text a photo' instead.");
+        dlImageDataUrl = null;
+        dlPreview.hidden = true;
+      }
+    });
+
+    function resizeImageToDataUrl(file, maxDim, quality) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("read fail"));
+        reader.onload = () => {
+          const img = new Image();
+          img.onerror = () => reject(new Error("decode fail"));
+          img.onload = () => {
+            const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+            const w = Math.round(img.width * scale);
+            const h = Math.round(img.height * scale);
+            const c = document.createElement("canvas");
+            c.width = w; c.height = h;
+            const cx = c.getContext("2d");
+            cx.drawImage(img, 0, 0, w, h);
+            resolve(c.toDataURL("image/jpeg", quality));
+          };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // ----- Submit -----
+    form.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      submitErr.hidden = true;
+
+      if (!sigDirty) {
+        submitErr.textContent = "Please draw your signature above.";
+        submitErr.hidden = false;
+        return;
+      }
+      const typedName = document.getElementById("typed-name").value.trim();
+      const dlNumber = document.getElementById("dl-number").value.trim();
+      const dlState = document.getElementById("dl-state").value.trim();
+      const agreed = document.getElementById("agreed").checked;
+      const dlMethod = document.querySelector('input[name="dl-method"]:checked')?.value || "upload";
+      if (!typedName || !dlNumber || !dlState || !agreed) {
+        submitErr.textContent = "Please complete all required fields and check the agreement box.";
+        submitErr.hidden = false;
+        return;
+      }
+      if (dlMethod === "upload" && !dlImageDataUrl) {
+        submitErr.textContent = "Please attach your driver's license photo, or pick a different delivery option below.";
+        submitErr.hidden = false;
+        return;
+      }
+
+      submitBtn.disabled = true;
+      const prev = submitBtn.textContent;
+      submitBtn.textContent = "Submitting…";
+
+      const signatureDataUrl = canvas.toDataURL("image/png");
+
+      try {
+        const res = await fetch(`/api/agreement/${encodeURIComponent(bookingId)}?t=${encodeURIComponent(token)}`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            signatureDataUrl,
+            typedName,
+            dlNumber,
+            dlState,
+            dlMethod,
+            dlImageDataUrl: dlMethod === "upload" ? dlImageDataUrl : null,
+            agreed: true,
+          }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          submitErr.textContent = body.error === "already signed"
+            ? "This agreement has already been signed. Reload the page to see your signed copy."
+            : `Submit failed: ${body.error || res.status}`;
+          submitErr.hidden = false;
+          submitBtn.disabled = false;
+          submitBtn.textContent = prev;
+          return;
+        }
+        // Success — reload so the signed view renders
+        location.reload();
+      } catch (e) {
+        submitErr.textContent = "Network error. Please try again or call 936-223-1182.";
+        submitErr.hidden = false;
+        submitBtn.disabled = false;
+        submitBtn.textContent = prev;
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

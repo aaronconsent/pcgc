@@ -62,6 +62,18 @@ export default {
     if (url.pathname === "/api/track/summary" && request.method === "GET") {
       return trackSummary(request, env, url);
     }
+    if (url.pathname.startsWith("/api/agreement/") && request.method === "GET") {
+      return getAgreement(request, env, url);
+    }
+    if (url.pathname.startsWith("/api/agreement/") && request.method === "POST") {
+      return signAgreement(request, env, url);
+    }
+    if (url.pathname === "/api/payment/create-checkout" && request.method === "POST") {
+      return createCloverCheckout(request, env);
+    }
+    if (url.pathname === "/api/payment/webhook" && request.method === "POST") {
+      return handleCloverWebhook(request, env);
+    }
 
     // Legacy URLs from the original site — 301 to the new locations
     // so search engines (and bookmarks) move with us.
@@ -104,6 +116,13 @@ async function submitBooking(request, env) {
   };
   await env.FEEDBACK_KV.put(`booking:${ts}:${idSuffix}`, JSON.stringify(record));
 
+  // Mint the agreement token now so the on-screen confirmation + both
+  // emails can link the customer straight to the signature page.
+  const agreementToken = await mintAgreementToken(id, env);
+  const agreementPath = agreementToken
+    ? `/agreement/?id=${encodeURIComponent(id)}&t=${agreementToken}`
+    : null;
+
   // Notify the owner via Resend. Failure here must NEVER fail the
   // booking — the record is already saved in KV; the email is a
   // convenience layer on top. Outcome is echoed in the response so
@@ -122,14 +141,14 @@ async function submitBooking(request, env) {
     customerEmailResult = ownerEmailResult;
   } else {
     try {
-      await sendBookingEmail(record, env);
+      await sendBookingEmail(record, env, agreementPath);
       ownerEmailResult = "sent";
     } catch (e) {
       ownerEmailResult = "failed: " + (e?.message || String(e));
       console.error("owner booking email failed:", ownerEmailResult);
     }
     try {
-      await sendCustomerConfirmationEmail(record, env);
+      await sendCustomerConfirmationEmail(record, env, agreementPath);
       customerEmailResult = "sent";
     } catch (e) {
       customerEmailResult = "failed: " + (e?.message || String(e));
@@ -137,7 +156,13 @@ async function submitBooking(request, env) {
     }
   }
 
-  return json({ ok: true, id, email: ownerEmailResult, customerEmail: customerEmailResult });
+  return json({
+    ok: true,
+    id,
+    email: ownerEmailResult,
+    customerEmail: customerEmailResult,
+    agreementPath, // absolute path (e.g. "/agreement/?id=...&t=...") for the confirmation page to link to
+  });
 }
 
 // Send the booking notification through Resend's HTTP API. The owner
@@ -149,7 +174,11 @@ async function submitBooking(request, env) {
 //   RESEND_API_KEY       — from resend.com/api-keys
 //   BOOKING_FROM_EMAIL   — verified sender, e.g. bookings@polkcountygolfcarts.com
 //   BOOKING_TO_EMAIL     — recipient, defaults to polkcountygolfcarts@yahoo.com
-async function sendBookingEmail(record, env) {
+async function sendBookingEmail(record, env, _agreementPath) {
+  // _agreementPath is currently unused for the OWNER email — the
+  // owner sees agreement status in /admin/rentals/, not in email.
+  // Kept in the signature so callers can pass it uniformly with
+  // sendCustomerConfirmationEmail.
   const from = env.BOOKING_FROM_EMAIL || "bookings@polkcountygolfcarts.com";
   const to = env.BOOKING_TO_EMAIL || "polkcountygolfcarts@yahoo.com";
   const customer = record.contact || {};
@@ -194,7 +223,7 @@ async function sendBookingEmail(record, env) {
 // dates + cart list, per-delivery requirements (DL / insurance /
 // plate photo for pickup; DL only for delivery), and a note about
 // the DocuSign rental agreement.
-async function sendCustomerConfirmationEmail(record, env) {
+async function sendCustomerConfirmationEmail(record, env, agreementPath) {
   const customer = record.contact || {};
   const to = customer.email;
   if (!to) throw new Error("no customer email on booking");
@@ -251,6 +280,14 @@ async function sendCustomerConfirmationEmail(record, env) {
 
     <p style="margin-top:1.5rem;"><b>What happens next:</b> We'll follow up by phone or text within a day to confirm your booking and take payment. ${farOutNote ? "Since your pickup is more than 3 months out, we'll collect a <b>50% deposit</b> to hold the reservation and the balance at pickup." : ""}</p>
 
+    ${agreementPath ? `<div style="background:#e6f1f3; border:1px solid #9fcfd7; border-radius:8px; padding:1rem 1.2rem; margin-top:1.5rem;">
+      <h3 style="margin:0 0 .5rem; color:#1f5a68;">Sign your rental agreement</h3>
+      <p style="margin:.35rem 0 .85rem;">Please sign the short rental agreement online before your rental — it takes about a minute and covers the terms of use, insurance, and cancellation policy.</p>
+      <p style="margin:0;">
+        <a href="https://polkcountygolfcarts.com${agreementPath}" style="display:inline-block; background:#e85a4f; color:#fff; padding:.7rem 1.25rem; border-radius:8px; text-decoration:none; font-weight:600;">Sign the agreement &rarr;</a>
+      </p>
+    </div>` : ""}
+
     <div style="background:#fff9f4; border:1px solid #f3c3bc; border-radius:8px; padding:1rem 1.2rem; margin-top:1.5rem;">
       <h3 style="margin:0 0 .5rem; color:#1f5a68;">At time of payment — please text these to 936-223-1182</h3>
       <ul style="margin:.35rem 0 0; padding-left:1.2rem;">
@@ -286,6 +323,9 @@ async function sendCustomerConfirmationEmail(record, env) {
     `What happens next: We'll follow up by phone or text within a day to confirm your booking and take payment.`,
     farOutNote ? `Since your pickup is more than 3 months out, we'll collect a 50% deposit to hold the reservation and the balance at pickup.` : null,
     ``,
+    agreementPath ? `Sign your rental agreement (takes about a minute):` : null,
+    agreementPath ? `  https://polkcountygolfcarts.com${agreementPath}` : null,
+    agreementPath ? `` : null,
     `At time of payment — please text these to 936-223-1182:`,
     ...requirements.map(r => `  - ${r}`),
     ``,
@@ -798,6 +838,252 @@ async function trackSummary(request, env, url) {
     byDay,
     byEvent,
   });
+}
+
+// -------------- Clover payment integration (scaffolding) -------------- //
+//
+// Not yet activated — waiting on the following secrets in the Cloudflare
+// dashboard (Workers & Pages -> pcgc -> Settings -> Variables and Secrets):
+//
+//   CLOVER_MERCHANT_ID     — 13-char string from Clover Dashboard ->
+//                            Setup -> Merchant Info. Public-ish.
+//   CLOVER_ACCESS_TOKEN    — API access token (Clover Dashboard ->
+//                            Setup -> API Tokens -> Create new token,
+//                            or OAuth flow for the app-marketplace path).
+//                            SECRET.
+//   CLOVER_ENVIRONMENT     — "sandbox" or "production" (defaults to
+//                            "sandbox" so we don't accidentally charge
+//                            live cards before the owner's ready).
+//   CLOVER_WEBHOOK_SECRET  — signing secret for /api/payment/webhook,
+//                            set on the Clover side under Setup ->
+//                            Webhooks. Used to verify inbound events.
+//
+// Flow (Hosted Checkout, the simplest integration):
+//   1. Customer completes rental form
+//   2. rentals.js POSTs to /api/payment/create-checkout with { bookingId,
+//      amountCents, farOut }
+//   3. Worker uses CLOVER_ACCESS_TOKEN to call
+//      https://sandbox.dev.clover.com/invoicingcheckoutservice/v1/checkouts
+//      with the amount + return URL back to /rentals/paid?order=<id>
+//   4. Worker returns the Clover-hosted checkout URL
+//   5. rentals.js redirects the customer to that URL
+//   6. Customer pays on Clover -> Clover redirects back
+//   7. Clover also fires a webhook to /api/payment/webhook with the
+//      payment outcome; we mark the booking `paid: true` in KV and
+//      the admin UI reflects it
+//
+// Everything below is guarded by "is CLOVER_ACCESS_TOKEN set?" so it's a
+// no-op until the secret lands.
+
+async function createCloverCheckout(request, env) {
+  if (!env.CLOVER_ACCESS_TOKEN || !env.CLOVER_MERCHANT_ID) {
+    return json({
+      ok: false,
+      reason: "clover_not_configured",
+      message: "Clover payment isn't configured yet — booking accepted, we'll take payment by phone/text. Owner: set CLOVER_MERCHANT_ID + CLOVER_ACCESS_TOKEN secrets to enable.",
+    }, 503);
+  }
+  // Real implementation lands once the Clover secrets exist. Sketch:
+  // let body; try { body = await request.json(); } catch { return json({error:"bad body"},400); }
+  // const { bookingId, amountCents, description } = body;
+  // const base = env.CLOVER_ENVIRONMENT === "production"
+  //   ? "https://api.clover.com" : "https://sandbox.dev.clover.com";
+  // const res = await fetch(`${base}/invoicingcheckoutservice/v1/checkouts`, {
+  //   method: "POST",
+  //   headers: {
+  //     "authorization": `Bearer ${env.CLOVER_ACCESS_TOKEN}`,
+  //     "content-type": "application/json",
+  //     "x-clover-merchant-id": env.CLOVER_MERCHANT_ID,
+  //   },
+  //   body: JSON.stringify({
+  //     customer: { firstName, lastName, email, phoneNumber },
+  //     shoppingCart: { lineItems: [{ name: description, unitQty: 1, price: amountCents }] },
+  //     redirectUrl: "https://polkcountygolfcarts.com/rentals/paid?bookingId=" + bookingId,
+  //   }),
+  // });
+  return json({ ok: false, reason: "not_yet_implemented" }, 501);
+}
+
+async function handleCloverWebhook(request, env) {
+  if (!env.CLOVER_WEBHOOK_SECRET) {
+    return json({ ok: false, reason: "webhook_secret_not_set" }, 503);
+  }
+  // Verify signature header, look up bookingId from the event, mark
+  // booking.paid = true in KV. See Clover webhook docs.
+  return json({ ok: false, reason: "not_yet_implemented" }, 501);
+}
+
+// -------------- Rental agreement (built-in DocuSign replacement) -------------- //
+//
+// After a customer submits the booking, we mint a per-booking HMAC token
+// bound to the booking id. The token goes in the customer confirmation
+// email as a link to /agreement/?id=<id>&t=<token>. The page fetches
+// GET /api/agreement/<id>?t=<token> to load the pre-filled booking data
+// and the current signature (if already signed), then POSTs the drawn
+// signature + typed name + agreement metadata back to the same URL.
+//
+// Once signed, the agreement is immutable — a second POST returns 409.
+
+const AGREEMENT_VERSION = "2026-07-31"; // bump if terms change
+
+// Physical fleet — mirrors site/assets/rentals.js CARTS. Kept in sync
+// by hand; both places are short and rarely change. Used on the
+// agreement page to show the full inventory with rented carts flagged.
+const FLEET = [
+  { id: "cart-2", cartNo: 2, name: "Cart #2 — The Limo", seats: 6,
+    make: "Club Car Limo", modelDetails: "Gas · White", serial: "LG9939-808771" },
+  { id: "cart-3", cartNo: 3, name: "Cart #3", seats: 4,
+    make: "Yamaha", modelDetails: "Gas · Tan", serial: "J0B-001578" },
+  { id: "cart-4", cartNo: 4, name: "Cart #4", seats: 4,
+    make: "Yamaha", modelDetails: "Gas · Tan", serial: "J0B-105687" },
+  { id: "cart-5", cartNo: 5, name: "Cart #5", seats: 4,
+    make: "Yamaha", modelDetails: "Gas · Tan", serial: "J0B-105659" },
+  { id: "cart-6", cartNo: 6, name: "Cart #6", seats: 4,
+    make: "Yamaha", modelDetails: "Gas · Grey", serial: "J0K-203736" },
+];
+
+async function mintAgreementToken(bookingId, env) {
+  if (!env.FEEDBACK_ADMIN_PASS) return null;
+  return hmacHex(env.FEEDBACK_ADMIN_PASS, `agreement.${bookingId}`);
+}
+
+async function verifyAgreementToken(bookingId, token, env) {
+  if (!token || !env.FEEDBACK_ADMIN_PASS) return false;
+  const expected = await hmacHex(env.FEEDBACK_ADMIN_PASS, `agreement.${bookingId}`);
+  return constantTimeEqual(token, expected);
+}
+
+// Look up a booking record + KV key by its PCGC-XXXXXX id. Booking keys
+// are booking:<ts>:<suffix>, so we linear-scan; PCGC volume is single
+// dealer / low double-digits per week, this is fine.
+async function findBookingById(id, env) {
+  let cursor;
+  do {
+    const page = await env.FEEDBACK_KV.list({ prefix: "booking:", cursor });
+    for (const k of page.keys) {
+      const raw = await env.FEEDBACK_KV.get(k.name);
+      if (!raw) continue;
+      let rec;
+      try { rec = JSON.parse(raw); } catch { continue; }
+      if (rec.id === id) return { key: k.name, rec };
+    }
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  return null;
+}
+
+async function getAgreement(request, env, url) {
+  if (!env.FEEDBACK_KV) return json({ error: "kv not configured" }, 503);
+  const id = decodeURIComponent(url.pathname.replace(/^\/api\/agreement\//, ""));
+  const token = url.searchParams.get("t");
+  if (!id || !token) return json({ error: "id + token required" }, 400);
+  if (!(await verifyAgreementToken(id, token, env))) {
+    return json({ error: "bad token" }, 401);
+  }
+  const match = await findBookingById(id, env);
+  if (!match) return json({ error: "booking not found" }, 404);
+  const b = match.rec;
+  // Return only what the agreement page needs — never send admin-only
+  // fields like ua/ip/country back to the signature form.
+  const c = b.contact || {};
+  return json({
+    id: b.id,
+    agreementVersion: AGREEMENT_VERSION,
+    dates: b.dates || {},
+    items: b.items || [],
+    delivery: b.delivery,
+    contact: {
+      name: c.name || "",
+      email: c.email || "",
+      phone: c.phone || "",
+      street: c.street || "",
+      city: c.city || "",
+      state: c.state || "",
+      zip: c.zip || "",
+      address: c.address || "", // delivery drop-off
+    },
+    pricing: b.pricing || {},
+    fleet: FLEET,
+    agreement: b.agreement || null, // null if unsigned; object if already signed
+  });
+}
+
+async function signAgreement(request, env, url) {
+  if (!env.FEEDBACK_KV) return json({ error: "kv not configured" }, 503);
+  const id = decodeURIComponent(url.pathname.replace(/^\/api\/agreement\//, ""));
+  const token = url.searchParams.get("t");
+  if (!id || !token) return json({ error: "id + token required" }, 400);
+  if (!(await verifyAgreementToken(id, token, env))) {
+    return json({ error: "bad token" }, 401);
+  }
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: "invalid body" }, 400); }
+  const {
+    signatureDataUrl,
+    typedName,
+    dlNumber,
+    dlState,
+    dlMethod,
+    dlImageDataUrl,
+    agreed,
+  } = body || {};
+
+  if (!signatureDataUrl || typeof signatureDataUrl !== "string" || !signatureDataUrl.startsWith("data:image/")) {
+    return json({ error: "missing signature drawing" }, 400);
+  }
+  // Signature drawings are typically 5-30KB. Reject anything absurd —
+  // keeps KV values inside the 25MB per-value cap with margin, and
+  // stops a hostile client from ballooning storage.
+  if (signatureDataUrl.length > 250_000) {
+    return json({ error: "signature too large" }, 413);
+  }
+  if (!typedName || typeof typedName !== "string" || !typedName.trim()) {
+    return json({ error: "typed name required" }, 400);
+  }
+  if (!dlNumber || !dlState) {
+    return json({ error: "driver's license number and state required" }, 400);
+  }
+  const ALLOWED_DL_METHODS = ["upload", "text", "in-person"];
+  const method = ALLOWED_DL_METHODS.includes(dlMethod) ? dlMethod : "text";
+  if (method === "upload") {
+    if (!dlImageDataUrl || typeof dlImageDataUrl !== "string" || !dlImageDataUrl.startsWith("data:image/")) {
+      return json({ error: "driver's license photo required for the 'upload now' option" }, 400);
+    }
+    // Cap at ~1MB — client-side we resize to ~200KB JPEG, so anything
+    // materially larger is either a bug or a client bypass. Still well
+    // inside KV's 25MB per-value ceiling.
+    if (dlImageDataUrl.length > 1_500_000) {
+      return json({ error: "driver's license photo too large — try a smaller image" }, 413);
+    }
+  }
+  if (agreed !== true) {
+    return json({ error: "you must agree to the terms" }, 400);
+  }
+
+  const match = await findBookingById(id, env);
+  if (!match) return json({ error: "booking not found" }, 404);
+  if (match.rec.agreement && match.rec.agreement.signedAt) {
+    // Idempotent-ish: return the existing signature timestamp instead
+    // of overwriting. Prevents a double-submit or a re-signature attempt.
+    return json({ error: "already signed", signedAt: match.rec.agreement.signedAt }, 409);
+  }
+
+  match.rec.agreement = {
+    version: AGREEMENT_VERSION,
+    signedAt: new Date().toISOString(),
+    typedName: String(typedName).slice(0, 200),
+    dlNumber: String(dlNumber).slice(0, 40),
+    dlState: String(dlState).slice(0, 4).toUpperCase(),
+    dlMethod: method,
+    dlImageDataUrl: method === "upload" ? dlImageDataUrl : null,
+    signatureDataUrl,
+    signedIp: request.headers.get("cf-connecting-ip") || "",
+    signedUa: (request.headers.get("user-agent") || "").slice(0, 500),
+  };
+  await env.FEEDBACK_KV.put(match.key, JSON.stringify(match.rec));
+
+  return json({ ok: true, signedAt: match.rec.agreement.signedAt });
 }
 
 // Returns a Response if auth fails, or null if it passes. Accepts EITHER

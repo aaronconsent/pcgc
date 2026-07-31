@@ -299,6 +299,33 @@
         items.innerHTML = rows.join("");
         wrap.appendChild(items);
 
+        // Agreement status card — signed / unsigned, with DL method
+        // + optional thumbnail once the customer completes the page.
+        const agreement = b.agreement || null;
+        const agreeCard = document.createElement("div");
+        agreeCard.className = "bk-checklist";
+        agreeCard.style.background = agreement ? "#dff0e1" : "#fff9f4";
+        agreeCard.style.borderColor = agreement ? "#a7d4ad" : "#f3c3bc";
+        if (agreement) {
+          const dlMethodLabel = { upload: "Photo uploaded on agreement page", text: "Customer said they'll text photo to 936-223-1182", "in-person": "Customer said they'll bring physical copy at pickup" };
+          const dl = dlMethodLabel[agreement.dlMethod] || (agreement.dlMethod || "not specified");
+          const parts = [
+            "<b>✓ Rental agreement signed</b>",
+            "<div style='margin-top:.35rem;'>By <b>" + (agreement.typedName || "—") + "</b> on " + new Date(agreement.signedAt).toLocaleString() + "</div>",
+            "<div>DL: <code>" + (agreement.dlNumber || "—") + "</code> · " + (agreement.dlState || "—") + " · " + dl + "</div>",
+          ];
+          if (agreement.dlImageDataUrl) {
+            parts.push("<img src='" + agreement.dlImageDataUrl + "' alt='Driver license' style='max-width:280px; max-height:180px; margin-top:.6rem; border:1px solid var(--line); border-radius:6px; background:#fff;'>");
+          }
+          if (agreement.signatureDataUrl) {
+            parts.push("<div style='margin-top:.6rem;'><span style='font-size:.82rem; color:var(--ink-soft);'>Signature:</span><br><img src='" + agreement.signatureDataUrl + "' alt='Signature' style='max-height:80px; background:#fff; border:1px solid var(--line); border-radius:4px; padding:4px;'></div>");
+          }
+          agreeCard.innerHTML = parts.join("");
+        } else {
+          agreeCard.innerHTML = "<b>⏳ Rental agreement not signed yet</b><div style='margin-top:.35rem; color:var(--ink-soft); font-size:.9rem;'>Customer received a signing link in their confirmation email. Follow up if needed.</div>";
+        }
+        wrap.appendChild(agreeCard);
+
         // Status control: dropdown lets the owner advance the booking
         // through New -> Picked Up / Delivered -> Returned. Setting it
         // to "returned" triggers the customer thank-you email from the

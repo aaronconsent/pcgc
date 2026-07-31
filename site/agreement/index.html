@@ -7,6 +7,9 @@
   <title>Rental Agreement · Polk County Golf Carts</title>
   <link rel="icon" type="image/svg+xml" href="/assets/logos/logo-color.svg">
   <link rel="stylesheet" href="/assets/site.css">
+  <!-- jsPDF — regenerates the signed-agreement PDF on demand from
+       the booking record (used by the Download PDF buttons). -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
   <style>
     .agree-page { max-width: 780px; margin: 0 auto; padding: 2rem 1.25rem 6rem; }
     .agree-page h1 { color: var(--teal-dk); margin: 0 0 .35rem; font-size: clamp(1.6rem, 3vw, 2.2rem); }
@@ -79,6 +82,30 @@
     .signed-preview img { max-width: 100%; margin-top: 1rem; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
     .signed-preview .meta { color: var(--ink-soft); font-size: .88rem; margin-top: .5rem; }
 
+    /* Top banner on the signed view — green "signed" tag +
+       Download PDF button aligned right. */
+    .signed-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; flex-wrap: wrap;
+      background: #dff0e1; border: 1px solid #a7d4ad; border-radius: 10px;
+      padding: 1rem 1.25rem; margin: 0 0 1.5rem;
+    }
+    .signed-banner b { color: #1e4a2b; font-size: 1.1rem; }
+    .signed-banner span#signed-meta {
+      display: block; color: #2b6b3f; font-size: .88rem; margin-top: .15rem;
+    }
+    .signed-attest {
+      display: flex; gap: .65rem; align-items: flex-start;
+      background: #fff9f4; border: 1px solid #f3c3bc; border-radius: 8px;
+      padding: .75rem 1rem;
+    }
+    .signed-check {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px; border-radius: 4px;
+      background: #2f6b3b; color: #fff; font-weight: 700; flex-shrink: 0;
+    }
+    .agree-cta { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem; }
+
     /* Fleet grid on the agreement — rented carts pop, others muted. */
     .fleet-grid {
       display: grid; gap: .75rem;
@@ -144,15 +171,99 @@
     <div id="loading" class="agree-status">Loading your agreement…</div>
     <div id="error-view" class="agree-status err" hidden></div>
 
+    <!-- Signed view — full read-only rendering of the signed
+         agreement. Populated by JS from the /api/agreement/<id>
+         response. Also carries a "Download PDF" button that
+         regenerates the exact same PDF the customer received by
+         email at submit. -->
     <div id="signed-view" hidden>
-      <div class="signed-preview">
-        <h2>✓ Agreement signed</h2>
-        <p>Thanks — we've recorded your signature. A copy is attached to your booking on our side; you can also print or save this page for your records.</p>
-        <p class="meta"><b>Booking:</b> <span id="signed-id"></span> · <b>Signed on:</b> <span id="signed-at"></span></p>
-        <img id="signed-sig" alt="Your signature">
-        <p class="meta"><b>Signed by:</b> <span id="signed-name"></span></p>
+      <div class="signed-banner">
+        <div>
+          <b>✓ Rental agreement signed</b>
+          <span id="signed-meta"></span>
+        </div>
+        <button type="button" id="download-pdf-btn" class="btn btn-coral">📄 Download PDF</button>
       </div>
+
+      <div class="agree-card">
+        <h1 style="margin:0 0 .35rem;">Short Term Rental Agreement</h1>
+        <p class="sub" style="margin:0;">Between Polk County Golf Carts, LLC (&ldquo;PCGC&rdquo;) and the Customer.</p>
+      </div>
+
+      <div class="agree-card">
+        <h2>Customer</h2>
+        <dl class="booking-grid">
+          <dt>Confirmation</dt>       <dd id="s-id"></dd>
+          <dt>Name</dt>                <dd id="s-name"></dd>
+          <dt>Phone</dt>               <dd id="s-phone"></dd>
+          <dt>Email</dt>               <dd id="s-email"></dd>
+          <dt>Billing address</dt>     <dd id="s-address"></dd>
+          <dt>Driver's license</dt>   <dd id="s-dl"></dd>
+          <dt>DL delivery method</dt>  <dd id="s-dl-method"></dd>
+        </dl>
+      </div>
+
+      <div class="agree-card">
+        <h2>Rental</h2>
+        <dl class="booking-grid">
+          <dt>Start date</dt>          <dd id="s-start"></dd>
+          <dt>End date</dt>            <dd id="s-end"></dd>
+          <dt>Location of use</dt>     <dd id="s-location"></dd>
+          <dt>Cart(s)</dt>             <dd id="s-carts"></dd>
+        </dl>
+        <div class="fleet-grid" id="s-fleet-grid" style="margin-top:.75rem;"></div>
+      </div>
+
+      <div class="agree-card">
+        <h2>Terms &amp; Conditions</h2>
+        <div id="s-terms-body">
+          <h4>Weekend / Holiday Rentals</h4>
+          <p>A two (2) day minimum rental is required for all weekend and holiday rentals.</p>
+
+          <h4>Cancellation Policy</h4>
+          <p>If you cancel your rental <b>seven (7) days</b> prior to the first rental date you will be refunded <b>100%</b>. If you cancel within <b>four (4) days</b> of the first rental date you will be refunded <b>50%</b>. If your cancellation is <b>three (3) days or less</b>, <b>no refund</b> will be granted.</p>
+
+          <h4>Return of Cart</h4>
+          <p>Make sure the cart is parked back at the office when finished. Thank you!</p>
+
+          <h4>Risk of Loss or Injury</h4>
+          <p>I will operate the golf cart(s) safely and responsibly and I will preserve and protect the golf cart(s) from loss or damage, my person or property, and the persons or property of others. I agree to be legally and financially liable for all damage and costs of repairs or total replacement for the golf cart(s), and for the loss, damage and/or injuries to my person or property and the persons or property of others regardless of fault. I agree to hold harmless, defend and indemnify PCGC, the owner of the golf cart(s) for all damages and claims of any nature whatsoever that may arise from the use of the golf cart(s) itself, my person and property, and the persons and property of others. Effective upon delivery or pick up of the golf cart(s) and until the golf cart is returned to PCGC, customer relieves PCGC of responsibility for all risk of physical damage to, or loss or destruction of the golf cart(s), regardless of who caused the damage. Acceptance of delivery includes customer not being present. Customer is responsible and liable for the golf cart(s) rented from the start and end dates listed in this agreement, not the number of days charged.</p>
+
+          <h4>Operations</h4>
+          <p>I understand that if the golf cart(s) should be inoperable through no fault of mine, I will contact PCGC immediately upon discovery (936) 223-1182, as PCGC will take reasonable steps to have the vehicle repaired / serviced / replaced as soon as it is possible and during normal business hours. This does not relieve me of the responsibility to ensure the golf cart(s) is not damaged or stolen regardless of mechanical or damage failure.</p>
+
+          <h4>Return of Equipment</h4>
+          <p>I promise to return the golf cart(s) to the location delivered from or picked up, in the same condition as I received it. Upon return, PCGC will perform an inspection to determine the condition of the golf cart(s). In the event of any damage, Customer agrees to pay for said damages including up to total replacement and hereby authorizes PCGC, in advance, to charge the credit card given at time of rental and/or the difference of the cash deposit, to make repairs or replace the entire unit(s) at full price in the event damage is beyond repair. If the cart is stolen or missing, customer agrees to pay for the unit(s) at full retail price as determined by PCGC's cart inventory log at the time of agreement.</p>
+
+          <h4>Miscellaneous Terms</h4>
+          <p>I understand that a golf cart(s) is subject to laws and regulations by both local and the State of Texas authorities. Customer agrees that the golf cart(s) will be operated in accordance with the laws of the State, including but not limited to the requirement that persons driving the golf cart(s) must not be under the influence of alcohol and/or illegal drugs or prescribed medication that could cause impairment. Customer further agrees that they will be personally responsible for all moving and/or parking violations issued to said cart(s) while in their possession, under their control, or at any time during the rental / loaner / demonstration agreement.</p>
+          <p>Customer agrees that only person(s) who are <b>16 years of age and/or older</b> will be permitted to operate the golf cart(s). Maximum occupancy is the number of available seats (<b>NO STANDING ON THE FENDER OR FOOT PLATE</b>).</p>
+          <p>Customer will remove the key from the golf cart(s) when not in use, will not sublease the golf cart(s), and will keep the golf cart(s) at the listed location of use.</p>
+        </div>
+      </div>
+
+      <div class="agree-card">
+        <h2>Signed by</h2>
+        <div class="signed-attest">
+          <span class="signed-check">✓</span>
+          <span>The customer has read and agreed to the terms of this Short Term Rental Agreement, and confirms the information above is accurate.</span>
+        </div>
+        <div style="margin-top:1rem;">
+          <img id="s-signature" alt="Customer signature" style="max-width:340px; max-height:120px; background:#fff; border:1px solid var(--line); border-radius:6px; padding:6px;">
+        </div>
+        <p style="margin:.5rem 0 0;"><b id="s-typed"></b></p>
+        <p class="sub" style="margin:.15rem 0 0;">Signed electronically on <span id="s-signed-at"></span></p>
+        <p class="sub" style="margin:.15rem 0 0;" id="s-ip-line" hidden>Signed from IP <span id="s-ip"></span></p>
+        <p style="margin:1rem 0 0;"><b>Polk County Golf Carts, LLC</b><br><span class="sub">Callie Long, Office Manager</span></p>
+      </div>
+
+      <div class="agree-card" id="s-dl-card" hidden>
+        <h2>Driver's License on File</h2>
+        <img id="s-dl-image" alt="Driver's license" style="max-width:100%; max-height:360px; border:1px solid var(--line); border-radius:8px; background:var(--bg);">
+      </div>
+
       <div class="agree-cta">
+        <button type="button" id="download-pdf-btn-bottom" class="btn btn-coral">📄 Download PDF</button>
         <a href="/" class="btn btn-ghost">Back to PCGC</a>
       </div>
     </div>
@@ -415,14 +526,15 @@
       }
       const data = await res.json();
 
-      // Already-signed short circuit
+      // Already-signed short circuit — render the FULL signed
+      // agreement as a read-only document (customer info, cart,
+      // dates, all terms, signature block, DL image if uploaded),
+      // plus a Download PDF button that regenerates the exact same
+      // PDF the customer got by email at submit time.
       if (data.agreement && data.agreement.signedAt) {
         loading.hidden = true;
         signedView.hidden = false;
-        document.getElementById("signed-id").textContent = data.id;
-        document.getElementById("signed-at").textContent = fmtDateTime(data.agreement.signedAt);
-        document.getElementById("signed-name").textContent = data.agreement.typedName || "";
-        document.getElementById("signed-sig").src = data.agreement.signatureDataUrl;
+        renderSignedAgreement(data);
         return;
       }
 
@@ -597,6 +709,294 @@
         submitBtn.textContent = prev;
       }
     });
+
+    // -------------- Signed-view rendering + PDF download --------------
+
+    // Cached booking data + PDF blob for the Download button.
+    let _signedData = null;
+    let _pdfBlob = null;
+
+    function renderSignedAgreement(data) {
+      _signedData = data;
+      const c = data.contact || {};
+      const ag = data.agreement || {};
+
+      // Banner
+      document.getElementById("signed-meta").textContent =
+        `Confirmation ${data.id} · Signed ${fmtDateTime(ag.signedAt)}`;
+
+      // Customer block
+      const addressLine = [c.street, [c.city, c.state].filter(Boolean).join(", "), c.zip].filter(Boolean).join(" · ");
+      const dlMethodLabel = {
+        upload: "Photo uploaded on the agreement page",
+        text: "Customer will text photo to 936-223-1182 at time of payment",
+        "in-person": "Customer will bring physical copy at pickup",
+      }[ag.dlMethod] || "—";
+      const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v || "—"; };
+      setText("s-id", data.id);
+      setText("s-name", c.name);
+      setText("s-phone", c.phone);
+      setText("s-email", c.email);
+      setText("s-address", addressLine);
+      setText("s-dl", `${ag.dlNumber || "—"}  (${ag.dlState || "—"})`);
+      setText("s-dl-method", dlMethodLabel);
+      setText("s-start", fmtDate(data.dates?.start));
+      setText("s-end", fmtDate(data.dates?.end));
+
+      const location = data.delivery === "pickup"
+        ? "Pickup at PCGC shop (1732 FM 3277, Livingston, TX)"
+        : (c.address || addressLine || "—");
+      setText("s-location", location);
+
+      const cartsText = (data.items || []).map(it => `${it.name} × ${it.qty}`).join("  ·  ");
+      setText("s-carts", cartsText);
+
+      // Fleet grid: rented carts with photo
+      const grid = document.getElementById("s-fleet-grid");
+      const rented = new Set((data.items || []).map(x => x.id));
+      const cartsMeta = (data.fleet || []).filter(f => rented.has(f.id));
+      if (grid) {
+        grid.innerHTML = cartsMeta.map(cart => `
+          <div class="fleet-cart rented">
+            <h4>${escapeHtml(cart.name)}</h4>
+            <div class="meta">${escapeHtml(cart.make)} · ${escapeHtml(cart.modelDetails || "")}<br>Serial <code>${escapeHtml(cart.serial)}</code></div>
+          </div>
+        `).join("");
+      }
+
+      // Signature block
+      if (ag.signatureDataUrl) {
+        document.getElementById("s-signature").src = ag.signatureDataUrl;
+      }
+      setText("s-typed", ag.typedName);
+      setText("s-signed-at", fmtDateTime(ag.signedAt));
+      if (ag.signedIp) {
+        document.getElementById("s-ip-line").hidden = false;
+        setText("s-ip", ag.signedIp);
+      }
+
+      // DL image (only when uploaded)
+      if (ag.dlMethod === "upload" && ag.dlImageDataUrl) {
+        document.getElementById("s-dl-card").hidden = false;
+        document.getElementById("s-dl-image").src = ag.dlImageDataUrl;
+      }
+
+      // Wire both Download PDF buttons
+      const wireDl = (btn) => {
+        if (!btn) return;
+        btn.addEventListener("click", handleDownloadPdf);
+      };
+      wireDl(document.getElementById("download-pdf-btn"));
+      wireDl(document.getElementById("download-pdf-btn-bottom"));
+    }
+
+    async function handleDownloadPdf(ev) {
+      const btn = ev.currentTarget;
+      const prev = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Building PDF…";
+      try {
+        if (!_pdfBlob) _pdfBlob = await generateAgreementPdfLocal(_signedData);
+        const url = URL.createObjectURL(_pdfBlob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `pcgc-agreement-${_signedData.id || "signed"}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (e) {
+        alert("Couldn't build the PDF: " + (e?.message || e));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = prev;
+      }
+    }
+
+    // ---- Agreement PDF generation (same layout as the one attached
+    //      to the customer's confirmation email at submit time). Kept
+    //      inline so /agreement/ is self-contained and doesn't need
+    //      the whole rentals.js bundle. ----
+
+    const AGREEMENT_TERMS_LOCAL = [
+      { h: "Weekend / Holiday Rentals",
+        t: "A two (2) day minimum rental is required for all weekend and holiday rentals." },
+      { h: "Cancellation Policy",
+        t: "If you cancel your rental seven (7) days prior to the first rental date you will be refunded 100%. If you cancel within four (4) days of the first rental date you will be refunded 50%. If your cancellation is three (3) days or less, no refund will be granted." },
+      { h: "Return of Cart",
+        t: "Make sure the cart is parked back at the office when finished. Thank you!" },
+      { h: "Risk of Loss or Injury",
+        t: "I will operate the golf cart(s) safely and responsibly and I will preserve and protect the golf cart(s) from loss or damage, my person or property, and the persons or property of others. I agree to be legally and financially liable for all damage and costs of repairs or total replacement for the golf cart(s), and for the loss, damage and/or injuries to my person or property and the persons or property of others regardless of fault. I agree to hold harmless, defend and indemnify PCGC, the owner of the golf cart(s) for all damages and claims of any nature whatsoever that may arise from the use of the golf cart(s) itself, my person and property, and the persons and property of others. Effective upon delivery or pick up of the golf cart(s) and until the golf cart is returned to PCGC, customer relieves PCGC of responsibility for all risk of physical damage to, or loss or destruction of the golf cart(s), regardless of who caused the damage. Acceptance of delivery includes customer not being present. Customer is responsible and liable for the golf cart(s) rented from the start and end dates listed in this agreement, not the number of days charged." },
+      { h: "Operations",
+        t: "I understand that if the golf cart(s) should be inoperable through no fault of mine, I will contact PCGC immediately upon discovery (936) 223-1182, as PCGC will take reasonable steps to have the vehicle repaired / serviced / replaced as soon as it is possible and during normal business hours. This does not relieve me of the responsibility to ensure the golf cart(s) is not damaged or stolen regardless of mechanical or damage failure." },
+      { h: "Return of Equipment",
+        t: "I promise to return the golf cart(s) to the location delivered from or picked up, in the same condition as I received it. Upon return, PCGC will perform an inspection to determine the condition of the golf cart(s). In the event of any damage, Customer agrees to pay for said damages including up to total replacement and hereby authorizes PCGC, in advance, to charge the credit card given at time of rental and/or the difference of the cash deposit, to make repairs or replace the entire unit(s) at full price in the event damage is beyond repair. If the cart is stolen or missing, customer agrees to pay for the unit(s) at full retail price as determined by PCGC's cart inventory log at the time of agreement." },
+      { h: "Miscellaneous Terms",
+        t: "I understand that a golf cart(s) is subject to laws and regulations by both local and the State of Texas authorities. Customer agrees that the golf cart(s) will be operated in accordance with the laws of the State, including but not limited to the requirement that persons driving the golf cart(s) must not be under the influence of alcohol and/or illegal drugs or prescribed medication that could cause impairment. Customer further agrees that they will be personally responsible for all moving and/or parking violations issued to said cart(s) while in their possession, under their control, or at any time during the rental / loaner / demonstration agreement.\n\nCustomer agrees that only person(s) who are 16 years of age and/or older will be permitted to operate the golf cart(s). Maximum occupancy is the number of available seats (NO STANDING ON THE FENDER OR FOOT PLATE).\n\nCustomer will remove the key from the golf cart(s) when not in use, will not sublease the golf cart(s), and will keep the golf cart(s) at the listed location of use." },
+    ];
+
+    async function generateAgreementPdfLocal(data) {
+      const ns = window.jspdf;
+      if (!ns || !ns.jsPDF) throw new Error("jsPDF not loaded");
+      const { jsPDF } = ns;
+      const doc = new jsPDF({ unit: "pt", format: "letter" });
+      const PAGE_H = 792, M = 50, W = 612 - M * 2, BOTTOM = PAGE_H - 60;
+      let y = M;
+      const c = data.contact || {};
+      const ag = data.agreement || {};
+      const setFill = (r, g, b) => doc.setTextColor(r, g, b);
+      const teal = () => setFill(31, 90, 104);
+      const coral = () => setFill(232, 90, 79);
+      const ink = () => setFill(20, 20, 20);
+      const muted = () => setFill(90, 90, 90);
+      const ensureSpace = (need) => { if (y + need > BOTTOM) { doc.addPage(); y = M; } };
+      const paragraph = (text, size, opts = {}) => {
+        doc.setFontSize(size);
+        doc.setFont("helvetica", opts.bold ? "bold" : "normal");
+        if (opts.color === "teal") teal();
+        else if (opts.color === "coral") coral();
+        else if (opts.color === "muted") muted();
+        else ink();
+        const lines = doc.splitTextToSize(text, W);
+        const need = lines.length * (size * 1.25);
+        ensureSpace(need);
+        doc.text(lines, M, y);
+        y += need;
+      };
+
+      // Header
+      doc.setFontSize(20); doc.setFont("helvetica", "bold"); teal();
+      doc.text("Polk County Golf Carts, LLC", M, y);
+      y += 18;
+      doc.setFontSize(10); doc.setFont("helvetica", "normal"); muted();
+      doc.text("1732 FM 3277  ·  Livingston, TX 77351  ·  936-223-1182  ·  polkcountygolfcarts.com", M, y);
+      y += 18;
+      doc.setDrawColor(232, 90, 79); doc.setLineWidth(2);
+      doc.line(M, y, M + W, y);
+      y += 22;
+
+      paragraph("Short Term Rental Agreement", 18, { bold: true, color: "teal" });
+      paragraph(`Confirmation ${data.id || "PCGC-—"}  ·  Signed ${new Date(ag.signedAt || Date.now()).toLocaleString()}`, 9, { color: "muted" });
+      y += 6;
+
+      // Customer info
+      paragraph("Customer", 12, { bold: true, color: "teal" });
+      const addressLine = [c.street, [c.city, c.state].filter(Boolean).join(", "), c.zip].filter(Boolean).join(" · ");
+      const rows = [
+        ["Name", c.name || "—"],
+        ["Phone", c.phone || "—"],
+        ["Email", c.email || "—"],
+        ["Billing address", addressLine || "—"],
+        ["Driver's license", (ag.dlNumber || "—") + "  (" + (ag.dlState || "—") + ")"],
+        ["DL delivery", ({ upload: "Photo uploaded on the agreement page", text: "Customer will text photo to 936-223-1182 at payment", "in-person": "Customer will bring physical copy at pickup" }[ag.dlMethod]) || "—"],
+      ];
+      doc.setFontSize(10); doc.setFont("helvetica", "normal"); ink();
+      for (const [k, v] of rows) {
+        ensureSpace(14);
+        muted(); doc.text(k, M, y);
+        ink();  doc.text(String(v), M + 110, y);
+        y += 14;
+      }
+      y += 8;
+
+      // Cart(s)
+      paragraph("Cart(s) Rented", 12, { bold: true, color: "teal" });
+      const rentedIds = new Set((data.items || []).map(it => it.id));
+      const fleet = (data.fleet || []).filter(f => rentedIds.has(f.id));
+      for (const cart of fleet) {
+        ensureSpace(14);
+        ink(); doc.setFontSize(10); doc.setFont("helvetica", "bold");
+        doc.text(cart.name, M, y);
+        doc.setFont("helvetica", "normal"); muted();
+        doc.text(`${cart.make} · ${cart.modelDetails || ""} · Serial ${cart.serial}`, M + 200, y);
+        y += 14;
+      }
+      y += 6;
+
+      paragraph(`Rental period: ${data.dates?.start || "—"} → ${data.dates?.end || "—"}`, 10);
+      const locText = data.delivery === "pickup"
+        ? "Pickup at PCGC shop (1732 FM 3277, Livingston, TX)"
+        : `Delivery drop-off: ${c.address || "—"}`;
+      paragraph(locText, 10);
+      y += 8;
+
+      // Terms
+      paragraph("Terms & Conditions", 12, { bold: true, color: "teal" });
+      for (const term of AGREEMENT_TERMS_LOCAL) {
+        ensureSpace(18);
+        paragraph(term.h, 11, { bold: true });
+        for (const para of term.t.split("\n\n")) paragraph(para, 9);
+        y += 4;
+      }
+
+      // Signature block
+      ensureSpace(200);
+      y += 10;
+      paragraph("Signed Agreement", 12, { bold: true, color: "teal" });
+      doc.setDrawColor(31, 90, 104); doc.setLineWidth(1);
+      doc.rect(M, y - 10, 12, 12);
+      doc.setLineWidth(1.5);
+      doc.line(M + 2, y - 5, M + 5, y - 2);
+      doc.line(M + 5, y - 2, M + 10, y - 9);
+      doc.setLineWidth(1);
+      doc.setFontSize(10); doc.setFont("helvetica", "normal"); ink();
+      const chkLines = doc.splitTextToSize(
+        "The customer has read and agreed to the terms of this Short Term Rental Agreement, and confirms the information above is accurate.",
+        W - 20
+      );
+      doc.text(chkLines, M + 20, y);
+      y += chkLines.length * 12 + 12;
+
+      ensureSpace(140);
+      muted(); doc.setFontSize(9);
+      doc.text("Customer signature:", M, y);
+      y += 10;
+      if (ag.signatureDataUrl) {
+        try { doc.addImage(ag.signatureDataUrl, "PNG", M, y, 220, 70); } catch (_) {}
+      }
+      y += 74;
+      doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.5);
+      doc.line(M, y, M + 260, y);
+      y += 12;
+      ink(); doc.setFontSize(10); doc.setFont("helvetica", "bold");
+      doc.text(ag.typedName || "—", M, y);
+      y += 12;
+      muted(); doc.setFontSize(9); doc.setFont("helvetica", "normal");
+      doc.text(`Signed electronically on ${new Date(ag.signedAt || Date.now()).toLocaleString()}`, M, y);
+      y += 12;
+      if (ag.signedIp) { doc.text(`Signed from IP ${ag.signedIp}`, M, y); y += 12; }
+
+      // PCGC counter-signature
+      y += 24;
+      ensureSpace(60);
+      doc.setDrawColor(150, 150, 150);
+      doc.line(M + 320, y, M + 320 + 200, y);
+      y += 12;
+      ink(); doc.setFontSize(10); doc.setFont("helvetica", "bold");
+      doc.text("Polk County Golf Carts, LLC", M + 320, y);
+      y += 12;
+      muted(); doc.setFontSize(9); doc.setFont("helvetica", "normal");
+      doc.text("Callie Long, Office Manager", M + 320, y);
+
+      // DL image (if uploaded)
+      if (ag.dlMethod === "upload" && ag.dlImageDataUrl) {
+        doc.addPage();
+        y = M;
+        paragraph("Driver's License on File", 14, { bold: true, color: "teal" });
+        y += 6;
+        try {
+          const props = doc.getImageProperties(ag.dlImageDataUrl);
+          const maxW = Math.min(W, 500);
+          const scale = maxW / props.width;
+          doc.addImage(ag.dlImageDataUrl, "JPEG", M, y, maxW, props.height * scale);
+          y += props.height * scale + 10;
+          muted(); doc.setFontSize(9);
+          doc.text(`DL number: ${ag.dlNumber || "—"} (${ag.dlState || "—"})  ·  Uploaded ${new Date(ag.signedAt || Date.now()).toLocaleString()}`, M, y);
+        } catch (_) {}
+      }
+
+      return doc.output("blob");
+    }
   })();
   </script>
 </body>

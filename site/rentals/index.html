@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.cdnfonts.com">
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/grobold">
   <link rel="stylesheet" href="/assets/site.css">
-  <link rel="stylesheet" href="/assets/rentals.css?v=45a6624f">
+  <link rel="stylesheet" href="/assets/rentals.css?v=2ef1e2d8">
   <meta property="og:title" content="Rent a Golf Cart · Polk County Golf Carts">
   <meta property="og:description" content="Book a golf cart rental in East Texas — up to 8 carts per booking, free delivery within 25 miles of Livingston, extended service up to 75 miles.">
   <meta property="og:image" content="https://polkcountygolfcarts.com/assets/og/rentals.png">
@@ -221,6 +221,37 @@
         </ul>
       </div>
 
+      <!-- Payment card entry — hidden by default; rentals.js reveals
+           it after /api/config confirms Clover is configured. Card
+           number / expiry / CVV / postal are mounted as iframes from
+           checkout.clover.com so raw card data never touches our JS
+           or server (PCI SAQ-A path). -->
+      <fieldset class="rental-fieldset rental-payment" id="card-fieldset" hidden>
+        <legend>Payment</legend>
+        <p class="rental-meta" id="card-mode-note">🔒 Card details entered below are tokenized by Clover — we never see or store your raw card number.</p>
+        <div class="rental-field">
+          <label>
+            <span>Card number</span>
+            <div id="card-number" class="clover-field"></div>
+          </label>
+        </div>
+        <div class="rental-grid-2">
+          <label class="rental-field">
+            <span>Expiration</span>
+            <div id="card-date" class="clover-field"></div>
+          </label>
+          <label class="rental-field">
+            <span>CVV</span>
+            <div id="card-cvv" class="clover-field"></div>
+          </label>
+        </div>
+        <label class="rental-field">
+          <span>Billing ZIP</span>
+          <div id="card-postal" class="clover-field"></div>
+        </label>
+        <p class="rental-error" id="card-error" hidden></p>
+      </fieldset>
+
       <p class="rental-fineprint">Weekend and holiday rentals require a 2-day minimum.</p>
 
       <p class="rental-error" id="pay-error" hidden></p>
@@ -268,6 +299,6 @@
   Polk County Golf Carts · 1732 FM 3277, Livingston, TX · <a href="tel:9362231182">936-223-1182</a>
 </footer>
 
-<script src="/assets/rentals.js?v=ed391488"></script>
+<script src="/assets/rentals.js?v=2e60477b"></script>
 </body>
 </html>

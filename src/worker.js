@@ -74,6 +74,9 @@ export default {
     if (url.pathname === "/api/payment/webhook" && request.method === "POST") {
       return handleCloverWebhook(request, env);
     }
+    if (url.pathname === "/api/config" && request.method === "GET") {
+      return getConfig(request, env);
+    }
 
     // Legacy URLs from the original site — 301 to the new locations
     // so search engines (and bookmarks) move with us.
@@ -104,6 +107,38 @@ async function submitBooking(request, env) {
   const ts = new Date().toISOString();
   const idSuffix = crypto.randomUUID().slice(0, 6).toUpperCase();
   const id = "PCGC-" + idSuffix;
+
+  // Payment step (Clover embedded flow). Runs BEFORE we save the
+  // booking so a failed charge doesn't leave an orphaned reservation
+  // in KV. If Clover isn't configured yet, we skip and save the
+  // booking anyway — the site falls back to "we'll follow up by
+  // phone for payment" behavior. Once the secrets land, every
+  // /api/booking POST is expected to include a sourceToken.
+  const sourceToken = payload.paymentSourceToken;
+  let charge = null;
+  if (env.CLOVER_ACCESS_TOKEN && sourceToken) {
+    // Amount = grand total for now. Deposit-only split (50% now,
+    // 50% at pickup for 3+-month-out bookings) is a future
+    // enhancement — will need a second /v1/charges call at pickup
+    // time triggered by the admin.
+    const grandCents = Math.round(((payload?.pricing?.grand ?? payload?.pricing?.total) || 0) * 100);
+    if (!grandCents) {
+      return json({ error: "no amount to charge" }, 400);
+    }
+    charge = await chargeCard(env, {
+      sourceToken,
+      amountCents: grandCents,
+      bookingId: id,
+      customerEmail: payload?.contact?.email,
+      description: `PCGC rental ${id} · ${payload?.dates?.start || "?"} to ${payload?.dates?.end || "?"}`,
+    });
+    if (!charge.ok) {
+      // Booking is NOT saved. Return the error so the client can
+      // surface it inline (bad card, insufficient funds, etc.).
+      return json({ error: charge.error || "payment_declined", clover: charge.raw || null }, 402);
+    }
+  }
+
   const record = {
     ...payload,
     id,
@@ -113,7 +148,16 @@ async function submitBooking(request, env) {
     ua: (request.headers.get("user-agent") || "").slice(0, 500),
     ip: request.headers.get("cf-connecting-ip") || "",
     country: request.cf?.country || "",
+    payment: charge?.ok ? {
+      status: "paid",
+      chargeId: charge.chargeId,
+      amountCents: Math.round(((payload?.pricing?.grand ?? payload?.pricing?.total) || 0) * 100),
+      chargedAt: ts,
+    } : null,
   };
+  // Never persist the source token — it's single-use anyway, but no
+  // reason to keep it around.
+  delete record.paymentSourceToken;
   await env.FEEDBACK_KV.put(`booking:${ts}:${idSuffix}`, JSON.stringify(record));
 
   // Mint the agreement token now so the on-screen confirmation + both
@@ -840,76 +884,140 @@ async function trackSummary(request, env, url) {
   });
 }
 
-// -------------- Clover payment integration (scaffolding) -------------- //
+// -------------- Clover payment integration (embedded flow) -------------- //
 //
-// Not yet activated — waiting on the following secrets in the Cloudflare
-// dashboard (Workers & Pages -> pcgc -> Settings -> Variables and Secrets):
+// Card entry happens ON the /rentals/ Step 4 page via Clover's Ecommerce
+// SDK — the card number, expiry, CVV, and postal fields are iframed in
+// from checkout.clover.com so raw card data never touches our JS or our
+// server. Only the tokenized `source` reference (clv_XXXX...) flows
+// through this Worker. This is the PCI SAQ-A path (same posture as
+// Stripe Elements or Braintree Hosted Fields).
+//
+// Not yet activated — waiting on the following secrets in Cloudflare
+// dashboard (Workers & Pages -> pcgc -> Settings -> Variables and
+// Secrets):
 //
 //   CLOVER_MERCHANT_ID     — 13-char string from Clover Dashboard ->
-//                            Setup -> Merchant Info. Public-ish.
-//   CLOVER_ACCESS_TOKEN    — API access token (Clover Dashboard ->
-//                            Setup -> API Tokens -> Create new token,
-//                            or OAuth flow for the app-marketplace path).
-//                            SECRET.
+//                            Setup -> Merchant Info. Public-ish; goes
+//                            in the client-side SDK init.
+//   CLOVER_PUBLIC_KEY      — the "pakms key" or Ecommerce public API
+//                            key. Exposed to the browser via
+//                            /api/config so the SDK can tokenize.
+//                            Get it from Clover Dashboard ->
+//                            Ecommerce -> API Tokens -> Public Key.
+//   CLOVER_ACCESS_TOKEN    — Ecommerce server-side API token. SECRET.
+//                            Get it from Clover Dashboard ->
+//                            Ecommerce -> API Tokens -> Private Key
+//                            (or via OAuth for a merchant-installed
+//                            app). Used server-side to /v1/charges.
 //   CLOVER_ENVIRONMENT     — "sandbox" or "production" (defaults to
-//                            "sandbox" so we don't accidentally charge
-//                            live cards before the owner's ready).
-//   CLOVER_WEBHOOK_SECRET  — signing secret for /api/payment/webhook,
-//                            set on the Clover side under Setup ->
-//                            Webhooks. Used to verify inbound events.
+//                            "sandbox" so no accidental live charges).
+//   CLOVER_WEBHOOK_SECRET  — SECRET. Set at Clover -> Setup ->
+//                            Webhooks after you subscribe our
+//                            /api/payment/webhook endpoint. Verifies
+//                            inbound events (chargebacks, disputes,
+//                            refund confirmations).
 //
-// Flow (Hosted Checkout, the simplest integration):
-//   1. Customer completes rental form
-//   2. rentals.js POSTs to /api/payment/create-checkout with { bookingId,
-//      amountCents, farOut }
-//   3. Worker uses CLOVER_ACCESS_TOKEN to call
-//      https://sandbox.dev.clover.com/invoicingcheckoutservice/v1/checkouts
-//      with the amount + return URL back to /rentals/paid?order=<id>
-//   4. Worker returns the Clover-hosted checkout URL
-//   5. rentals.js redirects the customer to that URL
-//   6. Customer pays on Clover -> Clover redirects back
-//   7. Clover also fires a webhook to /api/payment/webhook with the
-//      payment outcome; we mark the booking `paid: true` in KV and
-//      the admin UI reflects it
+// Merchant setup on the Clover side (John needs to do this):
+//   1. Sign up for Clover Ecommerce (this is a separate module from
+//      the physical Clover POS device — Ecommerce enables the SDK +
+//      REST API). Sandbox account is free.
+//   2. In Clover Dashboard -> Ecommerce -> API Tokens, generate a
+//      public key + a private key. Public goes in CLOVER_PUBLIC_KEY,
+//      private in CLOVER_ACCESS_TOKEN.
+//   3. Subscribe a webhook at Clover -> Setup -> Webhooks:
+//        URL:     https://polkcountygolfcarts.com/api/payment/webhook
+//        Events:  PAYMENT (at minimum); also DISPUTE + REFUND if
+//                 offered.
+//      Copy the signing secret into CLOVER_WEBHOOK_SECRET.
+//   4. In Cloudflare dashboard, add the four secrets as documented
+//      above.
 //
-// Everything below is guarded by "is CLOVER_ACCESS_TOKEN set?" so it's a
-// no-op until the secret lands.
+// Runtime flow (once the secrets exist):
+//   1. /rentals/ Step 4 loads. rentals.js fetches /api/config;
+//      if cloverPublicKey is set, it loads Clover.js SDK, mounts
+//      four iframe fields (card number, exp, CVV, postal), and
+//      switches the CTA to "Pay $X.XX now".
+//   2. Customer clicks Pay. rentals.js calls clover.createToken()
+//      -> gets a source token like clv_1TSTSABCD...
+//   3. rentals.js POSTs to /api/booking with the source token +
+//      booking data. Worker submitBooking() calls chargeCard()
+//      before saving to KV: if the charge fails, we return an
+//      error and the booking is NOT saved. If it succeeds, we
+//      save the booking with paid: true + the Clover charge id.
+//   4. Confirmation email + agreement link fire as usual.
+//   5. Clover webhooks (chargebacks, disputes) hit
+//      /api/payment/webhook and update the booking record.
 
-async function createCloverCheckout(request, env) {
-  if (!env.CLOVER_ACCESS_TOKEN || !env.CLOVER_MERCHANT_ID) {
-    return json({
-      ok: false,
-      reason: "clover_not_configured",
-      message: "Clover payment isn't configured yet — booking accepted, we'll take payment by phone/text. Owner: set CLOVER_MERCHANT_ID + CLOVER_ACCESS_TOKEN secrets to enable.",
-    }, 503);
+async function getConfig(request, env) {
+  // Public config — safe to expose. Never returns the private key.
+  return json({
+    clover: env.CLOVER_PUBLIC_KEY && env.CLOVER_MERCHANT_ID
+      ? {
+          publicKey: env.CLOVER_PUBLIC_KEY,
+          merchantId: env.CLOVER_MERCHANT_ID,
+          environment: env.CLOVER_ENVIRONMENT === "production" ? "production" : "sandbox",
+        }
+      : null,
+  });
+}
+
+// Server-side charge. Called from submitBooking() when the client
+// submits a source token. Returns { ok, chargeId, error } — never
+// throws, so submitBooking can decide whether to reject or save.
+async function chargeCard(env, { sourceToken, amountCents, bookingId, customerEmail, description }) {
+  if (!env.CLOVER_ACCESS_TOKEN) {
+    return { ok: false, error: "clover_not_configured" };
   }
-  // Real implementation lands once the Clover secrets exist. Sketch:
-  // let body; try { body = await request.json(); } catch { return json({error:"bad body"},400); }
-  // const { bookingId, amountCents, description } = body;
-  // const base = env.CLOVER_ENVIRONMENT === "production"
-  //   ? "https://api.clover.com" : "https://sandbox.dev.clover.com";
-  // const res = await fetch(`${base}/invoicingcheckoutservice/v1/checkouts`, {
-  //   method: "POST",
-  //   headers: {
-  //     "authorization": `Bearer ${env.CLOVER_ACCESS_TOKEN}`,
-  //     "content-type": "application/json",
-  //     "x-clover-merchant-id": env.CLOVER_MERCHANT_ID,
-  //   },
-  //   body: JSON.stringify({
-  //     customer: { firstName, lastName, email, phoneNumber },
-  //     shoppingCart: { lineItems: [{ name: description, unitQty: 1, price: amountCents }] },
-  //     redirectUrl: "https://polkcountygolfcarts.com/rentals/paid?bookingId=" + bookingId,
-  //   }),
-  // });
-  return json({ ok: false, reason: "not_yet_implemented" }, 501);
+  const base = env.CLOVER_ENVIRONMENT === "production"
+    ? "https://scl.clover.com"
+    : "https://scl-sandbox.dev.clover.com";
+  try {
+    const res = await fetch(`${base}/v1/charges`, {
+      method: "POST",
+      headers: {
+        "authorization": `Bearer ${env.CLOVER_ACCESS_TOKEN}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        amount: amountCents,
+        currency: "usd",
+        source: sourceToken,
+        description: description || `PCGC rental ${bookingId}`,
+        ...(customerEmail ? { receipt_email: customerEmail } : {}),
+        metadata: { bookingId },
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, error: body.message || body.error || `clover ${res.status}`, raw: body };
+    }
+    return { ok: true, chargeId: body.id, raw: body };
+  } catch (e) {
+    return { ok: false, error: "network: " + (e?.message || String(e)) };
+  }
+}
+
+async function createCloverCheckout(_request, _env) {
+  // The old hosted-checkout stub. Kept 501 — the embedded flow
+  // charges through submitBooking() instead of via a separate
+  // create-checkout call, so this endpoint isn't used anymore.
+  // Leaving the route registered in case a future integration
+  // (e.g. a "pay by link" flow) wants it.
+  return json({ ok: false, reason: "not_used_embedded_flow_charges_inline" }, 410);
 }
 
 async function handleCloverWebhook(request, env) {
   if (!env.CLOVER_WEBHOOK_SECRET) {
     return json({ ok: false, reason: "webhook_secret_not_set" }, 503);
   }
-  // Verify signature header, look up bookingId from the event, mark
-  // booking.paid = true in KV. See Clover webhook docs.
+  // TODO once real Clover webhook payloads land:
+  //   1. Verify the X-Clover-Signature header (HMAC-SHA256 of body
+  //      with CLOVER_WEBHOOK_SECRET as the key)
+  //   2. Parse the event { type, data: { object: { id, metadata } } }
+  //   3. metadata.bookingId lets us look up the booking in KV
+  //   4. Update rec.payment.chargeStatus / rec.refund etc.
+  //   5. Return 200 OK so Clover doesn't retry
   return json({ ok: false, reason: "not_yet_implemented" }, 501);
 }
 

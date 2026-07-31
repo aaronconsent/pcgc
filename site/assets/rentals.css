@@ -110,6 +110,20 @@
 }
 @media (max-width: 520px) { .rental-grid-3 { grid-template-columns: 1fr; } }
 
+/* Clover Ecommerce SDK renders each card field into a <div> we mount
+   an iframe inside; we style the container to match the rest of the
+   form and Clover styles the iframe contents via their initialize()
+   `styles` option, set in rentals.js. */
+.clover-field {
+  padding: .55rem .7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  min-height: 44px;
+}
+.clover-field.CloverFocus { border-color: var(--teal-dk); box-shadow: 0 0 0 2px rgba(31,90,104,.15); }
+.clover-field.CloverInvalid { border-color: #c2261a; }
+
 /* Info callouts on the review step — one for the payment requirements
    list, one for the cancellation policy, one for the deposit note. */
 .rental-info-box {

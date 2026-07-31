@@ -19,7 +19,7 @@
        (touch + mouse + pointer events, DPI-aware, smoothing). -->
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.2.0/dist/signature_pad.umd.min.js" defer></script>
   <link rel="stylesheet" href="/assets/site.css">
-  <link rel="stylesheet" href="/assets/rentals.css?v=598a5ddc">
+  <link rel="stylesheet" href="/assets/rentals.css?v=2c68727a">
   <meta property="og:title" content="Rent a Golf Cart · Polk County Golf Carts">
   <meta property="og:description" content="Book a golf cart rental in East Texas — up to 8 carts per booking, free delivery within 25 miles of Livingston, extended service up to 75 miles.">
   <meta property="og:image" content="https://polkcountygolfcarts.com/assets/og/rentals.png">
@@ -238,12 +238,12 @@
       <fieldset class="rental-fieldset" style="margin-top: 1.5rem;">
         <legend>Rental Agreement</legend>
 
-        <p class="rental-meta" style="margin-top:.25rem;">This is your Short Term Rental Agreement with Polk County Golf Carts. Read the terms, then sign at the bottom.</p>
+        <p class="rental-meta" style="margin-top:.25rem;">This is your Short Term Rental Agreement with Polk County Golf Carts. <b>Please read all the terms below</b>, then check the box at the bottom to confirm before signing.</p>
 
         <div id="agreement-fleet-heading" style="margin-top:1rem; font-weight:600; color:var(--teal-dk);">Cart(s) you're renting</div>
         <div class="fleet-grid" id="agreement-fleet-grid" style="margin-top:.5rem; display:grid; gap:.5rem; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));"></div>
 
-        <div class="agreement-terms-box">
+        <div class="agreement-terms-box" id="agreement-terms-box" tabindex="0">
           <h4>Weekend / Holiday Rentals</h4>
           <p>A two (2) day minimum rental is required for all weekend and holiday rentals.</p>
 
@@ -264,6 +264,16 @@
           <p>Customer agrees that only person(s) who are <b>16 years of age and/or older</b> will be permitted to operate the golf cart(s). Maximum occupancy is the number of available seats (<b>NO STANDING ON THE FENDER OR FOOT PLATE</b>).</p>
           <p>Customer will remove the key from the golf cart(s) when not in use, will not sublease the golf cart(s), and will keep the golf cart(s) at the listed location of use.</p>
         </div>
+
+        <!-- Read-through gate: the "I agree" checkbox is disabled
+             until the customer scrolls to the bottom of the terms
+             box. Instruction line above the checkbox flips from
+             "Scroll through…" to "You've read the agreement." -->
+        <p id="agreement-scroll-hint" class="rental-meta" style="margin-top:.5rem; color:#8a4a00; font-weight:600;">👆 Scroll to the bottom of the agreement above to enable the checkbox.</p>
+        <label class="agree-check" for="agreed">
+          <input type="checkbox" id="agreed" required disabled>
+          <span><b>I have read and agree to the terms of this Short Term Rental Agreement</b>, and I confirm the information above is accurate.</span>
+        </label>
 
         <!-- DL fields -->
         <div class="rental-grid-2" style="margin-top:1rem;">
@@ -318,12 +328,6 @@
             </label>
           </div>
         </div>
-
-        <!-- Agreement checkbox -->
-        <label class="rental-info-box" style="display:flex; gap:.65rem; align-items:flex-start; cursor:pointer;">
-          <input type="checkbox" id="agreed" required style="margin-top:4px;">
-          <span>I have read and agree to the terms of this Short Term Rental Agreement, and I confirm the information above is accurate.</span>
-        </label>
 
         <!-- Signature pad -->
         <div style="margin-top:1rem;">
@@ -399,6 +403,6 @@
   Polk County Golf Carts · 1732 FM 3277, Livingston, TX · <a href="tel:9362231182">936-223-1182</a>
 </footer>
 
-<script src="/assets/rentals.js?v=0ceb39d9"></script>
+<script src="/assets/rentals.js?v=c756a7c6"></script>
 </body>
 </html>

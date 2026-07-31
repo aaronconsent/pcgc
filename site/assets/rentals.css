@@ -127,6 +127,55 @@
 .agreement-terms-box h4 { color: var(--teal-dk); margin: .85rem 0 .25rem; font-size: .95rem; }
 .agreement-terms-box h4:first-child { margin-top: 0; }
 .agreement-terms-box p { margin: .5rem 0; }
+.agreement-terms-box:focus-within { outline: 2px solid var(--teal-dk); outline-offset: 2px; }
+
+/* Read-through gate: agree-check gets locked until the customer has
+   scrolled through the terms box. When enabled we swap the amber
+   "Scroll to the bottom" hint for a green "You've read the agreement."
+   confirmation via the .scroll-complete state on the hint. */
+.agree-check {
+  display: flex; gap: .75rem; align-items: flex-start;
+  padding: .85rem 1.15rem;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  margin: .35rem 0 1rem;
+  cursor: pointer;
+  transition: opacity .15s ease, border-color .15s ease, background .15s ease;
+}
+.agree-check.locked {
+  opacity: .5; cursor: not-allowed; background: var(--bg-alt);
+}
+.agree-check.locked input { pointer-events: none; }
+.agree-check:not(.locked):hover { border-color: var(--teal-dk); }
+.agree-check input { margin-top: 4px; }
+.agree-check input:checked ~ span { color: var(--teal-dk); }
+.agree-check.checked { border-color: var(--coral); background: #fff9f4; }
+
+#agreement-scroll-hint.scroll-complete { color: #1e4a2b; }
+#agreement-scroll-hint.scroll-complete::before { content: "✓ "; }
+
+/* Field-level required-field highlight. Set on any input that failed
+   validation at submit time; cleared as soon as the user starts
+   editing that field. */
+.rental-field.field-error input,
+.rental-field.field-error textarea,
+input.field-error, textarea.field-error {
+  border-color: #c2261a !important;
+  box-shadow: 0 0 0 2px rgba(194, 38, 26, .15);
+}
+.dl-drop.field-error {
+  border-color: #c2261a !important;
+  background: #fde9e6;
+}
+.sig-box.field-error {
+  border-color: #c2261a !important;
+  background: #fde9e6;
+}
+.agree-check.field-error {
+  border-color: #c2261a !important;
+  background: #fde9e6;
+}
 
 .fleet-grid { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 .fleet-cart {
@@ -180,6 +229,8 @@
 .dl-drop-icon { font-size: 2rem; line-height: 1; margin-bottom: .5rem; }
 .dl-drop-headline { font-weight: 700; color: var(--teal-dk); font-size: 1rem; }
 .dl-drop-sub { color: var(--ink-soft); font-size: .82rem; margin-top: .25rem; }
+.dl-drop-empty[hidden], .dl-drop-preview[hidden] { display: none !important; }
+.dl-drop-empty { display: block; }
 .dl-drop-preview { display: flex; flex-direction: column; align-items: center; gap: .5rem; }
 .dl-drop-preview img {
   max-width: 100%;

@@ -580,6 +580,42 @@ let sigTypedRendered = false;     // canvas holds a typed-name auto-render
 function initAgreementUi() {
   renderAgreementFleet();
 
+  // Read-through gate for the "I agree" checkbox — it stays locked
+  // until the customer scrolls to the bottom of the terms box. The
+  // hint above the checkbox flips from amber ("Scroll…") to green
+  // once fulfilled.
+  const termsBox = $("#agreement-terms-box");
+  const agreedCheck = $("#agreed");
+  const agreedWrap = agreedCheck?.closest(".agree-check");
+  const scrollHint = $("#agreement-scroll-hint");
+  function markAgreementRead() {
+    if (!agreedCheck || !agreedWrap) return;
+    agreedCheck.disabled = false;
+    agreedWrap.classList.remove("locked");
+    if (scrollHint) {
+      scrollHint.classList.add("scroll-complete");
+      scrollHint.textContent = "You've read the agreement — check the box to confirm.";
+    }
+  }
+  if (termsBox && agreedCheck) {
+    agreedWrap?.classList.add("locked");
+    termsBox.addEventListener("scroll", () => {
+      // Within 12px of the bottom counts as "read". Handles rounding
+      // when devicePixelRatio doesn't divide the content height cleanly.
+      const remaining = termsBox.scrollHeight - termsBox.scrollTop - termsBox.clientHeight;
+      if (remaining < 12) markAgreementRead();
+    });
+    // Short-circuit for viewports where the terms don't overflow the
+    // scroll box (unlikely at current copy length, but future-proof).
+    if (termsBox.scrollHeight <= termsBox.clientHeight + 4) markAgreementRead();
+  }
+  if (agreedCheck) {
+    agreedCheck.addEventListener("change", () => {
+      agreedWrap?.classList.toggle("checked", agreedCheck.checked);
+      clearFieldError(agreedWrap);
+    });
+  }
+
   sigCanvas = $("#sig-canvas");
   if (!sigCanvas) return;
   // signature_pad may not be loaded yet (defer'd on the <script>). If
@@ -798,16 +834,28 @@ function collectAgreement() {
   const agreed = $("#agreed").checked;
   const dlMethod = document.querySelector('input[name="dl-method"]:checked')?.value || "upload";
 
-  if (!dlNumber || !dlState) return { ok: false, msg: "Please fill in your driver's license number and state." };
-  if (!agreed) return { ok: false, msg: "Please check the box to agree to the rental agreement terms." };
-  // "Signed" if the signature pad has strokes OR the canvas is
-  // holding the typed-name auto-render.
+  // Collect ALL missing fields so we can red-highlight them at once
+  // and let the customer fix everything in one pass, then jump to
+  // the first one.
+  const errors = []; // { field: <selector>, msg: string }
+  if (!dlNumber) errors.push({ field: "#dl-number", msg: "Driver's license number" });
+  if (!dlState) errors.push({ field: "#dl-state", msg: "State" });
+  if (!agreed) errors.push({ field: ".agree-check", msg: "Read the agreement above and check the box to confirm" });
   const hasSignature = (sigPad && !sigPad.isEmpty()) || sigTypedRendered;
-  if (!hasSignature) return { ok: false, msg: "Please draw your signature — or type your name below to auto-generate one." };
-  if (!typedName) return { ok: false, msg: "Please type your full legal name below the signature." };
+  if (!hasSignature) errors.push({ field: ".sig-box", msg: "Draw your signature — or type your name below to auto-generate one" });
+  if (!typedName) errors.push({ field: "#typed-name", msg: "Type your full legal name" });
   if (dlMethod === "upload" && !agreementDlImage) {
-    return { ok: false, msg: "Please attach your driver's license photo, or pick a different delivery option." };
+    errors.push({ field: ".dl-drop", msg: "Attach your driver's license photo, or pick a different delivery option" });
   }
+
+  if (errors.length) {
+    // Build a friendly summary for the error banner too.
+    const msg = errors.length === 1
+      ? errors[0].msg + "."
+      : `Please complete the highlighted field${errors.length > 1 ? "s" : ""}: ${errors.map(e => e.msg).join("; ")}.`;
+    return { ok: false, msg, errors };
+  }
+
   return {
     ok: true,
     agreement: {
@@ -825,18 +873,55 @@ function collectAgreement() {
   };
 }
 
+// Red-highlight a field/element and set up a one-shot listener that
+// clears the highlight as soon as the customer starts fixing it.
+function markFieldError(selector) {
+  const el = document.querySelector(selector);
+  if (!el) return;
+  // Prefer to highlight the enclosing .rental-field wrapper (so the
+  // whole labeled row lights up); fall back to the element itself.
+  const target = el.closest(".rental-field") || el;
+  target.classList.add("field-error");
+  const clearer = () => {
+    target.classList.remove("field-error");
+    el.removeEventListener("input", clearer);
+    el.removeEventListener("change", clearer);
+    el.removeEventListener("click", clearer);
+  };
+  el.addEventListener("input", clearer);
+  el.addEventListener("change", clearer);
+  el.addEventListener("click", clearer);
+}
+function clearFieldError(el) {
+  if (!el) return;
+  const target = el.closest ? (el.closest(".rental-field") || el) : el;
+  target.classList?.remove?.("field-error");
+}
+function clearAllFieldErrors() {
+  document.querySelectorAll(".field-error").forEach(el => el.classList.remove("field-error"));
+}
+
 async function submitBooking() {
   const err = $("#pay-error");
   err.hidden = true;
+  clearAllFieldErrors();
 
   // Inline agreement validation runs first — nothing gets POSTed
   // until the customer has filled the license fields, drawn a
-  // signature, and checked the "I agree" box.
+  // signature, and checked the "I agree" box. Any missed field
+  // gets a red-border highlight that clears when they start
+  // editing it.
   const collected = collectAgreement();
   if (!collected.ok) {
     err.textContent = collected.msg;
     err.hidden = false;
-    err.scrollIntoView({ behavior: "smooth", block: "center" });
+    (collected.errors || []).forEach(e => markFieldError(e.field));
+    // Scroll the FIRST failed field into view so the customer sees
+    // exactly where to start.
+    const first = collected.errors?.[0]?.field
+      ? document.querySelector(collected.errors[0].field)
+      : err;
+    (first || err).scrollIntoView({ behavior: "smooth", block: "center" });
     return;
   }
 

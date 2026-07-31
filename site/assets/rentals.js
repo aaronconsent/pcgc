@@ -1207,38 +1207,28 @@ async function handleShareClick(platform, flashToast) {
   // that need the user to attach the image manually.
   if (window.pcgcTrack) window.pcgcTrack("booking-shared");
 
+  // Desktop path — normal new-tab open (no popup dimensions), plus
+  // auto-download the image for platforms that don't accept an image
+  // via URL query.
   if (platform === "facebook") {
-    // Facebook Sharer accepts a URL and pulls OG image + title from
-    // the target page. Uses the /rentals/ page's OG image (branded
-    // PCGC card) rather than the customer's booking image.
+    // Facebook Sharer pulls OG image + title from the target URL.
     const u = encodeURIComponent(SHARE_URL);
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${u}`, "_blank", "noopener,width=680,height=560");
-    flashToast(`Caption copied ✓ — paste into your Facebook post. Opening Facebook…`);
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${u}`, "_blank", "noopener");
+    flashToast(`Caption copied ✓ — paste into your Facebook post.`);
     return;
   }
 
   if (platform === "instagram") {
-    // No web-share URL exists for IG. Save the image to disk so the
-    // user can drop it into an IG Story from their computer's
-    // Meta account (or AirDrop to their phone).
     triggerDownload(_shareBlob, "pcgc-rental.png");
-    flashToast(
-      `Instagram doesn't allow web-posting — the image just downloaded. ` +
-      `Post it as a Story from the <a href="https://www.instagram.com/" target="_blank" rel="noopener">Instagram app</a> ` +
-      `(paste the copied caption). On your phone? Use the Share button on this page instead — Instagram will show up in the share sheet.`
-    , 12000);
+    window.open("https://www.instagram.com/", "_blank", "noopener");
+    flashToast(`Image downloaded + caption copied ✓ — post it as a Story on Instagram.`);
     return;
   }
 
   if (platform === "nextdoor") {
-    // Nextdoor has no public share intent URL. Same play as IG:
-    // download the image, open Nextdoor, guide the user.
     triggerDownload(_shareBlob, "pcgc-rental.png");
-    flashToast(
-      `The image just downloaded — paste the caption and drop the image into a new post at ` +
-      `<a href="https://nextdoor.com/news_feed/" target="_blank" rel="noopener">nextdoor.com</a>. ` +
-      `On your phone? Use the Share button on this page and pick Nextdoor from the sheet.`
-    , 12000);
+    window.open("https://nextdoor.com/news_feed/", "_blank", "noopener");
+    flashToast(`Image downloaded + caption copied ✓ — start a new post on your neighborhood feed.`);
     return;
   }
 }
@@ -1254,39 +1244,40 @@ function triggerDownload(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// Redesigned 1080x1080 share image — Instagram-style full-bleed
-// photo with a dark gradient overlay at the bottom for text.
-// Layout (top -> bottom):
-//   Cart photo covers the whole square
-//   Coral accent bar top-left with "POLK COUNTY GOLF CARTS"
-//   Dark gradient fades in over the bottom 40%
-//   "JUST BOOKED WITH" pre-header (small caps, coral)
-//   Big serif headline "Cart Day. Lake Day."
-//   White subhead — First name · dates
-//   Cart name in coral accent
-//   Small footer: URL + phone
+// 1080x1080 share image — Instagram-post aesthetic with a solid
+// coral footer bar at the bottom (URL + address + phone). Text no
+// longer overlaps because the right-side stack was collapsed into a
+// full-width centered footer.
+//
+// Layout, top -> bottom:
+//   0-100   coral-underlined "POLK COUNTY GOLF CARTS" tag (top-left)
+//   0-930   full-bleed cart photo with dark gradient over bottom half
+//   ~590+   pre-header + "Cart Day. / Lake Day." + name + dates
+//   930-1080 solid coral footer strip: URL · city · phone (centered)
 async function generateShareImage(booking) {
   const W = 1080, H = 1080;
+  const FOOTER_H = 150;              // solid coral bar at the very bottom
+  const PHOTO_H = H - FOOTER_H;      // the photo/text zone lives above it
   const c = document.createElement("canvas");
   c.width = W; c.height = H;
   const ctx = c.getContext("2d");
 
-  // 1. Full-bleed cart photo, object-fit: cover
+  // 1. Full-bleed cart photo above the footer (object-fit: cover)
   const cart = (booking.items && booking.items[0]) || null;
   const cartMeta = cart ? CARTS.find(x => x.id === cart.id) : null;
   const imgSrc = (cartMeta && cartMeta.img) || "/assets/photos/rentals/limo.jpg";
   const cartImg = await loadImage(imgSrc).catch(() => null);
-  if (cartImg) drawCover(ctx, cartImg, 0, 0, W, H);
-  else { ctx.fillStyle = "#1f5a68"; ctx.fillRect(0, 0, W, H); }
+  if (cartImg) drawCover(ctx, cartImg, 0, 0, W, PHOTO_H);
+  else { ctx.fillStyle = "#1f5a68"; ctx.fillRect(0, 0, W, PHOTO_H); }
 
-  // 2. Bottom gradient overlay for text legibility (transparent
-  //    at ~35% height fading to near-black at bottom).
-  const grad = ctx.createLinearGradient(0, H * 0.30, 0, H);
+  // 2. Dark gradient over the bottom half of the photo for text
+  //    legibility (transparent up top, near-black at the footer join).
+  const grad = ctx.createLinearGradient(0, PHOTO_H * 0.45, 0, PHOTO_H);
   grad.addColorStop(0.0, "rgba(0,0,0,0)");
-  grad.addColorStop(0.35, "rgba(0,0,0,0.35)");
-  grad.addColorStop(1.0, "rgba(15,40,50,0.92)");
+  grad.addColorStop(0.55, "rgba(0,0,0,0.55)");
+  grad.addColorStop(1.0, "rgba(15,40,50,0.88)");
   ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(0, 0, W, PHOTO_H);
 
   // 3. Top-left brand tag with coral underline
   ctx.textAlign = "left";
@@ -1299,45 +1290,49 @@ async function generateShareImage(booking) {
   ctx.fillStyle = "#e85a4f";
   ctx.fillRect(60, 92, brandW, 3);
 
-  // 4. Bottom text stack
+  // 4. Left text stack, anchored to the photo bottom (which is where
+  //    the coral footer begins). Vertical order bottom-up so we can
+  //    position by "distance from footer" cleanly.
   const c1 = booking.contact || {};
   const firstName = (c1.name || "").split(/\s+/)[0] || "";
   const start = fmtShort(booking.dates?.start);
   const end = fmtShort(booking.dates?.end);
 
-  // Pre-header: JUST BOOKED WITH
+  //   Row 5 (nearest footer): cart name (soft coral)
+  if (cartMeta) {
+    ctx.fillStyle = "#f8bcb6";
+    ctx.font = "600 26px system-ui, sans-serif";
+    ctx.fillText(cartMeta.name, 60, PHOTO_H - 30);
+  }
+  //   Row 4: first name · dates
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.font = "500 34px system-ui, -apple-system, Segoe UI, sans-serif";
+  const subline = firstName ? `${firstName} · ${start} → ${end}` : `${start} → ${end}`;
+  ctx.fillText(subline, 60, PHOTO_H - 75);
+  //   Row 3: "Lake Day." headline line 2
+  ctx.fillStyle = "#fff";
+  ctx.font = "800 92px Georgia, 'Times New Roman', serif";
+  ctx.fillText("Lake Day.", 60, PHOTO_H - 145);
+  //   Row 2: "Cart Day." headline line 1
+  ctx.fillText("Cart Day.", 60, PHOTO_H - 240);
+  //   Row 1: pre-header (coral small caps)
   ctx.fillStyle = "#e85a4f";
   ctx.font = "700 26px system-ui, sans-serif";
-  ctx.letterSpacing = "0.15em"; // ignored by canvas API but harmless
-  ctx.fillText("JUST BOOKED WITH POLK COUNTY GOLF CARTS", 60, H - 330);
+  ctx.fillText("JUST BOOKED WITH POLK COUNTY GOLF CARTS", 60, PHOTO_H - 305);
 
-  // Main headline — big, serif, tight leading over 2 lines
+  // 5. Solid coral footer bar at the very bottom with URL + city +
+  //    phone all on one centered line. Single stack — no overlap
+  //    possible.
+  ctx.fillStyle = "#e85a4f";
+  ctx.fillRect(0, PHOTO_H, W, FOOTER_H);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
   ctx.fillStyle = "#fff";
-  ctx.font = "800 96px Georgia, 'Times New Roman', serif";
-  ctx.fillText("Cart Day.", 60, H - 240);
-  ctx.fillText("Lake Day.", 60, H - 150);
-
-  // Sub: first name + dates
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.font = "500 34px system-ui, -apple-system, Segoe UI, sans-serif";
-  const subline = firstName
-    ? `${firstName} · ${start} → ${end}`
-    : `${start} → ${end}`;
-  ctx.fillText(subline, 60, H - 95);
-  if (cartMeta) {
-    ctx.fillStyle = "#f8bcb6"; // soft coral
-    ctx.font = "600 26px system-ui, sans-serif";
-    ctx.fillText(cartMeta.name, 60, H - 60);
-  }
-
-  // 5. Footer strip right side: URL
-  ctx.textAlign = "right";
-  ctx.fillStyle = "#fff";
-  ctx.font = "700 30px Georgia, serif";
-  ctx.fillText("polkcountygolfcarts.com", W - 60, H - 95);
-  ctx.fillStyle = "rgba(255,255,255,0.7)";
-  ctx.font = "400 22px system-ui, sans-serif";
-  ctx.fillText("Livingston, TX · 936-223-1182", W - 60, H - 60);
+  ctx.font = "700 34px Georgia, serif";
+  ctx.fillText("polkcountygolfcarts.com", W / 2, PHOTO_H + 55);
+  ctx.font = "500 24px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.fillText("Livingston, TX  ·  936-223-1182", W / 2, PHOTO_H + 100);
 
   return new Promise((resolve) => c.toBlob(resolve, "image/png", 0.94));
 }

@@ -110,6 +110,36 @@
 }
 @media (max-width: 520px) { .rental-grid-3 { grid-template-columns: 1fr; } }
 
+/* Shareable social image card on Step 5. Preview centered above three
+   action buttons (share sheet / download / copy caption). */
+.share-card {
+  background: linear-gradient(140deg, #fff9f4 0%, #e6f1f3 100%);
+  border: 2px solid var(--coral);
+  border-radius: 14px;
+  padding: 1.5rem 1.75rem;
+  box-shadow: 0 6px 24px rgba(232, 90, 79, .12);
+}
+.share-preview {
+  display: flex; justify-content: center;
+  margin: 1rem 0;
+  min-height: 100px;
+}
+.share-preview img {
+  max-width: 100%;
+  max-height: 460px;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(20,50,58,.18);
+  background: #fff;
+}
+.share-actions {
+  display: flex; flex-wrap: wrap; gap: .5rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+.share-actions .btn { font-size: .95rem; }
+#share-toast { animation: toastFadeIn .25s ease; }
+@keyframes toastFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
 /* flatpickr — visible alt-input needs to match the rest of the form,
    and the calendar popup should pick up our teal accent color. */
 .rental-field input.flatpickr-input,

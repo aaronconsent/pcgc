@@ -262,7 +262,13 @@ async function sendBookingEmail(record, env, _agreementPath) {
   const from = env.BOOKING_FROM_EMAIL || "bookings@polkcountygolfcarts.com";
   const to = env.BOOKING_TO_EMAIL || "polkcountygolfcarts@yahoo.com";
   const customer = record.contact || {};
-  const fromWithName = `${displayName(customer.name)} via PCGC Bookings <${from}>`;
+  // Clean brand-only sender name — owner's question: "why does the
+  // inbox show 'Melissa D. Long via PCGC Bookings'?" Original design
+  // was to surface the customer name in the From line, but the
+  // subject already names the customer ("New rental booking · Melissa
+  // D. Long · Aug 15 -> Aug 17") and Reply-To routes back to them, so
+  // there's no reason to duplicate. Sender is now just the shop.
+  const fromWithName = `Polk County Golf Carts <${from}>`;
   const replyTo = customer.email
     ? `${displayName(customer.name)} <${customer.email}>`
     : undefined;
@@ -858,6 +864,8 @@ const TRACKED_EVENTS = new Set([
   "booking-submitted",
   // Rental flow entry — fired from rentals.js on Step 1 first-view.
   "rental-flow-start",
+  // Rental share — customer clicked Share / Download on Step 5.
+  "booking-shared",
 ]);
 const TRACK_TTL_SEC = 90 * 24 * 60 * 60; // 90-day retention
 

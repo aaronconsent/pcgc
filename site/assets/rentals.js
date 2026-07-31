@@ -1096,7 +1096,6 @@ function renderConfirmation() {
         "Driver's license (photo or scan) for everyone who will be driving the cart",
       ];
   $("#requirements-list").innerHTML = requirements.map(r => `<li>${r}</li>`).join("");
-  $("#docusign-email").textContent = b.contact.email || "your email";
 
   // Post-submit "Sign the agreement" CTA — the agreement is signed
   // inline on Step 4 now, so this becomes a "View your signed copy"
@@ -1115,6 +1114,231 @@ function renderConfirmation() {
   } else if (cta) {
     cta.hidden = true;
   }
+
+  // Kick off the shareable-image generation — canvas draw is quick
+  // (~200ms) but async because we wait on an <img> to load. The
+  // share card unhides once the preview blob is ready.
+  initShareCard(b);
+}
+
+// ---------- Shareable social image (Step 5) ---------- //
+//
+// Everything here is zero-dependency: a Canvas 2D draw for the image,
+// navigator.share (Web Share API Level 2) for the native share sheet
+// when the browser + platform support it (Safari iOS, Chrome Android,
+// Edge, Chrome Windows 15.90+). Falls back to download + copy-caption
+// on unsupported browsers.
+
+const SHARE_CAPTION = () => (
+  `Just booked a golf cart rental at Polk County Golf Carts for our Lake Livingston trip! 🚗⛳ Family-owned since 2020, best carts in East Texas.\n\nRent yours at https://polkcountygolfcarts.com/rentals/ · 936-223-1182`
+);
+
+let _shareBlob = null;   // cached PNG blob so re-clicking Share doesn't regenerate
+let _shareBooking = null;
+
+async function initShareCard(booking) {
+  _shareBooking = booking;
+  const card = $("#share-card");
+  const previewImg = $("#share-preview-img");
+  const previewLoading = $("#share-preview-loading");
+  const shareBtn = $("#share-btn");
+  const downloadBtn = $("#share-download-btn");
+  const copyBtn = $("#share-copy-btn");
+  const toast = $("#share-toast");
+  if (!card) return;
+
+  card.hidden = false;
+  previewImg.hidden = true;
+  previewLoading.hidden = false;
+
+  try {
+    _shareBlob = await generateShareImage(booking);
+    previewImg.src = URL.createObjectURL(_shareBlob);
+    previewImg.hidden = false;
+    previewLoading.hidden = true;
+  } catch (e) {
+    previewLoading.textContent = "Couldn't generate share image — try refreshing.";
+    return;
+  }
+
+  // Wire the three buttons (idempotent — safe if renderConfirmation
+  // runs more than once).
+  const flashToast = (msg, ms = 3000) => {
+    toast.textContent = msg;
+    toast.hidden = false;
+    clearTimeout(flashToast._t);
+    flashToast._t = setTimeout(() => { toast.hidden = true; }, ms);
+  };
+
+  shareBtn.onclick = async () => {
+    if (!_shareBlob) return;
+    const file = new File([_shareBlob], "pcgc-rental.png", { type: "image/png" });
+    const shareData = {
+      files: [file],
+      title: "Polk County Golf Carts",
+      text: SHARE_CAPTION(),
+    };
+    // canShare with files is Web Share Level 2 — Safari iOS 15+,
+    // Chrome Android, Edge, some desktop Chromes. Fall back
+    // gracefully otherwise.
+    if (navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        if (window.pcgcTrack) window.pcgcTrack("booking-shared");
+        return;
+      } catch (e) {
+        // AbortError = user cancelled the share sheet — silent no-op.
+        if (e && e.name !== "AbortError") flashToast("Share cancelled or failed. Try Download instead.");
+        return;
+      }
+    }
+    // Fallback for desktops without Web Share API — copy caption +
+    // hint the user to save the image below.
+    try { await navigator.clipboard.writeText(SHARE_CAPTION()); } catch (_) {}
+    flashToast("Caption copied ✓ — save the image below and paste both wherever you're posting.", 5000);
+  };
+
+  downloadBtn.onclick = () => {
+    if (!_shareBlob) return;
+    const url = URL.createObjectURL(_shareBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pcgc-rental-${booking.id || "share"}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    flashToast("Downloaded ✓");
+    if (window.pcgcTrack) window.pcgcTrack("booking-shared");
+  };
+
+  copyBtn.onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(SHARE_CAPTION());
+      flashToast("Caption copied ✓");
+    } catch (_) {
+      flashToast("Copy failed — long-press the caption to copy manually.");
+    }
+  };
+}
+
+// Draws a 1080x1080 branded share card on an offscreen canvas.
+// Layout:
+//   background: coral -> teal diagonal gradient
+//   cream card in the middle (90% inset)
+//   cart photo top of card (16:9-ish)
+//   "Just booked at PCGC!" headline
+//   customer first name + dates
+//   URL + phone footer
+// Returns a PNG blob.
+async function generateShareImage(booking) {
+  const W = 1080, H = 1080;
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const ctx = c.getContext("2d");
+
+  // Background: brand gradient
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, "#e85a4f");
+  grad.addColorStop(1, "#1f5a68");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Interior card
+  const pad = 48;
+  roundRect(ctx, pad, pad, W - pad * 2, H - pad * 2, 32, "#fbf8f3");
+
+  // Cart photo (of the first cart they rented, if any)
+  const cart = (booking.items && booking.items[0]) || null;
+  const cartMeta = cart ? CARTS.find(x => x.id === cart.id) : null;
+  const imgSrc = (cartMeta && cartMeta.img) || "/assets/photos/rentals/limo.jpg";
+
+  const cartImg = await loadImage(imgSrc).catch(() => null);
+  const photoX = pad + 48, photoY = pad + 48;
+  const photoW = W - pad * 2 - 96, photoH = 520;
+  ctx.save();
+  roundRect(ctx, photoX, photoY, photoW, photoH, 20, null);
+  ctx.clip();
+  if (cartImg) drawCover(ctx, cartImg, photoX, photoY, photoW, photoH);
+  else { ctx.fillStyle = "#e6f1f3"; ctx.fillRect(photoX, photoY, photoW, photoH); }
+  ctx.restore();
+
+  // Headline
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = "#1f5a68";
+  ctx.font = "700 68px Georgia, 'Times New Roman', serif";
+  ctx.fillText("Just booked at PCGC!", W / 2, photoY + photoH + 90);
+
+  // First name + dates
+  const c1 = booking.contact || {};
+  const firstName = (c1.name || "").split(/\s+/)[0] || "";
+  const start = fmtShort(booking.dates?.start);
+  const end = fmtShort(booking.dates?.end);
+  ctx.fillStyle = "#555";
+  ctx.font = "500 32px system-ui, -apple-system, Segoe UI, sans-serif";
+  const sub = firstName ? `${firstName} · ${start} → ${end}` : `${start} → ${end}`;
+  ctx.fillText(sub, W / 2, photoY + photoH + 140);
+
+  // Cart-name line (e.g. "Cart #2 — The Limo")
+  if (cartMeta) {
+    ctx.fillStyle = "#e85a4f";
+    ctx.font = "700 28px system-ui, -apple-system, Segoe UI, sans-serif";
+    ctx.fillText(cartMeta.name, W / 2, photoY + photoH + 185);
+  }
+
+  // Footer strip
+  const footerY = H - pad - 100;
+  ctx.fillStyle = "#e85a4f";
+  ctx.fillRect(pad, footerY, W - pad * 2, 4);
+  ctx.fillStyle = "#1f5a68";
+  ctx.font = "700 36px Georgia, serif";
+  ctx.fillText("polkcountygolfcarts.com", W / 2, footerY + 55);
+  ctx.fillStyle = "#666";
+  ctx.font = "400 26px system-ui, sans-serif";
+  ctx.fillText("Livingston, TX · 936-223-1182", W / 2, footerY + 92);
+
+  return new Promise((resolve) => c.toBlob(resolve, "image/png"));
+}
+
+// Canvas draw helpers.
+function roundRect(ctx, x, y, w, h, r, fill) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+}
+// Object-fit: cover for canvas images.
+function drawCover(ctx, img, dx, dy, dw, dh) {
+  const sr = img.width / img.height;
+  const dr = dw / dh;
+  let sx = 0, sy = 0, sw = img.width, sh = img.height;
+  if (sr > dr) {
+    // source wider than destination — crop sides
+    sw = img.height * dr;
+    sx = (img.width - sw) / 2;
+  } else {
+    sh = img.width / dr;
+    sy = (img.height - sh) / 2;
+  }
+  ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+}
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+function fmtShort(iso) {
+  if (!iso) return "";
+  const d = new Date(iso + "T00:00:00");
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
 // ---------- Boot ----------

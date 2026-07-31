@@ -158,9 +158,39 @@
 .dl-radio input { margin-top: 3px; }
 .dl-radio small { color: var(--ink-soft); }
 
-.dl-upload-box {
-  padding: 1rem 1.15rem;
-  background: #fff; border: 2px dashed var(--line); border-radius: 8px;
+/* DL drop zone. The <input type="file"> lives visually hidden; the
+   full-width <label> acts as the click/tap target and styles itself
+   as a friendly upload card. Empty and preview states swap via the
+   [hidden] attribute on their inner elements. */
+.dl-upload-box { margin-top: .85rem; }
+.dl-drop {
+  display: block;
+  padding: 1.5rem 1rem;
+  background: #fff;
+  border: 2px dashed var(--line);
+  border-radius: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.dl-drop:hover, .dl-drop:focus-within {
+  border-color: var(--coral);
+  background: #fff9f4;
+}
+.dl-drop-icon { font-size: 2rem; line-height: 1; margin-bottom: .5rem; }
+.dl-drop-headline { font-weight: 700; color: var(--teal-dk); font-size: 1rem; }
+.dl-drop-sub { color: var(--ink-soft); font-size: .82rem; margin-top: .25rem; }
+.dl-drop-preview { display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+.dl-drop-preview img {
+  max-width: 100%;
+  max-height: 260px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  display: block;
+}
+.dl-drop-replace {
+  color: var(--coral); font-weight: 600; font-size: .88rem;
 }
 
 .sig-box {
@@ -327,15 +357,15 @@
 .stepper b { min-width: 24px; text-align: center; font-size: 1.05rem; color: var(--ink); }
 .cart-tile.selected .stepper { background: #ffe9e6; border-color: var(--coral); }
 
-/* Sticky total bar (mobile) -- becomes sidebar on desktop */
+/* Inline Step 2 total + Continue CTA. Previously floated fixed at the
+   bottom of the viewport — pulled per owner request so every step's
+   CTA sits inline in the natural page flow. */
 .rental-total {
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
   background: var(--bg-alt);
-  border-top: 1px solid var(--line);
-  box-shadow: 0 -8px 24px rgba(20,50,58,.1);
-  padding: .85rem 1.25rem env(safe-area-inset-bottom, .85rem);
-  z-index: 30;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-top: 1.5rem;
   display: flex; align-items: center; gap: 1rem;
   flex-wrap: wrap;
 }

@@ -15,8 +15,11 @@
   <!-- Cedarville Cursive — used to auto-render the typed name as a
        signature-style preview on the /rentals/ Step 4 signature pad. -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cedarville+Cursive&display=swap">
+  <!-- signature_pad — battle-tested HTML5 canvas signature pad
+       (touch + mouse + pointer events, DPI-aware, smoothing). -->
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.2.0/dist/signature_pad.umd.min.js" defer></script>
   <link rel="stylesheet" href="/assets/site.css">
-  <link rel="stylesheet" href="/assets/rentals.css?v=685ab324">
+  <link rel="stylesheet" href="/assets/rentals.css?v=598a5ddc">
   <meta property="og:title" content="Rent a Golf Cart · Polk County Golf Carts">
   <meta property="og:description" content="Book a golf cart rental in East Texas — up to 8 carts per booking, free delivery within 25 miles of Livingston, extended service up to 75 miles.">
   <meta property="og:image" content="https://polkcountygolfcarts.com/assets/og/rentals.png">
@@ -301,12 +304,18 @@
           </div>
 
           <div class="dl-upload-box" id="dl-upload-box" style="margin-top:.85rem;">
-            <label class="rental-field">
-              <span>Attach your driver's license photo</span>
-              <input type="file" id="dl-file" accept="image/*" capture="environment">
+            <input type="file" id="dl-file" accept="image/*" capture="environment" hidden>
+            <label for="dl-file" class="dl-drop" id="dl-drop">
+              <div class="dl-drop-empty">
+                <div class="dl-drop-icon" aria-hidden="true">📸</div>
+                <div class="dl-drop-headline">Tap to upload your driver's license</div>
+                <div class="dl-drop-sub">JPG, PNG, or HEIC · resized on your device before upload</div>
+              </div>
+              <div class="dl-drop-preview" hidden>
+                <img id="dl-preview" alt="Driver's license preview">
+                <div class="dl-drop-replace">Tap to replace</div>
+              </div>
             </label>
-            <p class="rental-meta">The image is resized on your device before upload. Stored securely with your booking.</p>
-            <img id="dl-preview" alt="Driver's license preview" hidden style="max-width:100%; max-height:220px; margin-top:.5rem; border:1px solid var(--line); border-radius:6px; background:var(--bg);">
           </div>
         </div>
 
@@ -390,6 +399,6 @@
   Polk County Golf Carts · 1732 FM 3277, Livingston, TX · <a href="tel:9362231182">936-223-1182</a>
 </footer>
 
-<script src="/assets/rentals.js?v=5b225275"></script>
+<script src="/assets/rentals.js?v=0ceb39d9"></script>
 </body>
 </html>

@@ -172,14 +172,12 @@ function goTo(step) {
   if (step === 2) renderCartGrid();
   if (step === 4) {
     renderPaymentSummary();
-    // Re-render the fleet grid (customer may have changed cart
-    // selection on a back-and-forth), and re-init the signature
-    // canvas. Signature was initialized on DOMContentLoaded when
-    // Step 4 was still hidden — hidden elements have 0x0 rects, so
-    // the canvas came up sized 0x0 and strokes silently no-op'd.
-    // Re-run now that the step is visible.
     renderAgreementFleet();
-    if (typeof resizeSigCanvas === "function" && sigCanvas) resizeSigCanvas();
+    // Init or resize the signature pad now that Step 4 is visible.
+    // signature_pad handles the DPI + pointer-event details; we just
+    // need to make sure the canvas has real dimensions.
+    initSignaturePad();
+    resizeSigCanvas();
   }
   if (step === 5) renderConfirmation();
 }
@@ -547,22 +545,11 @@ function renderPaymentSummary() {
 
   // Deposit note appears only when the pickup date is 3+ months out.
   const depositNote = $("#deposit-note");
-  depositNote.hidden = !bookingIsFarOut();
-
-  // Requirements text — pickup needs DL + insurance + plate photo;
-  // delivery only needs the driver's license. Copy matches the owner's
-  // docx: everything goes to us via text at time of payment.
-  const isPickup = state.delivery === "pickup";
-  const reqs = isPickup
-    ? [
-        "Driver's license (photo or scan) for everyone who will be driving the cart",
-        "Auto insurance (photo or scan)",
-        "Photo of your vehicle's license plate (the vehicle we'll be loading the cart onto)",
-      ]
-    : [
-        "Driver's license (photo or scan) for everyone who will be driving the cart",
-      ];
-  $("#review-requirements").innerHTML = reqs.map(r => `<li>${r}</li>`).join("");
+  if (depositNote) depositNote.hidden = !bookingIsFarOut();
+  // #review-requirements used to live in a dedicated info box on
+  // Step 4; that box was removed (the DL delivery chooser inside the
+  // rental agreement covers the same information). Leaving no code
+  // that references it here.
 }
 
 // True when the pickup date is 3+ months (~90 days) after today. Owner's
@@ -585,42 +572,42 @@ function initStep4() {
 
 // ---------- Inline rental agreement (moved from /agreement/ page) ----------
 // State captured from the agreement UI at submit time.
-let agreementSignature = null;    // data URL of the drawn signature
 let agreementDlImage = null;      // data URL of the uploaded DL photo (or null)
-let sigCanvas, sigCtx, sigDrawn = false, sigDrawing = false;
+let sigCanvas = null;             // <canvas> element
+let sigPad = null;                // SignaturePad instance (from CDN)
+let sigTypedRendered = false;     // canvas holds a typed-name auto-render
 
 function initAgreementUi() {
   renderAgreementFleet();
 
-  // Signature canvas — same lightweight pad as /agreement/index.html.
   sigCanvas = $("#sig-canvas");
   if (!sigCanvas) return;
-  sigCtx = sigCanvas.getContext("2d");
-  resizeSigCanvas();
-  window.addEventListener("resize", resizeSigCanvas);
-  sigCanvas.addEventListener("mousedown", sigStart);
-  sigCanvas.addEventListener("mousemove", sigMove);
-  window.addEventListener("mouseup", sigEnd);
-  sigCanvas.addEventListener("touchstart", sigStart, { passive: false });
-  sigCanvas.addEventListener("touchmove", sigMove, { passive: false });
-  sigCanvas.addEventListener("touchend", sigEnd);
+  // signature_pad may not be loaded yet (defer'd on the <script>). If
+  // so, wait one tick and try again — it's usually fine by the time
+  // the customer navigates from step 1 to step 4.
+  initSignaturePad();
+
   $("#sig-clear").addEventListener("click", () => {
-    sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
-    sigDrawn = false;
+    if (sigPad) sigPad.clear();
     sigTypedRendered = false;
   });
 
   // Auto-render the typed name into the canvas as a signature-style
-  // preview whenever the customer types. If they draw over it, the
-  // manual strokes take over; if they clear + re-type, we re-render.
+  // preview whenever the customer types. If they draw over it, their
+  // strokes replace the typed version; clearing + retyping renders again.
   const typed = $("#typed-name");
   if (typed) {
     typed.addEventListener("input", () => {
-      if (!sigDrawn || sigTypedRendered) {
+      // Only redraw if the canvas is empty OR currently shows a typed
+      // render (never clobber a manually-drawn signature).
+      if (!sigPad) return;
+      if (sigPad.isEmpty() || sigTypedRendered) {
         renderTypedSignature(typed.value.trim());
       }
     });
   }
+
+  window.addEventListener("resize", resizeSigCanvas);
 
   // DL delivery-method radios — show/hide the upload box.
   $$('input[name="dl-method"]').forEach(r => r.addEventListener("change", updateDlMethodUi));
@@ -630,30 +617,85 @@ function initAgreementUi() {
   $("#dl-file").addEventListener("change", handleDlFile);
 }
 
-// Whether the current canvas content came from the typed-name
-// auto-render (as opposed to a real hand-drawn stroke). Lets us
-// safely replace it when the customer keeps typing without losing
-// their manual strokes.
-let sigTypedRendered = false;
+function initSignaturePad() {
+  if (sigPad || !sigCanvas) return;
+  if (typeof SignaturePad === "undefined") {
+    // Script hasn't loaded yet — retry shortly.
+    setTimeout(initSignaturePad, 200);
+    return;
+  }
+  resizeSigCanvas();
+  sigPad = new SignaturePad(sigCanvas, {
+    backgroundColor: "rgba(255,255,255,0)",
+    penColor: "#1f5a68",
+    minWidth: 1.2,
+    maxWidth: 3.0,
+    velocityFilterWeight: 0.7,
+  });
+  // If the canvas currently shows a typed-name auto-render, wipe the
+  // painted glyphs (not signature_pad's stroke data) so the user's
+  // freehand drawing lands on a clean surface instead of overlapping.
+  sigPad.addEventListener("beginStroke", () => {
+    if (sigTypedRendered) {
+      const ctx = sigCanvas.getContext("2d");
+      const ratio = window.devicePixelRatio || 1;
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+      ctx.restore();
+      sigTypedRendered = false;
+    }
+  });
+}
+
+// Resize the canvas to its CSS size scaled to the device pixel ratio.
+// Uses signature_pad's own fromData()/toData() to preserve strokes
+// across resize — no fragile drawImage() dance like the previous
+// hand-rolled pad.
+function resizeSigCanvas() {
+  if (!sigCanvas) return;
+  const rect = sigCanvas.getBoundingClientRect();
+  if (rect.width < 2 || rect.height < 2) return;
+  const ratio = window.devicePixelRatio || 1;
+  const savedData = sigPad ? sigPad.toData() : null;
+  const wasTyped = sigTypedRendered;
+  const typed = $("#typed-name")?.value?.trim() || "";
+  sigCanvas.width = Math.floor(rect.width * ratio);
+  sigCanvas.height = Math.floor(rect.height * ratio);
+  const ctx = sigCanvas.getContext("2d");
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  if (sigPad && savedData && savedData.length) sigPad.fromData(savedData);
+  else if (wasTyped && typed) renderTypedSignature(typed);
+}
 
 function renderTypedSignature(name) {
-  if (!sigCanvas || !sigCtx) return;
-  // Clear + repaint in the cursive font. Devicepixel-aware sizing —
-  // resizeSigCanvas() sets transform(dpr, ...) so we draw in CSS px.
-  const cssW = sigCanvas.width / (window.devicePixelRatio || 1);
-  const cssH = sigCanvas.height / (window.devicePixelRatio || 1);
-  sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
-  if (!name) { sigDrawn = false; sigTypedRendered = false; return; }
-  // Font size proportional to canvas height; drop-shadow off.
-  const size = Math.max(28, Math.min(64, Math.floor(cssH * 0.55)));
-  sigCtx.save();
-  sigCtx.font = `${size}px "Cedarville Cursive", "Snell Roundhand", "Segoe Script", cursive`;
-  sigCtx.fillStyle = "#1f5a68";
-  sigCtx.textBaseline = "middle";
-  sigCtx.textAlign = "left";
-  sigCtx.fillText(name, 24, cssH / 2);
-  sigCtx.restore();
-  sigDrawn = true;
+  if (!sigPad || !sigCanvas) return;
+  const ctx = sigCanvas.getContext("2d");
+  const ratio = window.devicePixelRatio || 1;
+  const cssW = sigCanvas.width / ratio;
+  const cssH = sigCanvas.height / ratio;
+  sigPad.clear();
+  if (!name) { sigTypedRendered = false; return; }
+  ctx.save();
+  const size = Math.max(30, Math.min(72, Math.floor(cssH * 0.6)));
+  ctx.font = `${size}px "Cedarville Cursive", "Snell Roundhand", "Segoe Script", cursive`;
+  ctx.fillStyle = "#1f5a68";
+  ctx.textAlign = "left";
+  // True optical centering: measure the actual glyph bounding box
+  // (Cedarville Cursive has heavy descenders under the baseline —
+  // textBaseline:"middle" alone leaves the visible mass too high).
+  ctx.textBaseline = "alphabetic";
+  const m = ctx.measureText(name);
+  const ascent = m.actualBoundingBoxAscent  || size * 0.75;
+  const descent = m.actualBoundingBoxDescent || size * 0.25;
+  const glyphH = ascent + descent;
+  // baseline Y so that (baseline - ascent) + glyphH/2 lands at cssH/2
+  const baselineY = (cssH / 2) + (glyphH / 2) - descent;
+  ctx.fillText(name, 24, baselineY);
+  ctx.restore();
+  // Tell signature_pad this counts as "not empty" for isEmpty().
+  // signature_pad uses internal stroke data, so we mark our flag
+  // instead and check both when we validate at submit time.
   sigTypedRendered = true;
 }
 
@@ -677,70 +719,8 @@ function renderAgreementFleet() {
   `).join("");
 }
 
-function resizeSigCanvas() {
-  if (!sigCanvas || !sigCtx) return;
-  const rect = sigCanvas.getBoundingClientRect();
-  // No visible layout yet (Step 4 still hidden). Bail without touching
-  // the canvas — goTo(4) will call us again once the step is visible.
-  if (rect.width < 2 || rect.height < 2) return;
-  const dpr = window.devicePixelRatio || 1;
-  // Preserve the current drawing so a mid-flow resize (device rotation,
-  // window resize) doesn't wipe an in-progress signature. Only try if
-  // there's actually something on the canvas — drawImage() throws when
-  // the source is 0x0, which killed the whole function on first init.
-  let prev = null;
-  if (sigCanvas.width > 0 && sigCanvas.height > 0) {
-    prev = document.createElement("canvas");
-    prev.width = sigCanvas.width;
-    prev.height = sigCanvas.height;
-    prev.getContext("2d").drawImage(sigCanvas, 0, 0);
-  }
-  sigCanvas.width = Math.floor(rect.width * dpr);
-  sigCanvas.height = Math.floor(rect.height * dpr);
-  sigCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  sigCtx.strokeStyle = "#1f5a68";
-  sigCtx.lineWidth = 2.2;
-  sigCtx.lineCap = "round";
-  sigCtx.lineJoin = "round";
-  if (sigDrawn && prev) {
-    sigCtx.save();
-    sigCtx.setTransform(1, 0, 0, 1, 0, 0);
-    sigCtx.drawImage(prev, 0, 0, sigCanvas.width, sigCanvas.height);
-    sigCtx.restore();
-  }
-}
-function sigPos(ev) {
-  const rect = sigCanvas.getBoundingClientRect();
-  const t = ev.touches ? ev.touches[0] : ev;
-  return { x: t.clientX - rect.left, y: t.clientY - rect.top };
-}
-function sigStart(ev) {
-  ev.preventDefault();
-  sigDrawing = true;
-  // If the canvas currently holds a typed-name auto-signature, wipe
-  // it so the customer's freehand drawing isn't overlaid on top of
-  // the cursive text.
-  if (sigTypedRendered && sigCtx && sigCanvas) {
-    sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
-    sigTypedRendered = false;
-  }
-  const p = sigPos(ev);
-  sigCtx.beginPath();
-  sigCtx.moveTo(p.x, p.y);
-}
-function sigMove(ev) {
-  if (!sigDrawing) return;
-  ev.preventDefault();
-  const p = sigPos(ev);
-  sigCtx.lineTo(p.x, p.y);
-  sigCtx.stroke();
-  sigDrawn = true;
-}
-function sigEnd() {
-  if (!sigDrawing) return;
-  sigDrawing = false;
-  sigCtx.closePath();
-}
+// Custom pointer handlers replaced by signature_pad — see
+// initSignaturePad() above. sigStart/sigMove/sigEnd/sigPos removed.
 
 function updateDlMethodUi() {
   const method = document.querySelector('input[name="dl-method"]:checked')?.value || "upload";
@@ -750,23 +730,39 @@ function updateDlMethodUi() {
   if (method !== "upload") {
     $("#dl-file").value = "";
     agreementDlImage = null;
-    $("#dl-preview").hidden = true;
-    $("#dl-preview").removeAttribute("src");
+    resetDlDropUi();
   }
+}
+
+function resetDlDropUi() {
+  const dropEmpty = document.querySelector(".dl-drop-empty");
+  const dropPreview = document.querySelector(".dl-drop-preview");
+  const img = $("#dl-preview");
+  if (dropEmpty) dropEmpty.hidden = false;
+  if (dropPreview) dropPreview.hidden = true;
+  if (img) img.removeAttribute("src"); // clearing src avoids the broken-image icon
+}
+function showDlDropPreview(dataUrl) {
+  const dropEmpty = document.querySelector(".dl-drop-empty");
+  const dropPreview = document.querySelector(".dl-drop-preview");
+  const img = $("#dl-preview");
+  if (img) img.src = dataUrl;
+  if (dropEmpty) dropEmpty.hidden = true;
+  if (dropPreview) dropPreview.hidden = false;
 }
 
 async function handleDlFile() {
   const file = $("#dl-file").files && $("#dl-file").files[0];
-  if (!file) { agreementDlImage = null; $("#dl-preview").hidden = true; return; }
+  if (!file) { agreementDlImage = null; resetDlDropUi(); return; }
   try {
     const url = await resizeImage(file, 1600, 0.72);
+    if (!url || !url.startsWith("data:image/")) throw new Error("bad url");
     agreementDlImage = url;
-    $("#dl-preview").src = url;
-    $("#dl-preview").hidden = false;
+    showDlDropPreview(url);
   } catch (_) {
     agreementDlImage = null;
-    $("#dl-preview").hidden = true;
-    alert("Could not process that image. Please try again or pick 'text a photo' instead.");
+    resetDlDropUi();
+    alert("Could not process that image. iPhone HEIC photos sometimes fail — try picking a JPG/PNG from your photo library, or select 'text a photo to 936-223-1182' below.");
   }
 }
 
@@ -804,7 +800,10 @@ function collectAgreement() {
 
   if (!dlNumber || !dlState) return { ok: false, msg: "Please fill in your driver's license number and state." };
   if (!agreed) return { ok: false, msg: "Please check the box to agree to the rental agreement terms." };
-  if (!sigDrawn) return { ok: false, msg: "Please draw your signature in the box." };
+  // "Signed" if the signature pad has strokes OR the canvas is
+  // holding the typed-name auto-render.
+  const hasSignature = (sigPad && !sigPad.isEmpty()) || sigTypedRendered;
+  if (!hasSignature) return { ok: false, msg: "Please draw your signature — or type your name below to auto-generate one." };
   if (!typedName) return { ok: false, msg: "Please type your full legal name below the signature." };
   if (dlMethod === "upload" && !agreementDlImage) {
     return { ok: false, msg: "Please attach your driver's license photo, or pick a different delivery option." };
@@ -817,7 +816,10 @@ function collectAgreement() {
       dlState,
       dlMethod,
       dlImageDataUrl: dlMethod === "upload" ? agreementDlImage : null,
-      signatureDataUrl: sigCanvas.toDataURL("image/png"),
+      // signature_pad's toDataURL() is a thin wrapper around
+      // canvas.toDataURL and captures both drawn strokes and any
+      // typed-name auto-render we painted on top of the canvas.
+      signatureDataUrl: (sigPad ? sigPad.toDataURL("image/png") : sigCanvas.toDataURL("image/png")),
       agreed: true,
     },
   };
